@@ -1,6 +1,7 @@
 #include "OsdParsePanel.h"
 #include "DeviceManager.h"
 #include <QFrame>
+#include <QPointer>
 #include <QDateTime>
 
 // Helper: convert QJsonValue to display string
@@ -125,7 +126,6 @@ void OsdParsePanel::clear() {
         delete item;
     }
     mContentLayout->addStretch();
-    mPrevValues.clear();
     mTopicLabel->setText(QStringLiteral(""));
 }
 
@@ -137,7 +137,12 @@ void OsdParsePanel::refresh() {
     if (rawJson.isEmpty())
         return;
 
-    QJsonDocument doc = QJsonDocument::fromJson(rawJson.toUtf8());
+    QJsonParseError parseErr;
+    QJsonDocument doc = QJsonDocument::fromJson(rawJson.toUtf8(), &parseErr);
+    if (parseErr.error != QJsonParseError::NoError) {
+        qWarning() << "OsdParsePanel: JSON parse error:" << parseErr.errorString();
+        return;
+    }
     if (!doc.isObject())
         return;
 
@@ -195,6 +200,9 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
 
     QSet<QString> renderedKeys;
     QMap<QString, QString> newValues;
+
+    // Save previous values BEFORE clearing (for change detection)
+    QMap<QString, QString> prevValues = mPrevValues;
 
     // Clear old content
     clear();
@@ -292,7 +300,7 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
 
     // Value change highlighting
     for (auto it = newValues.begin(); it != newValues.end(); ++it) {
-        QString oldVal = mPrevValues.value(it.key());
+        QString oldVal = prevValues.value(it.key());
         bool changed = !oldVal.isEmpty() && oldVal != it.value();
         if (changed) {
             // Find the value label by iterating rendered groups
@@ -328,8 +336,11 @@ void OsdParsePanel::setFieldValue(QLabel* label, const QString& value, bool high
     label->setText(value);
     if (highlight) {
         label->setStyleSheet(QStringLiteral("color: #1a73e8; font-weight: bold; font-size: 11px;"));
-        QTimer::singleShot(1200, this, [label]() {
-            label->setStyleSheet(QStringLiteral("font-size: 11px; font-weight: 500;"));
+        QPointer<QLabel> weakLabel(label);
+        QTimer::singleShot(1200, this, [weakLabel]() {
+            if (weakLabel) {
+                weakLabel->setStyleSheet(QStringLiteral("font-size: 11px; font-weight: 500;"));
+            }
         });
     }
 }
