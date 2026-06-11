@@ -1,0 +1,97 @@
+# ============================================
+# DJI-CLOUD-API 监控客户端 构建配置
+# ============================================
+cmake_minimum_required(VERSION 3.10)
+project(DjiCloudApi VERSION 1.0.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
+endif()
+
+# 查找 Qt6
+find_package(Qt6 COMPONENTS Core Widgets Mqtt REQUIRED)
+
+# 源文件
+set(SOURCES
+    src/main.cpp
+    src/core/ConfigStore.cpp
+    src/core/DeviceManager.cpp
+    src/core/TopicManager.cpp
+    src/mqtt/MqttClientManager.cpp
+    src/ui/MainWindow.cpp
+    src/ui/DeviceTreeWidget.cpp
+    src/ui/OsdPanel.cpp
+    src/ui/RawJsonPanel.cpp
+    src/ui/PublishPanel.cpp
+    src/ui/ConfigDialog.cpp
+    src/ui/TopicEditDialog.cpp
+)
+
+set(HEADERS
+    src/core/DeviceInfo.h
+    src/core/OsdData.h
+    src/core/ConfigStore.h
+    src/core/DeviceManager.h
+    src/core/TopicManager.h
+    src/mqtt/MqttClientManager.h
+    src/ui/MainWindow.h
+    src/ui/DeviceTreeWidget.h
+    src/ui/OsdPanel.h
+    src/ui/RawJsonPanel.h
+    src/ui/PublishPanel.h
+    src/ui/ConfigDialog.h
+    src/ui/TopicEditDialog.h
+)
+
+add_executable(DjiCloudApi ${SOURCES} ${HEADERS})
+
+target_include_directories(DjiCloudApi PRIVATE
+    src
+    src/core
+    src/mqtt
+    src/ui
+)
+
+target_link_libraries(DjiCloudApi
+    Qt6::Core
+    Qt6::Widgets
+    Qt6::Mqtt
+)
+
+# 复制默认配置文件到构建目录
+configure_file(
+    ${CMAKE_SOURCE_DIR}/src/resources/config.json
+    ${CMAKE_BINARY_DIR}/config.json
+    COPYONLY
+)
+
+# 编译器标志
+if(MSVC)
+    target_compile_options(DjiCloudApi PRIVATE /utf-8)
+else()
+    target_compile_options(DjiCloudApi PRIVATE -fexec-charset=UTF-8)
+endif()
+
+# ============================================
+# Windows 部署: windeployqt 自动打包 (可选)
+# 用法: cmake --build . --target deploy
+# ============================================
+if(WIN32)
+    add_custom_target(deploy
+        COMMAND ${CMAKE_COMMAND} -E echo "=== Running windeployqt ==="
+        COMMAND windeployqt
+            --no-translations
+            "$<TARGET_FILE:DjiCloudApi>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/src/resources/config.json"
+            "${CMAKE_BINARY_DIR}/config.json"
+        DEPENDS DjiCloudApi
+        COMMENT "Deploying Qt DLLs and config for Windows distribution"
+    )
+endif()

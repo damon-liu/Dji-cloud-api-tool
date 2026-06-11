@@ -1,0 +1,21 @@
+# 构建产物
+build/
+build_linux/
+build_mingw/
+
+# 部署目录中的编译产物（配置文件保留）
+deploy/main
+deploy/main.exe
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 临时文件
+-
+
+# 系统文件
+.DS_Store
+Thumbs.db

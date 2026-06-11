@@ -1,0 +1,19 @@
+# ============================================
+# docker-compose.yml - C++ demo 应用部署
+# ============================================
+
+services:
+  c-study:
+    image: c-study:v1.0            # 使用服务器上预构建的镜像
+    container_name: c-study
+    # 应用执行完即退出，不重启
+    restart: "no"
+    # 分配伪终端，确保标准输出正常
+    tty: false
+    stdin_open: false
+    # 可选：资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "64M"
