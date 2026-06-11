@@ -319,13 +319,18 @@ void MainWindow::setupLayout() {
     osdScroll->setWidgetResizable(true);
     osdScroll->setFrameShape(QFrame::NoFrame);
 
+    auto* parseScroll = new QScrollArea(this);
+    parseScroll->setWidget(mOsdParsePanel);
+    parseScroll->setWidgetResizable(true);
+    parseScroll->setFrameShape(QFrame::NoFrame);
+
     // 左半区：OSD 面板 + JSON 解析面板 垂直堆叠
     auto* leftHalf = new QWidget(this);
     auto* leftHalfLayout = new QVBoxLayout(leftHalf);
     leftHalfLayout->setContentsMargins(0, 0, 0, 0);
     leftHalfLayout->setSpacing(4);
-    leftHalfLayout->addWidget(osdScroll, 3);      // OSD 占 3 份
-    leftHalfLayout->addWidget(mOsdParsePanel, 2);  // 解析占 2 份
+    leftHalfLayout->addWidget(osdScroll, 3);       // OSD 占 3 份
+    leftHalfLayout->addWidget(parseScroll, 2);     // 解析占 2 份
 
     mRightSplitter = new QSplitter(Qt::Horizontal, this);
     mRightSplitter->addWidget(leftHalf);
