@@ -32,6 +32,7 @@ set(SOURCES
     src/ui/ConfigDialog.cpp
     src/ui/TopicEditDialog.cpp
     src/ui/TopicListWidget.cpp
+    src/ui/OsdParsePanel.cpp
 )
 
 set(HEADERS
@@ -49,6 +50,8 @@ set(HEADERS
     src/ui/ConfigDialog.h
     src/ui/TopicEditDialog.h
     src/ui/TopicListWidget.h
+    src/core/TopicMapping.h
+    src/ui/OsdParsePanel.h
 )
 
 add_executable(DjiCloudApi ${SOURCES} ${HEADERS})
@@ -73,6 +76,13 @@ configure_file(
     COPYONLY
 )
 
+# 复制 topic 映射配置文件到构建目录
+configure_file(
+    ${CMAKE_SOURCE_DIR}/config/topic_mappings.json
+    ${CMAKE_BINARY_DIR}/topic_mappings.json
+    COPYONLY
+)
+
 # 编译器标志
 if(MSVC)
     target_compile_options(DjiCloudApi PRIVATE /utf-8)
@@ -93,6 +103,9 @@ if(WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_SOURCE_DIR}/src/resources/config.json"
             "${CMAKE_BINARY_DIR}/config.json"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/config/topic_mappings.json"
+            "${CMAKE_BINARY_DIR}/topic_mappings.json"
         DEPENDS DjiCloudApi
         COMMENT "Deploying Qt DLLs and config for Windows distribution"
     )
