@@ -89,6 +89,22 @@ public:
         return TopicMappingConfig{}; // 空配置
     }
 
+    bool hasMappingForTopic(const QString& topic) const {
+        if (mConfigs.contains(topic))
+            return true;
+        for (auto it = mConfigs.begin(); it != mConfigs.end(); ++it) {
+            QString pattern = it.key();
+            if (!pattern.contains("{sn}"))
+                continue;
+            QString escaped = QRegularExpression::escape(pattern);
+            escaped.replace("\\{sn\\}", "[^/]+");
+            QRegularExpression re("^" + escaped + "$");
+            if (re.match(topic).hasMatch())
+                return true;
+        }
+        return false;
+    }
+
     // 检查是否有可用的映射
     bool isEmpty() const { return mConfigs.isEmpty(); }
 
@@ -101,6 +117,8 @@ private:
             qWarning() << "TopicMapping: root is not a JSON object";
             return false;
         }
+
+        mConfigs.clear();
 
         QJsonObject root = doc.object();
         QJsonObject topics = root.value("topics").toObject();
