@@ -470,7 +470,7 @@ void MainWindow::connectSignals() {
 
     // 加载 topic 映射配置
     {
-        TopicMapping* mapping = new TopicMapping(this);
+        TopicMapping* mapping = new TopicMapping();
         QString mappingPath = QApplication::applicationDirPath() + "/topic_mappings.json";
         if (!mapping->load(mappingPath)) {
             qWarning() << "MainWindow: failed to load topic_mappings.json, using built-in fallback";
