@@ -68,6 +68,17 @@ QString DeviceTreeWidget::selectedDeviceSn() const {
     return item->data(0, Qt::UserRole).toString();
 }
 
+void DeviceTreeWidget::mousePressEvent(QMouseEvent* event) {
+    QTreeWidgetItem* item = itemAt(event->pos());
+    if (!item) {
+        // 点击空白区域：取消选中
+        clearSelection();
+        setCurrentItem(nullptr);
+        emit deviceSelected("");
+    }
+    QTreeWidget::mousePressEvent(event);
+}
+
 void DeviceTreeWidget::onItemClicked(QTreeWidgetItem* item, int column) {
     Q_UNUSED(column)
     QString sn = item->data(0, Qt::UserRole).toString();

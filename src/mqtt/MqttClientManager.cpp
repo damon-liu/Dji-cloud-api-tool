@@ -29,6 +29,7 @@ MqttClientManager::~MqttClientManager() {
 void MqttClientManager::connectToBroker(const MqttConfig& config) {
     mConfig = config;
     mReconnectDelayMs = BASE_RECONNECT_MS;
+    mIntentionalDisconnect = false;
 
     mClient->setHostname(config.host);
     mClient->setPort(static_cast<quint16>(config.port));
@@ -41,6 +42,7 @@ void MqttClientManager::connectToBroker(const MqttConfig& config) {
 }
 
 void MqttClientManager::disconnectFromBroker() {
+    mIntentionalDisconnect = true;
     stopReconnect();
     mSubscribedTopics.clear();
     mClient->disconnectFromHost();
@@ -88,6 +90,10 @@ void MqttClientManager::onConnected() {
 void MqttClientManager::onDisconnected() {
     qDebug() << "MQTT: disconnected";
     emit disconnected();
+    if (mIntentionalDisconnect) {
+        mIntentionalDisconnect = false;
+        return;
+    }
     startReconnect();
 }
 

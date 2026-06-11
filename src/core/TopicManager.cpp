@@ -23,6 +23,12 @@ void TopicManager::addTopic(const QString& deviceSn, const QString& topic) {
     if (!mDeviceTopics.contains(deviceSn))
         mDeviceTopics[deviceSn] = {};
 
+    // 新添加的 topic 始终从启用状态开始，清理可能残留的禁用记录
+    if (mDisabledTopics.contains(deviceSn)) {
+        mDisabledTopics[deviceSn].remove(topic);
+        if (mDisabledTopics[deviceSn].isEmpty())
+            mDisabledTopics.remove(deviceSn);
+    }
     mDeviceTopics[deviceSn].insert(topic);
     mTopicToDevice[topic] = deviceSn;
     emit topicsChanged({topic}, {});
@@ -33,6 +39,12 @@ void TopicManager::removeTopic(const QString& deviceSn, const QString& topic) {
         return;
     mDeviceTopics[deviceSn].remove(topic);
     mTopicToDevice.remove(topic);
+    // 同步清理禁用记录
+    if (mDisabledTopics.contains(deviceSn)) {
+        mDisabledTopics[deviceSn].remove(topic);
+        if (mDisabledTopics[deviceSn].isEmpty())
+            mDisabledTopics.remove(deviceSn);
+    }
     emit topicsChanged({}, {topic});
 }
 
@@ -65,6 +77,7 @@ void TopicManager::removeDevice(const QString& deviceSn) {
     for (const auto& t : removed)
         mTopicToDevice.remove(t);
     mDeviceTopics.remove(deviceSn);
+    mDisabledTopics.remove(deviceSn);
     emit topicsChanged({}, removed);
 }
 
@@ -72,5 +85,66 @@ void TopicManager::clear() {
     QStringList removed = allTopics();
     mDeviceTopics.clear();
     mTopicToDevice.clear();
+    mDisabledTopics.clear();
     emit topicsChanged({}, removed);
+}
+
+QStringList TopicManager::allEnabledTopics() const {
+    QSet<QString> result;
+    for (auto it = mDeviceTopics.begin(); it != mDeviceTopics.end(); ++it) {
+        const QString& sn = it.key();
+        const QSet<QString>& deviceTopics = it.value();
+        const QSet<QString> disabled = mDisabledTopics.value(sn);
+        for (const auto& t : deviceTopics) {
+            if (!disabled.contains(t))
+                result.insert(t);
+        }
+    }
+    return result.values();
+}
+
+void TopicManager::setTopicEnabled(const QString& deviceSn, const QString& topic, bool enabled) {
+    if (!mDeviceTopics.contains(deviceSn) || !mDeviceTopics[deviceSn].contains(topic))
+        return;
+
+    bool currentlyEnabled = !mDisabledTopics.value(deviceSn).contains(topic);
+
+    if (enabled && !currentlyEnabled) {
+        // 启用：从禁用集合中移除
+        mDisabledTopics[deviceSn].remove(topic);
+        if (mDisabledTopics[deviceSn].isEmpty())
+            mDisabledTopics.remove(deviceSn);
+        emit topicsChanged({topic}, {});
+    } else if (!enabled && currentlyEnabled) {
+        // 禁用：加入禁用集合
+        mDisabledTopics[deviceSn].insert(topic);
+        emit topicsChanged({}, {topic});
+    }
+    // 状态未变则不操作
+}
+
+bool TopicManager::isTopicEnabled(const QString& deviceSn, const QString& topic) const {
+    return !mDisabledTopics.value(deviceSn).contains(topic);
+}
+
+QStringList TopicManager::enabledTopicsForDevice(const QString& deviceSn) const {
+    QSet<QString> deviceTopics = mDeviceTopics.value(deviceSn);
+    QSet<QString> disabled = mDisabledTopics.value(deviceSn);
+    QStringList result;
+    for (const auto& t : deviceTopics) {
+        if (!disabled.contains(t))
+            result.append(t);
+    }
+    return result;
+}
+
+QSet<QString> TopicManager::disabledTopicsForDevice(const QString& deviceSn) const {
+    return mDisabledTopics.value(deviceSn);
+}
+
+void TopicManager::setDisabledTopicsForDevice(const QString& deviceSn, const QSet<QString>& topics) {
+    if (topics.isEmpty())
+        mDisabledTopics.remove(deviceSn);
+    else
+        mDisabledTopics[deviceSn] = topics;
 }

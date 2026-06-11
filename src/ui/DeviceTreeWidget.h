@@ -2,6 +2,7 @@
 #define DEVICETREEWIDGET_H
 
 #include <QTreeWidget>
+#include <QMouseEvent>
 #include <QMap>
 #include "DeviceInfo.h"
 
@@ -18,6 +19,9 @@ public:
 
 signals:
     void deviceSelected(const QString& sn);
+
+protected:
+    void mousePressEvent(QMouseEvent* event) override;
 
 private slots:
     void onItemClicked(QTreeWidgetItem* item, int column);

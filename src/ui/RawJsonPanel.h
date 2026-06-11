@@ -10,6 +10,7 @@
 #include <QClipboard>
 #include <QApplication>
 #include <QFont>
+#include <QTextCursor>
 
 class RawJsonPanel : public QWidget {
     Q_OBJECT
@@ -27,6 +28,11 @@ public:
         title->setObjectName("sectionTitle");
         title->setStyleSheet("font-size: 13px; font-weight: bold; color: #5f6368;");
 
+        mPauseBtn = new QPushButton("⏸ 暂停");
+        mPauseBtn->setObjectName("copyBtn");
+        mPauseBtn->setCursor(Qt::PointingHandCursor);
+        mPauseBtn->setFixedWidth(80);
+
         auto* copyBtn = new QPushButton("📋 复制");
         copyBtn->setObjectName("copyBtn");
         copyBtn->setCursor(Qt::PointingHandCursor);
@@ -34,6 +40,7 @@ public:
 
         header->addWidget(title);
         header->addStretch();
+        header->addWidget(mPauseBtn);
         header->addWidget(copyBtn);
         layout->addLayout(header);
 
@@ -48,6 +55,22 @@ public:
         connect(copyBtn, &QPushButton::clicked, this, [this]() {
             QClipboard* clip = QApplication::clipboard();
             clip->setText(mEditor->toPlainText());
+        });
+
+        connect(mPauseBtn, &QPushButton::clicked, this, [this]() {
+            mPaused = !mPaused;
+            mPauseBtn->setText(mPaused ? "▶ 继续" : "⏸ 暂停");
+            if (!mPaused) {
+                for (const auto& j : mPendingBuffer) {
+                    if (!mEditor->toPlainText().isEmpty())
+                        mEditor->appendPlainText("---");
+                    mEditor->appendPlainText(j);
+                }
+                mPendingBuffer.clear();
+                QTextCursor cursor = mEditor->textCursor();
+                cursor.movePosition(QTextCursor::End);
+                mEditor->setTextCursor(cursor);
+            }
         });
     }
 
@@ -64,8 +87,32 @@ public:
         mEditor->clear();
     }
 
+    void appendJson(const QString& json) {
+        if (json.isEmpty()) return;
+        if (mPaused) {
+            mPendingBuffer.append(json);
+            while (mPendingBuffer.size() > MAX_BUFFER)
+                mPendingBuffer.removeFirst();
+            return;
+        }
+        if (!mEditor->toPlainText().isEmpty())
+            mEditor->appendPlainText("---");
+        mEditor->appendPlainText(json);
+        QTextCursor cursor = mEditor->textCursor();
+        cursor.movePosition(QTextCursor::End);
+        mEditor->setTextCursor(cursor);
+    }
+
+    void clearHistory() {
+        mEditor->clear();
+    }
+
 private:
     QPlainTextEdit* mEditor;
+    QPushButton*    mPauseBtn       = nullptr;
+    bool            mPaused         = false;
+    QStringList     mPendingBuffer;
+    static constexpr int MAX_BUFFER = 1000;
 };
 
 #endif // RAWJSONPANEL_H

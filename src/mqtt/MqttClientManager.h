@@ -47,6 +47,7 @@ private:
     MqttConfig    mConfig;
     QStringList   mSubscribedTopics;
     int           mReconnectDelayMs;   // 当前重连延迟
+    bool          mIntentionalDisconnect = false;
     static constexpr int MAX_RECONNECT_MS = 30000;  // 最大重连间隔 30s
     static constexpr int BASE_RECONNECT_MS = 1000;  // 基础重连间隔 1s
 };

@@ -12,6 +12,7 @@
 #include "OsdPanel.h"
 #include "RawJsonPanel.h"
 #include "PublishPanel.h"
+#include "TopicListWidget.h"
 #include "DeviceManager.h"
 
 class MainWindow : public QMainWindow {
@@ -21,11 +22,10 @@ public:
 
 private slots:
     void onDeviceSelected(const QString& sn);
-    void onOsdUpdated(const QString& sn, const QString& rawJson);
+    void onOsdUpdated(const QString& sn, const QString& topic, const QString& rawJson);
     void onConnectAction();
     void onDisconnectAction();
     void onAddDevice();
-    void onEditTopic();
     void onDeleteDevice();
     void updateStatusBar();
 
@@ -34,6 +34,7 @@ private:
     void setupLayout();
     void setupStatusBar();
     void connectSignals();
+    void refreshTopicList(const QString& sn);
 
     DeviceManager*     mDevMgr;
     DeviceTreeWidget*  mDeviceTree;
@@ -44,6 +45,7 @@ private:
     QPushButton*       mTogglePublishBtn;
     QLabel*            mStatusLabel;
     QLabel*            mDeviceCountLabel;
+    QLabel*            mVersionLabel;
     QLabel*            mBrokerLabel;
 
     // Toolbar actions
@@ -52,8 +54,8 @@ private:
 
     // Sidebar buttons
     QPushButton*       mAddDeviceBtn;
-    QPushButton*       mEditTopicBtn;
     QPushButton*       mDeleteDeviceBtn;
+    TopicListWidget*   mTopicListWidget;
 
     // Stylesheet helper
     void applyStyle();

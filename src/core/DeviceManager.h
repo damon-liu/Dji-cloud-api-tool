@@ -36,10 +36,18 @@ public:
     void removeTopic(const QString& deviceSn, const QString& topic);
     void updateTopic(const QString& deviceSn, const QString& oldTopic, const QString& newTopic);
 
+    // Topic 启用/禁用控制
+    void setTopicEnabled(const QString& deviceSn, const QString& topic, bool enabled);
+    bool isTopicEnabled(const QString& deviceSn, const QString& topic) const;
+
     // OSD 缓存
     const AircraftOsd* latestAircraftOsd(const QString& sn) const;
     const DockOsd* latestDockOsd(const QString& sn) const;
     QString latestRawJson(const QString& sn) const;
+
+    // JSON 历史数据
+    QString jsonHistory(const QString& sn, const QString& topic = {}) const;
+    void clearJsonHistory(const QString& sn, const QString& topic = {});
 
     // 配置访问
     MqttConfig mqttConfig() const;
@@ -54,7 +62,7 @@ signals:
     void brokerError(const QString& error);
     void deviceAdded(const QString& sn);
     void deviceRemoved(const QString& sn);
-    void deviceOsdUpdated(const QString& sn, const QString& rawJson);
+    void deviceOsdUpdated(const QString& sn, const QString& topic, const QString& rawJson);
     void deviceOnlineChanged(const QString& sn, bool online);
 
 private slots:
@@ -72,7 +80,9 @@ private:
     QMap<QString, AircraftOsd> mAircraftOsdCache;
     QMap<QString, DockOsd>     mDockOsdCache;
     QMap<QString, QString>     mRawJsonCache;
+    QMap<QString, QMap<QString, QStringList>> mJsonHistory;  // SN → topic → history[]
     QString                    mConfigPath;
+    static constexpr int MAX_JSON_HISTORY = 500;
 };
 
 #endif // DEVICEMANAGER_H

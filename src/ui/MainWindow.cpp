@@ -171,7 +171,7 @@ void MainWindow::setupToolBar() {
     toolbar->setMovable(false);
     toolbar->setFloatable(false);
 
-    // 左侧：配置 + 连接操作
+    // 左侧：配置按钮
     auto* configAct = toolbar->addAction("⚙ 配置");
     auto* configBtn = qobject_cast<QToolButton*>(toolbar->widgetForAction(configAct));
     if (configBtn) configBtn->setObjectName("configBtn");
@@ -179,13 +179,23 @@ void MainWindow::setupToolBar() {
         ConfigDialog dlg(mDevMgr->mqttConfig(), this);
         if (dlg.exec() == QDialog::Accepted) {
             mDevMgr->setMqttConfig(dlg.getConfig());
-            // 配置成功后自动连接
             if (!mDevMgr->isConnected()) {
                 mDevMgr->connectBroker();
             }
         }
     });
 
+    // Spacer: pushes everything after it to the right
+    auto* spacer = new QWidget(this);
+    spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    toolbar->addWidget(spacer);
+
+    // Broker 信息标签（spacer 右侧）
+    mBrokerLabel = new QLabel(" 未连接", this);
+    mBrokerLabel->setStyleSheet("color: #9e9e9e; font-size: 12px; padding: 0 12px;");
+    toolbar->addWidget(mBrokerLabel);
+
+    // 连接/断开按钮（右侧）
     mConnectAct = toolbar->addAction("● 连接");
     auto* connectBtn = qobject_cast<QToolButton*>(toolbar->widgetForAction(mConnectAct));
     if (connectBtn) connectBtn->setObjectName("connectBtn");
@@ -195,17 +205,6 @@ void MainWindow::setupToolBar() {
     auto* disconnectBtn = qobject_cast<QToolButton*>(toolbar->widgetForAction(mDisconnectAct));
     if (disconnectBtn) disconnectBtn->setObjectName("disconnectBtn");
     connect(mDisconnectAct, &QAction::triggered, this, &MainWindow::onDisconnectAction);
-
-    toolbar->addSeparator();
-
-    // Broker 信息标签
-    mBrokerLabel = new QLabel(" 未连接", this);
-    mBrokerLabel->setStyleSheet("color: #9e9e9e; font-size: 12px; padding: 0 12px;");
-    toolbar->addWidget(mBrokerLabel);
-
-    auto* spacer = new QWidget(this);
-    spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    toolbar->addWidget(spacer);
 }
 
 // ——— 主布局 ———
@@ -216,69 +215,50 @@ void MainWindow::setupLayout() {
     leftLayout->setContentsMargins(8, 8, 4, 8);
     leftLayout->setSpacing(4);
 
-    // 区域标题
+    // 区域标题 + 操作按钮
     auto* titleRow = new QHBoxLayout;
+    titleRow->setSpacing(4);
     auto* treeTitle = new QLabel("设备列表");
     treeTitle->setObjectName("sectionTitle");
     titleRow->addWidget(treeTitle);
     titleRow->addStretch();
-    leftLayout->addLayout(titleRow);
-
-    // 设备和按钮横向排列：设备树 | 操作按钮
-    auto* treeAndBtns = new QHBoxLayout;
-    treeAndBtns->setSpacing(6);
-
-    // 设备树
-    mDeviceTree = new DeviceTreeWidget(this);
-    mDeviceTree->setMinimumWidth(170);
-    mDeviceTree->setMaximumWidth(220);
-    treeAndBtns->addWidget(mDeviceTree, 1);
-
-    // 按钮竖排
-    auto* btnCol = new QVBoxLayout;
-    btnCol->setSpacing(4);
 
     mAddDeviceBtn = new QPushButton("＋", this);
     mAddDeviceBtn->setCursor(Qt::PointingHandCursor);
-    mAddDeviceBtn->setFixedSize(32, 32);
+    mAddDeviceBtn->setFixedSize(28, 28);
     mAddDeviceBtn->setToolTip("添加设备");
     mAddDeviceBtn->setStyleSheet(
         "QPushButton { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; "
-        "border-radius: 4px; font-size: 16px; font-weight: bold; }"
+        "border-radius: 4px; font-size: 14px; font-weight: bold; }"
         "QPushButton:hover { background: #c8e6c9; }");
     connect(mAddDeviceBtn, &QPushButton::clicked, this, &MainWindow::onAddDevice);
-    btnCol->addWidget(mAddDeviceBtn);
-
-    mEditTopicBtn = new QPushButton("✎", this);
-    mEditTopicBtn->setCursor(Qt::PointingHandCursor);
-    mEditTopicBtn->setEnabled(false);
-    mEditTopicBtn->setFixedSize(32, 32);
-    mEditTopicBtn->setToolTip("编辑 Topic");
-    mEditTopicBtn->setStyleSheet(
-        "QPushButton { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; "
-        "border-radius: 4px; font-size: 14px; }"
-        "QPushButton:hover { background: #ffe0b2; }"
-        "QPushButton:disabled { background: #f5f5f5; color: #bdbdbd; border-color: #e0e0e0; }");
-    connect(mEditTopicBtn, &QPushButton::clicked, this, &MainWindow::onEditTopic);
-    btnCol->addWidget(mEditTopicBtn);
+    titleRow->addWidget(mAddDeviceBtn);
 
     mDeleteDeviceBtn = new QPushButton("✕", this);
     mDeleteDeviceBtn->setCursor(Qt::PointingHandCursor);
     mDeleteDeviceBtn->setEnabled(false);
-    mDeleteDeviceBtn->setFixedSize(32, 32);
+    mDeleteDeviceBtn->setFixedSize(28, 28);
     mDeleteDeviceBtn->setToolTip("删除设备");
     mDeleteDeviceBtn->setStyleSheet(
         "QPushButton { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; "
-        "border-radius: 4px; font-size: 14px; }"
+        "border-radius: 4px; font-size: 13px; }"
         "QPushButton:hover { background: #ffcdd2; }"
         "QPushButton:disabled { background: #f5f5f5; color: #bdbdbd; border-color: #e0e0e0; }");
     connect(mDeleteDeviceBtn, &QPushButton::clicked, this, &MainWindow::onDeleteDevice);
-    btnCol->addWidget(mDeleteDeviceBtn);
+    titleRow->addWidget(mDeleteDeviceBtn);
 
-    btnCol->addStretch();
-    treeAndBtns->addLayout(btnCol);
+    leftLayout->addLayout(titleRow);
 
-    leftLayout->addLayout(treeAndBtns, 1);
+    // 设备树（占满宽度）
+    mDeviceTree = new DeviceTreeWidget(this);
+    mDeviceTree->setMinimumWidth(310);
+    mDeviceTree->setMaximumWidth(440);
+    leftLayout->addWidget(mDeviceTree, 1);
+
+    // === Topic 列表面板（设备树下方） ===
+    mTopicListWidget = new TopicListWidget(this);
+    mTopicListWidget->setMaximumHeight(200);
+    leftLayout->addWidget(mTopicListWidget);
 
     // === 右侧：OSD + JSON 水平分割 ===
     auto* rightPanel = new QWidget(this);
@@ -339,7 +319,18 @@ void MainWindow::setupStatusBar() {
     mStatusLabel->setStyleSheet("font-weight: bold; padding: 0 8px;");
     mDeviceCountLabel->setStyleSheet("padding: 0 8px;");
 
+    // 版本信息 — 真正居中
+    auto* versionContainer = new QWidget(this);
+    auto* versionLayout = new QHBoxLayout(versionContainer);
+    versionLayout->setContentsMargins(0, 0, 0, 0);
+    versionLayout->setAlignment(Qt::AlignCenter);
+    mVersionLabel = new QLabel("v1.0 · github.com/damon-liu/Dji-cloud-api-tool");
+    mVersionLabel->setStyleSheet(
+        "color: #80868b; font-size: 11px; letter-spacing: 0.5px;");
+    versionLayout->addWidget(mVersionLabel);
+
     statusBar()->addWidget(mStatusLabel);
+    statusBar()->addWidget(versionContainer, 1);
     statusBar()->addPermanentWidget(mDeviceCountLabel);
 }
 
@@ -347,6 +338,32 @@ void MainWindow::setupStatusBar() {
 void MainWindow::connectSignals() {
     connect(mDeviceTree, &DeviceTreeWidget::deviceSelected,
             this, &MainWindow::onDeviceSelected);
+
+    // TopicListWidget signals → DeviceManager
+    connect(mTopicListWidget, &TopicListWidget::topicAdded,
+            this, [this](const QString& sn, const QString& topic) {
+        mDevMgr->addTopic(sn, topic);
+        refreshTopicList(sn);
+    });
+    connect(mTopicListWidget, &TopicListWidget::topicToggled,
+            this, [this](const QString& sn, const QString& topic) {
+        bool currentlyEnabled = mDevMgr->isTopicEnabled(sn, topic);
+        mDevMgr->setTopicEnabled(sn, topic, !currentlyEnabled);
+        refreshTopicList(sn);
+    });
+    connect(mTopicListWidget, &TopicListWidget::topicRemoved,
+            this, [this](const QString& sn, const QString& topic) {
+        mDevMgr->removeTopic(sn, topic);
+        refreshTopicList(sn);
+    });
+
+    // Topic 选中变化 → 原始 JSON 按 topic 过滤
+    connect(mTopicListWidget, &TopicListWidget::topicSelectionChanged,
+            this, [this](const QString& selectedTopic) {
+        QString sn = mDeviceTree->selectedDeviceSn();
+        if (!sn.isEmpty())
+            mRawJsonPanel->setJson(mDevMgr->jsonHistory(sn, selectedTopic));
+    });
 
     connect(mDevMgr, &DeviceManager::deviceOsdUpdated,
             this, &MainWindow::onOsdUpdated);
@@ -373,12 +390,16 @@ void MainWindow::connectSignals() {
 
     connect(mDevMgr, &DeviceManager::deviceAdded, this, [this]() {
         mDeviceTree->rebuild(mDevMgr->topLevelDevices(), mDevMgr->allDevices());
+        // Refresh topic list for currently selected device
+        QString currentSn = mDeviceTree->selectedDeviceSn();
+        refreshTopicList(currentSn);
         updateStatusBar();
     });
     connect(mDevMgr, &DeviceManager::deviceRemoved, this, [this]() {
         mDeviceTree->rebuild(mDevMgr->topLevelDevices(), mDevMgr->allDevices());
         mOsdPanel->clear();
         mRawJsonPanel->clear();
+        mTopicListWidget->clearTopics();
         updateStatusBar();
     });
 
@@ -395,7 +416,16 @@ void MainWindow::connectSignals() {
 
 // ——— 设备选择 ———
 void MainWindow::onDeviceSelected(const QString& sn) {
-    if (sn.isEmpty()) return;
+    if (sn.isEmpty()) {
+        // 取消选中：清空所有面板
+        mOsdPanel->clear();
+        mRawJsonPanel->clear();
+        mPublishPanel->setTopics({});
+        mTopicListWidget->clearTopics();
+        mDeleteDeviceBtn->setEnabled(false);
+        mAddDeviceBtn->setEnabled(true);
+        return;
+    }
 
     DeviceInfo* dev = mDevMgr->device(sn);
     if (!dev) return;
@@ -404,19 +434,42 @@ void MainWindow::onDeviceSelected(const QString& sn) {
     const DockOsd* dockOsd   = mDevMgr->latestDockOsd(sn);
     mOsdPanel->showOsd(dev, airOsd, dockOsd, mDevMgr->latestRawJson(sn));
 
-    mRawJsonPanel->setJson(mDevMgr->latestRawJson(sn));
+    mRawJsonPanel->setJson(mDevMgr->jsonHistory(sn));
     mPublishPanel->setTopics(mDevMgr->topicsForDevice(sn));
 
+    // 刷新 topic 列表
+    refreshTopicList(sn);
+
     // 启用操作按钮
-    mEditTopicBtn->setEnabled(true);
     mDeleteDeviceBtn->setEnabled(true);
+
+    // 根据设备类型控制添加按钮
+    if (dev->type == DeviceType::Aircraft) {
+        mAddDeviceBtn->setEnabled(false);
+    } else {
+        mAddDeviceBtn->setEnabled(true);
+    }
 }
 
-void MainWindow::onOsdUpdated(const QString& sn, const QString& rawJson) {
-    Q_UNUSED(rawJson)
-    if (mDeviceTree->selectedDeviceSn() == sn) {
-        onDeviceSelected(sn);
+void MainWindow::onOsdUpdated(const QString& sn, const QString& topic, const QString& rawJson) {
+    if (mDeviceTree->selectedDeviceSn() != sn)
+        return;
+
+    // 刷新 OSD 面板数据（轻量更新，不重建 JSON 历史）
+    DeviceInfo* dev = mDevMgr->device(sn);
+    if (dev) {
+        const AircraftOsd* airOsd = mDevMgr->latestAircraftOsd(sn);
+        const DockOsd* dockOsd   = mDevMgr->latestDockOsd(sn);
+        mOsdPanel->showOsd(dev, airOsd, dockOsd, mDevMgr->latestRawJson(sn));
     }
+
+    // 按用户选中的 topic 过滤追加
+    QString selectedTopic = mTopicListWidget->selectedTopic();
+    if (!selectedTopic.isEmpty() && topic != selectedTopic)
+        return;  // 不是用户选中的 topic，跳过
+
+    if (!rawJson.isEmpty())
+        mRawJsonPanel->appendJson(rawJson);
 }
 
 // ——— 连接操作 ———
@@ -430,20 +483,45 @@ void MainWindow::onDisconnectAction() {
 
 // ——— 设备操作 ———
 void MainWindow::onAddDevice() {
-    QString typeStr = QInputDialog::getItem(this, "添加设备", "选择设备类型:",
-        {"Dock (机场)", "Pilot (手飞飞机)"}, 0, false);
-    if (typeStr.isEmpty()) return;
+    QString selectedSn = mDeviceTree->selectedDeviceSn();
+    DeviceInfo* selectedDev = nullptr;
+    if (!selectedSn.isEmpty())
+        selectedDev = mDevMgr->device(selectedSn);
 
-    DeviceType type = typeStr.contains("Dock") ? DeviceType::Dock : DeviceType::Aircraft;
+    // Determine if we're adding a child device to a Dock
+    bool addingChild = (selectedDev && selectedDev->type == DeviceType::Dock);
 
-    QString sn = QInputDialog::getText(this, "添加设备", "设备序列号 (SN):");
-    if (sn.trimmed().isEmpty()) return;
+    QString sn;
+    QString name;
+    DeviceType type;
 
-    QString name = QInputDialog::getText(this, "添加设备", "设备名称:",
-        QLineEdit::Normal, sn.trimmed());
-    // 名称未填写则默认使用 SN
-    if (name.trimmed().isEmpty())
-        name = sn.trimmed();
+    if (addingChild) {
+        // Adding a child Aircraft to the selected Dock
+        sn = QInputDialog::getText(this, "添加手飞无人机",
+            QString("为机场「%1」添加手飞无人机\n设备序列号 (SN):").arg(selectedDev->name));
+        if (sn.trimmed().isEmpty()) return;
+
+        name = QInputDialog::getText(this, "添加手飞无人机", "设备名称:",
+            QLineEdit::Normal, sn.trimmed());
+        if (name.trimmed().isEmpty())
+            name = sn.trimmed();
+        type = DeviceType::Aircraft;
+    } else {
+        // Adding a top-level device
+        QString typeStr = QInputDialog::getItem(this, "添加设备", "选择设备类型:",
+            {"Dock (机场)", "Pilot (手飞飞机)"}, 0, false);
+        if (typeStr.isEmpty()) return;
+
+        type = typeStr.contains("Dock") ? DeviceType::Dock : DeviceType::Aircraft;
+
+        sn = QInputDialog::getText(this, "添加设备", "设备序列号 (SN):");
+        if (sn.trimmed().isEmpty()) return;
+
+        name = QInputDialog::getText(this, "添加设备", "设备名称:",
+            QLineEdit::Normal, sn.trimmed());
+        if (name.trimmed().isEmpty())
+            name = sn.trimmed();
+    }
 
     // 默认订阅 OSD topic
     QString osdTopic = QString("thing/product/%1/osd").arg(sn.trimmed());
@@ -454,35 +532,10 @@ void MainWindow::onAddDevice() {
     info.sn   = sn.trimmed();
     info.name = name.trimmed();
     info.type = type;
+    if (addingChild)
+        info.parentSn = selectedDev->sn;
+
     mDevMgr->addDevice(info, defaultTopics);
-}
-
-void MainWindow::onEditTopic() {
-    QString sn = mDeviceTree->selectedDeviceSn();
-    if (sn.isEmpty()) {
-        QMessageBox::information(this, "提示", "请先在设备列表中选择一个设备。");
-        return;
-    }
-
-    DeviceInfo* dev = mDevMgr->device(sn);
-    if (!dev) return;
-
-    QStringList currentTopics = mDevMgr->topicsForDevice(sn);
-    TopicEditDialog dlg(currentTopics, dev->name, dev->sn, this);
-    if (dlg.exec() == QDialog::Accepted) {
-        QStringList newTopics = dlg.topics();
-        QSet<QString> oldSet(currentTopics.begin(), currentTopics.end());
-        QSet<QString> newSet(newTopics.begin(), newTopics.end());
-
-        for (const auto& t : currentTopics) {
-            if (!newSet.contains(t))
-                mDevMgr->removeTopic(sn, t);
-        }
-        for (const auto& t : newTopics) {
-            if (!oldSet.contains(t))
-                mDevMgr->addTopic(sn, t);
-        }
-    }
 }
 
 void MainWindow::onDeleteDevice() {
@@ -498,9 +551,23 @@ void MainWindow::onDeleteDevice() {
 
     if (ret == QMessageBox::Yes) {
         mDevMgr->removeDevice(sn);
-        mEditTopicBtn->setEnabled(false);
         mDeleteDeviceBtn->setEnabled(false);
     }
+}
+
+void MainWindow::refreshTopicList(const QString& sn) {
+    if (sn.isEmpty()) {
+        mTopicListWidget->clearTopics();
+        return;
+    }
+    QStringList topics = mDevMgr->topicsForDevice(sn);
+    // Collect disabled topics from DeviceManager
+    QSet<QString> disabled;
+    for (const auto& t : topics) {
+        if (!mDevMgr->isTopicEnabled(sn, t))
+            disabled.insert(t);
+    }
+    mTopicListWidget->setTopics(sn, topics, disabled);
 }
 
 void MainWindow::updateStatusBar() {

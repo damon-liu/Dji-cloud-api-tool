@@ -102,12 +102,12 @@ void ConfigDialog::startTest() {
         default:                                 errMsg = "未知错误"; break;
         }
         cleanupTest();
-        QMessageBox::warning(this, "连接测试", "✗ 连接失败: " + errMsg);
+        QMessageBox::warning(this, "连接测试", "连接失败请检查配置参数是否有误");
     });
 
     connect(mTestTimer, &QTimer::timeout, this, [this]() {
         cleanupTest();
-        QMessageBox::warning(this, "连接测试", "✗ 连接超时（5 秒无响应）");
+        QMessageBox::warning(this, "连接测试", "连接失败请检查配置参数是否有误");
     });
 
     mTestClient->connectToHost();

@@ -37,11 +37,6 @@ private:
     QLabel* mOnlineLabel;
     QLabel* mUpdateTimeLabel;
 
-    // 公共：位置信息
-    QLabel* mLongitude;
-    QLabel* mLatitude;
-    QLabel* mAltitude;
-
     // 飞机专属
     QGroupBox* mAircraftGroup;
     QLabel* mBatteryPercent;
@@ -55,17 +50,6 @@ private:
     QLabel* mHomeDist;
     QLabel* mFlightTime;
     QLabel* mRcSignal;
-
-    // 机场专属
-    QGroupBox* mDockGroup;
-    QLabel* mCoverState;
-    QLabel* mDroneInDock;
-    QLabel* mWorkingVoltage;
-    QLabel* mWorkingCurrent;
-    QLabel* mBackupBattery;
-    QLabel* mWindSpeed;
-    QLabel* mEnvTemp;
-    QLabel* mEnvHumidity;
 
     QVBoxLayout* mMainLayout;
 };

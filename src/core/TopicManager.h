@@ -37,6 +37,22 @@ public:
     // 移除某个设备的所有 topic
     void removeDevice(const QString& deviceSn);
 
+    // 获取所有启用的 topic（过滤掉禁用的）——供 MQTT 订阅用
+    QStringList allEnabledTopics() const;
+
+    // 设置/查询某个 topic 的启用/禁用状态
+    void setTopicEnabled(const QString& deviceSn, const QString& topic, bool enabled);
+    bool isTopicEnabled(const QString& deviceSn, const QString& topic) const;
+
+    // 获取某个设备所有启用的 topic
+    QStringList enabledTopicsForDevice(const QString& deviceSn) const;
+
+    // 获取某个设备所有禁用的 topic（供 ConfigStore 持久化用）
+    QSet<QString> disabledTopicsForDevice(const QString& deviceSn) const;
+
+    // 批量设置禁用 topic（供 ConfigStore 加载用）
+    void setDisabledTopicsForDevice(const QString& deviceSn, const QSet<QString>& topics);
+
     // 清空所有 topic
     void clear();
 
@@ -45,8 +61,9 @@ signals:
     void topicsChanged(const QStringList& newTopics, const QStringList& removedTopics);
 
 private:
-    QMap<QString, QSet<QString>> mDeviceTopics;  // deviceSn -> set of topics
-    QMap<QString, QString>       mTopicToDevice;  // topic -> deviceSn (反向索引)
+    QMap<QString, QSet<QString>> mDeviceTopics;    // deviceSn -> set of topics
+    QMap<QString, QString>       mTopicToDevice;    // topic -> deviceSn (反向索引)
+    QMap<QString, QSet<QString>> mDisabledTopics;   // deviceSn -> set of disabled topics
 };
 
 #endif // TOPICMANAGER_H

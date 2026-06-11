@@ -36,25 +36,39 @@ bool ConfigStore::load(const QString& filePath) {
     // 解析设备列表
     mDevices.clear();
     mDeviceTopics.clear();
+    mDisabledTopics.clear();
     QJsonArray devs = root["devices"].toArray();
     for (const auto& val : devs) {
         QJsonObject devObj = val.toObject();
         DeviceInfo info = DeviceInfo::fromJson(devObj);
 
         // 该设备自己的所有 topic
-        QStringList allTopics;
+        QSet<QString> allTopics;
         QJsonArray topicArr = devObj["topics"].toArray();
         for (const auto& t : topicArr)
-            allTopics.append(t.toString());
+            allTopics.insert(t.toString());
+
+        // 该设备禁用的 topic（向后兼容：旧配置无此字段）
+        QSet<QString> disabledTopics;
+        QJsonArray disabledArr = devObj["disabled_topics"].toArray();
+        for (const auto& t : disabledArr)
+            disabledTopics.insert(t.toString());
 
         if (info.type == DeviceType::Dock) {
             // 机场 topics（只保留包含 dock_sn 的）
-            QStringList dockTopics;
+            QSet<QString> dockTopics;
+            QSet<QString> dockDisabled;
             for (const auto& t : allTopics) {
                 if (t.contains(info.sn))
-                    dockTopics.append(t);
+                    dockTopics.insert(t);
+            }
+            for (const auto& t : disabledTopics) {
+                if (t.contains(info.sn))
+                    dockDisabled.insert(t);
             }
             mDeviceTopics[info.sn] = dockTopics;
+            if (!dockDisabled.isEmpty())
+                mDisabledTopics[info.sn] = dockDisabled;
             mDevices.append(info);
 
             // 子飞机
@@ -68,16 +82,25 @@ bool ConfigStore::load(const QString& filePath) {
                 mDevices.append(child);
 
                 // 子飞机 topics
-                QStringList childTopics;
+                QSet<QString> childTopics;
+                QSet<QString> childDisabled;
                 for (const auto& t : allTopics) {
                     if (t.contains(aircraftSn))
-                        childTopics.append(t);
+                        childTopics.insert(t);
+                }
+                for (const auto& t : disabledTopics) {
+                    if (t.contains(aircraftSn))
+                        childDisabled.insert(t);
                 }
                 mDeviceTopics[child.sn] = childTopics;
+                if (!childDisabled.isEmpty())
+                    mDisabledTopics[child.sn] = childDisabled;
             }
         } else {
             // 独立手飞
             mDeviceTopics[info.sn] = allTopics;
+            if (!disabledTopics.isEmpty())
+                mDisabledTopics[info.sn] = disabledTopics;
             mDevices.append(info);
         }
     }
@@ -109,6 +132,13 @@ bool ConfigStore::save(const QString& filePath) {
             for (const auto& t : mDeviceTopics.value(d.sn))
                 topics.append(t);
             obj["topics"] = topics;
+            // 禁用 topic
+            QJsonArray disabledArr;
+            QSet<QString> deviceDisabled = mDisabledTopics.value(d.sn);
+            for (const auto& t : deviceDisabled)
+                disabledArr.append(t);
+            if (!disabledArr.isEmpty())
+                obj["disabled_topics"] = disabledArr;
             dockMap[d.sn] = obj;
         } else if (d.isChild()) {
             // 库内飞机合并到父机场
@@ -118,6 +148,14 @@ bool ConfigStore::save(const QString& filePath) {
                 for (const auto& t : mDeviceTopics.value(d.sn))
                     topics.append(t);
                 dockMap[d.parentSn]["topics"] = topics;
+                // 合并子飞机禁用 topic 到父条目
+                QSet<QString> childDisabled = mDisabledTopics.value(d.sn);
+                if (!childDisabled.isEmpty()) {
+                    QJsonArray existingDisabled = dockMap[d.parentSn]["disabled_topics"].toArray();
+                    for (const auto& t : childDisabled)
+                        existingDisabled.append(t);
+                    dockMap[d.parentSn]["disabled_topics"] = existingDisabled;
+                }
             }
         } else {
             // 独立手飞
@@ -126,6 +164,13 @@ bool ConfigStore::save(const QString& filePath) {
             for (const auto& t : mDeviceTopics.value(d.sn))
                 topics.append(t);
             obj["topics"] = topics;
+            // 禁用 topic
+            QJsonArray disabledArr;
+            QSet<QString> deviceDisabled = mDisabledTopics.value(d.sn);
+            for (const auto& t : deviceDisabled)
+                disabledArr.append(t);
+            if (!disabledArr.isEmpty())
+                obj["disabled_topics"] = disabledArr;
             pilotList.append(obj);
         }
     }
@@ -164,9 +209,20 @@ void ConfigStore::setDevices(const QVector<DeviceInfo>& devices) {
 }
 
 QStringList ConfigStore::topicsForDevice(const QString& sn) const {
-    return mDeviceTopics.value(sn);
+    return mDeviceTopics.value(sn).values();
 }
 
 void ConfigStore::setTopicsForDevice(const QString& sn, const QStringList& topics) {
-    mDeviceTopics[sn] = topics;
+    mDeviceTopics[sn] = QSet<QString>(topics.begin(), topics.end());
+}
+
+QStringList ConfigStore::disabledTopicsForDevice(const QString& sn) const {
+    return mDisabledTopics.value(sn).values();
+}
+
+void ConfigStore::setDisabledTopicsForDevice(const QString& sn, const QStringList& topics) {
+    if (topics.isEmpty())
+        mDisabledTopics.remove(sn);
+    else
+        mDisabledTopics[sn] = QSet<QString>(topics.begin(), topics.end());
 }

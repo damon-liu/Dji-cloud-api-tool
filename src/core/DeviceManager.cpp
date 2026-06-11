@@ -33,6 +33,14 @@ bool DeviceManager::initialize(const QString& configPath) {
         mDevices[info.sn] = info;
         QStringList topics = mConfigStore->topicsForDevice(info.sn);
         mTopicManager->setDeviceTopics(info.sn, topics);
+
+        // 加载禁用 topic 状态
+        QStringList disabled = mConfigStore->disabledTopicsForDevice(info.sn);
+        if (!disabled.isEmpty()) {
+            mTopicManager->setDisabledTopicsForDevice(
+                info.sn,
+                QSet<QString>(disabled.begin(), disabled.end()));
+        }
     }
 
     qDebug() << "DeviceManager: initialized with" << mDevices.size() << "devices";
@@ -161,6 +169,27 @@ QString DeviceManager::latestRawJson(const QString& sn) const {
     return mRawJsonCache.value(sn);
 }
 
+QString DeviceManager::jsonHistory(const QString& sn, const QString& topic) const {
+    if (!mJsonHistory.contains(sn))
+        return {};
+    if (topic.isEmpty()) {
+        // 空 topic → 返回所有 topic 的合并历史
+        QStringList all;
+        const auto& topicMap = mJsonHistory[sn];
+        for (auto it = topicMap.begin(); it != topicMap.end(); ++it)
+            all.append(it.value());
+        return all.join("\n---\n");
+    }
+    return mJsonHistory[sn].value(topic).join("\n---\n");
+}
+
+void DeviceManager::clearJsonHistory(const QString& sn, const QString& topic) {
+    if (topic.isEmpty())
+        mJsonHistory.remove(sn);
+    else if (mJsonHistory.contains(sn))
+        mJsonHistory[sn].remove(topic);
+}
+
 MqttConfig DeviceManager::mqttConfig() const {
     return mConfigStore->mqttConfig();
 }
@@ -184,11 +213,23 @@ bool DeviceManager::saveConfig(const QString& path) {
     return mConfigStore->save(path);
 }
 
+void DeviceManager::setTopicEnabled(const QString& deviceSn, const QString& topic, bool enabled) {
+    mTopicManager->setTopicEnabled(deviceSn, topic, enabled);
+    // 持久化到 ConfigStore
+    QStringList disabled = mTopicManager->disabledTopicsForDevice(deviceSn).values();
+    mConfigStore->setDisabledTopicsForDevice(deviceSn, disabled);
+    saveConfig(mConfigPath);
+}
+
+bool DeviceManager::isTopicEnabled(const QString& deviceSn, const QString& topic) const {
+    return mTopicManager->isTopicEnabled(deviceSn, topic);
+}
+
 // ——— 私有槽 ———
 
 void DeviceManager::onMqttConnected() {
-    // 连接成功后订阅所有 topic
-    QStringList all = mTopicManager->allTopics();
+    // 连接成功后订阅所有启用的 topic
+    QStringList all = mTopicManager->allEnabledTopics();
     mMqttManager->subscribeTopics(all);
     emit brokerConnected();
 }
@@ -219,9 +260,14 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
         return;
     }
 
-    // 保存原始 JSON
+    // 保存原始 JSON（最新一条）
     QString formatted = QString::fromUtf8(doc.toJson(QJsonDocument::Indented));
     mRawJsonCache[sn] = formatted;
+
+    // 累积 JSON 历史（最多 500 条）
+    mJsonHistory[sn][topic].append(formatted);
+    while (mJsonHistory[sn][topic].size() > MAX_JSON_HISTORY)
+        mJsonHistory[sn][topic].removeFirst();
 
     // 解析 OSD 数据
     DeviceInfo& info = mDevices[sn];
@@ -241,5 +287,5 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
         emit deviceOnlineChanged(sn, true);
     }
 
-    emit deviceOsdUpdated(sn, formatted);
+    emit deviceOsdUpdated(sn, topic, formatted);
 }

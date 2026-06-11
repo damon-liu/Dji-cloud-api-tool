@@ -6,6 +6,7 @@
 #include <QJsonObject>
 #include <QVector>
 #include <QMap>
+#include <QSet>
 #include "DeviceInfo.h"
 
 // MQTT 连接配置
@@ -40,15 +41,20 @@ public:
     QStringList topicsForDevice(const QString& sn) const;
     void setTopicsForDevice(const QString& sn, const QStringList& topics);
 
+    // 禁用 topic 管理
+    QStringList disabledTopicsForDevice(const QString& sn) const;
+    void setDisabledTopicsForDevice(const QString& sn, const QStringList& topics);
+
 signals:
     void configChanged();
 
 private:
     QString defaultConfigPath() const;
 
-    MqttConfig           mMqttConfig;
-    QVector<DeviceInfo>  mDevices;
-    QMap<QString, QStringList> mDeviceTopics;  // SN -> topics
+    MqttConfig                  mMqttConfig;
+    QVector<DeviceInfo>         mDevices;
+    QMap<QString, QSet<QString>> mDeviceTopics;   // SN -> topics
+    QMap<QString, QSet<QString>> mDisabledTopics;  // SN -> disabled topics
 };
 
 #endif // CONFIGSTORE_H
