@@ -2,7 +2,6 @@
 #include "DeviceManager.h"
 #include <QFrame>
 #include <QPointer>
-#include <QDateTime>
 
 // Helper: convert QJsonValue to display string
 static QString valToString(const QJsonValue& val) {
@@ -35,29 +34,29 @@ void OsdParsePanel::setupUi() {
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(4);
 
-    // --- Title bar ---
+    // --- 标题栏 ---
     auto* header = new QHBoxLayout;
     header->setSpacing(6);
 
-    mTitleLabel = new QLabel(QStringLiteral("\xF0\x9F\x94\x8D JSON \xE8\xA7\xA3\xE6\x9E\x90"));
-    mTitleLabel->setStyleSheet(QStringLiteral("font-size: 13px; font-weight: bold; color: #1a73e8;"));
+    mTitleLabel = new QLabel("🔍 JSON 解析");
+    mTitleLabel->setStyleSheet("font-size: 13px; font-weight: bold; color: #1a73e8;");
 
-    mTopicLabel = new QLabel(QStringLiteral(""));
-    mTopicLabel->setStyleSheet(QStringLiteral("color: #80868b; font-size: 10px;"));
+    mTopicLabel = new QLabel("");
+    mTopicLabel->setStyleSheet("color: #80868b; font-size: 10px;");
 
     header->addWidget(mTitleLabel);
     header->addWidget(mTopicLabel, 1);
 
-    // Refresh interval selector
-    auto* intervalLabel = new QLabel(QStringLiteral("\xE5\x88\xB7\xE6\x96\xB0\xE9\x97\xB4\xE9\x9A\x94:"));
-    intervalLabel->setStyleSheet(QStringLiteral("color: #80868b; font-size: 11px;"));
+    // 刷新间隔选择
+    auto* intervalLabel = new QLabel("刷新间隔:");
+    intervalLabel->setStyleSheet("color: #80868b; font-size: 11px;");
 
     mIntervalCombo = new QComboBox;
-    mIntervalCombo->addItems({QStringLiteral("1s"), QStringLiteral("2s"), QStringLiteral("5s"), QStringLiteral("10s")});
-    mIntervalCombo->setCurrentIndex(1); // default 2s
+    mIntervalCombo->addItems({"1s", "2s", "5s", "10s"});
+    mIntervalCombo->setCurrentIndex(1); // 默认 2s
     mIntervalCombo->setFixedWidth(60);
     mIntervalCombo->setStyleSheet(
-        QStringLiteral("QComboBox { border: 1px solid #dadce0; border-radius: 3px; padding: 2px 4px; font-size: 11px; }"));
+        "QComboBox { border: 1px solid #dadce0; border-radius: 3px; padding: 2px 4px; font-size: 11px; }");
     connect(mIntervalCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, [this](int idx) {
         static const int sIntervals[] = {1000, 2000, 5000, 10000};
@@ -66,13 +65,13 @@ void OsdParsePanel::setupUi() {
             mRefreshTimer->start(mIntervalMs);
     });
 
-    mPauseBtn = new QPushButton(QStringLiteral("\xE2\x8F\xB8 \xE6\x9A\x82\xE5\x81\x9C"));
+    mPauseBtn = new QPushButton("⏸ 暂停");
     mPauseBtn->setCursor(Qt::PointingHandCursor);
     mPauseBtn->setFixedWidth(80);
     mPauseBtn->setStyleSheet(
-        QStringLiteral("QPushButton { border: 1px solid #dadce0; border-radius: 4px; padding: 4px 12px; "
-               "font-size: 12px; background: #fff; color: #5f6368; }"
-               "QPushButton:hover { background: #f1f3f4; }"));
+        "QPushButton { border: 1px solid #dadce0; border-radius: 4px; padding: 4px 12px; "
+        "font-size: 12px; background: #fff; color: #5f6368; }"
+        "QPushButton:hover { background: #f1f3f4; }");
     connect(mPauseBtn, &QPushButton::clicked, this, &OsdParsePanel::togglePause);
 
     header->addWidget(intervalLabel);
@@ -80,17 +79,17 @@ void OsdParsePanel::setupUi() {
     header->addWidget(mPauseBtn);
     mainLayout->addLayout(header);
 
-    // Separator line
+    // 分隔线
     auto* sep = new QFrame;
     sep->setFrameShape(QFrame::HLine);
-    sep->setStyleSheet(QStringLiteral("color: #e0e0e0;"));
+    sep->setStyleSheet("color: #e0e0e0;");
     mainLayout->addWidget(sep);
 
-    // --- Scrollable content area ---
+    // --- 可滚动内容区域 ---
     mScrollArea = new QScrollArea;
     mScrollArea->setWidgetResizable(true);
     mScrollArea->setFrameShape(QFrame::NoFrame);
-    mScrollArea->setStyleSheet(QStringLiteral("QScrollArea { background: transparent; border: none; }"));
+    mScrollArea->setStyleSheet("QScrollArea { background: transparent; border: none; }");
 
     mContentWidget = new QWidget;
     mContentLayout = new QVBoxLayout(mContentWidget);
@@ -106,7 +105,7 @@ void OsdParsePanel::setTopic(const QString& deviceSn, const QString& topic) {
     mDeviceSn = deviceSn;
     mTopic    = topic;
     mPrevValues.clear();
-    mTopicLabel->setText(topic.isEmpty() ? QStringLiteral("") : topic);
+    mTopicLabel->setText(topic.isEmpty() ? "" : topic);
 
     if (deviceSn.isEmpty() || topic.isEmpty()) {
         clear();
@@ -117,7 +116,6 @@ void OsdParsePanel::setTopic(const QString& deviceSn, const QString& topic) {
 }
 
 void OsdParsePanel::clear() {
-    // Remove all group widgets from content layout
     QLayoutItem* item;
     while ((item = mContentLayout->takeAt(0)) != nullptr) {
         if (item->widget()) {
@@ -126,7 +124,7 @@ void OsdParsePanel::clear() {
         delete item;
     }
     mContentLayout->addStretch();
-    mTopicLabel->setText(QStringLiteral(""));
+    mTopicLabel->setText("");
 }
 
 void OsdParsePanel::refresh() {
@@ -158,10 +156,10 @@ void OsdParsePanel::togglePause() {
     mPaused = !mPaused;
     if (mPaused) {
         mRefreshTimer->stop();
-        mPauseBtn->setText(QStringLiteral("\xE2\x96\xB6 \xE7\xBB\xA7\xE7\xBB\xAD"));
+        mPauseBtn->setText("▶ 继续");
     } else {
         mRefreshTimer->start(mIntervalMs);
-        mPauseBtn->setText(QStringLiteral("\xE2\x8F\xB8 \xE6\x9A\x82\xE5\x81\x9C"));
+        mPauseBtn->setText("⏸ 暂停");
         refresh();
     }
 }
@@ -169,7 +167,7 @@ void OsdParsePanel::togglePause() {
 QMap<QString, QString> OsdParsePanel::flattenJson(const QJsonObject& obj, const QString& prefix) const {
     QMap<QString, QString> result;
     for (auto it = obj.begin(); it != obj.end(); ++it) {
-        QString key = prefix.isEmpty() ? it.key() : prefix + QStringLiteral(".") + it.key();
+        QString key = prefix.isEmpty() ? it.key() : prefix + "." + it.key();
         QJsonValue val = it.value();
 
         if (val.isObject()) {
@@ -177,7 +175,7 @@ QMap<QString, QString> OsdParsePanel::flattenJson(const QJsonObject& obj, const 
         } else if (val.isArray()) {
             QJsonArray arr = val.toArray();
             for (int i = 0; i < arr.size(); ++i) {
-                QString arrayKey = key + QStringLiteral("[") + QString::number(i) + QStringLiteral("]");
+                QString arrayKey = key + "[" + QString::number(i) + "]";
                 if (arr[i].isObject()) {
                     result.insert(flattenJson(arr[i].toObject(), arrayKey));
                 } else {
@@ -201,27 +199,27 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
     QSet<QString> renderedKeys;
     QMap<QString, QString> newValues;
 
-    // Save previous values BEFORE clearing (for change detection)
+    // 在清空前保存旧值（用于变化检测）
     QMap<QString, QString> prevValues = mPrevValues;
 
-    // Clear old content
+    // 清空旧内容
     clear();
 
     if (cfg.fields.isEmpty()) {
-        auto* noMapLabel = new QLabel(QStringLiteral("\xE8\xAF\xA5 topic \xE6\x9A\x82\xE6\x97\xA0\xE6\x98\xA0\xE5\xB0\x84\xE9\x85\x8D\xE7\xBD\xAE"));
-        noMapLabel->setStyleSheet(QStringLiteral("color: #9e9e9e; font-size: 12px; padding: 16px;"));
+        auto* noMapLabel = new QLabel("该 topic 暂无映射配置");
+        noMapLabel->setStyleSheet("color: #9e9e9e; font-size: 12px; padding: 16px;");
         noMapLabel->setAlignment(Qt::AlignCenter);
         mContentLayout->insertWidget(mContentLayout->count() - 1, noMapLabel);
         return;
     }
 
-    // Render by groups
+    // 按分组渲染
     for (const auto& group : cfg.groups) {
         auto* groupBox = new QGroupBox(group.label);
         groupBox->setStyleSheet(
-            QStringLiteral("QGroupBox { font-weight: bold; color: #333; border: 1px solid #e0e0e0; "
-                   "border-radius: 4px; margin-top: 8px; padding: 12px 8px 8px 8px; background: #ffffff; }"
-                   "QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px; }"));
+            "QGroupBox { font-weight: bold; color: #333; border: 1px solid #e0e0e0; "
+            "border-radius: 4px; margin-top: 8px; padding: 12px 8px 8px 8px; background: #ffffff; }"
+            "QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px; }");
 
         auto* formLayout = new QFormLayout(groupBox);
         formLayout->setSpacing(2);
@@ -237,21 +235,21 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
             QString displayValue;
 
             if (!flatData.contains(key)) {
-                displayValue = QStringLiteral("-");
+                displayValue = "-";
             } else if (!fm.values.isEmpty() && fm.values.contains(rawValue)) {
                 displayValue = fm.values[rawValue];
             } else {
                 displayValue = rawValue;
             }
 
-            if (!fm.unit.isEmpty() && displayValue != QStringLiteral("-"))
-                displayValue += QStringLiteral(" ") + fm.unit;
+            if (!fm.unit.isEmpty() && displayValue != "-")
+                displayValue += " " + fm.unit;
 
             auto* nameLabel = new QLabel(zhName);
-            nameLabel->setStyleSheet(QStringLiteral("color: #5f6368; font-size: 11px;"));
+            nameLabel->setStyleSheet("color: #5f6368; font-size: 11px;");
 
             auto* valueLabel = new QLabel(displayValue);
-            valueLabel->setStyleSheet(QStringLiteral("font-size: 11px; font-weight: 500;"));
+            valueLabel->setStyleSheet("font-size: 11px; font-weight: 500;");
 
             formLayout->addRow(nameLabel, valueLabel);
             renderedKeys.insert(key);
@@ -266,7 +264,7 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
         }
     }
 
-    // Unmapped fields (grey at bottom)
+    // 未映射字段（灰色显示在底部）
     QStringList unmappedKeys;
     for (auto it = flatData.begin(); it != flatData.end(); ++it) {
         if (!renderedKeys.contains(it.key()))
@@ -274,11 +272,11 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
     }
 
     if (!unmappedKeys.isEmpty()) {
-        auto* unmappedGroup = new QGroupBox(QStringLiteral("\xE6\x9C\xAA\xE6\x98\xA0\xE5\xB0\x84\xE5\xAD\x97\xE6\xAE\xB5"));
+        auto* unmappedGroup = new QGroupBox("未映射字段");
         unmappedGroup->setStyleSheet(
-            QStringLiteral("QGroupBox { font-weight: bold; color: #9e9e9e; border: 1px solid #e0e0e0; "
-                   "border-radius: 4px; margin-top: 8px; padding: 12px 8px 8px 8px; background: #fafafa; }"
-                   "QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px; }"));
+            "QGroupBox { font-weight: bold; color: #9e9e9e; border: 1px solid #e0e0e0; "
+            "border-radius: 4px; margin-top: 8px; padding: 12px 8px 8px 8px; background: #fafafa; }"
+            "QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px; }");
 
         auto* unmappedLayout = new QFormLayout(unmappedGroup);
         unmappedLayout->setSpacing(2);
@@ -286,10 +284,10 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
 
         for (const auto& key : unmappedKeys) {
             auto* keyLabel = new QLabel(key);
-            keyLabel->setStyleSheet(QStringLiteral("color: #b0b0b0; font-size: 10px;"));
+            keyLabel->setStyleSheet("color: #b0b0b0; font-size: 10px;");
 
             auto* valLabel = new QLabel(flatData[key]);
-            valLabel->setStyleSheet(QStringLiteral("color: #b0b0b0; font-size: 10px;"));
+            valLabel->setStyleSheet("color: #b0b0b0; font-size: 10px;");
 
             unmappedLayout->addRow(keyLabel, valLabel);
             newValues[key] = flatData[key];
@@ -298,12 +296,11 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
         mContentLayout->insertWidget(mContentLayout->count() - 1, unmappedGroup);
     }
 
-    // Value change highlighting
+    // 值变化高亮（对比保存的旧值）
     for (auto it = newValues.begin(); it != newValues.end(); ++it) {
         QString oldVal = prevValues.value(it.key());
         bool changed = !oldVal.isEmpty() && oldVal != it.value();
         if (changed) {
-            // Find the value label by iterating rendered groups
             for (int i = 0; i < mContentLayout->count(); ++i) {
                 QLayoutItem* item = mContentLayout->itemAt(i);
                 if (!item || !item->widget()) continue;
@@ -335,11 +332,11 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
 void OsdParsePanel::setFieldValue(QLabel* label, const QString& value, bool highlight) {
     label->setText(value);
     if (highlight) {
-        label->setStyleSheet(QStringLiteral("color: #1a73e8; font-weight: bold; font-size: 11px;"));
+        label->setStyleSheet("color: #1a73e8; font-weight: bold; font-size: 11px;");
         QPointer<QLabel> weakLabel(label);
         QTimer::singleShot(1200, this, [weakLabel]() {
             if (weakLabel) {
-                weakLabel->setStyleSheet(QStringLiteral("font-size: 11px; font-weight: 500;"));
+                weakLabel->setStyleSheet("font-size: 11px; font-weight: 500;");
             }
         });
     }
