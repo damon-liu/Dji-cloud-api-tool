@@ -13,6 +13,7 @@
 #include "RawJsonPanel.h"
 #include "PublishPanel.h"
 #include "TopicListWidget.h"
+#include "OsdParsePanel.h"
 #include "DeviceManager.h"
 
 class MainWindow : public QMainWindow {
@@ -56,6 +57,7 @@ private:
     QPushButton*       mAddDeviceBtn;
     QPushButton*       mDeleteDeviceBtn;
     TopicListWidget*   mTopicListWidget;
+    OsdParsePanel*    mOsdParsePanel;
 
     // Stylesheet helper
     void applyStyle();

@@ -10,6 +10,49 @@
 #include <QFrame>
 #include <QInputDialog>
 #include <QToolButton>
+#include <QFile>
+#include "TopicMapping.h"
+
+// 内置默认 topic 映射 JSON（文件缺失时降级使用）
+static const char* TOPIC_MAPPINGS_BUILTIN = R"(
+{
+    "topics": {
+        "thing/product/{sn}/osd": {
+            "description": "OSD 遥测数据",
+            "fields": {
+                "job_number": {"zh":"累计作业次数","unit":"次"},
+                "electric_supply_voltage": {"zh":"供电电压","unit":"mV"},
+                "working_voltage": {"zh":"工作电压","unit":"mV"},
+                "wind_speed": {"zh":"风速","unit":"m/s"},
+                "environment_temperature": {"zh":"环境温度","unit":"℃"},
+                "humidity": {"zh":"湿度","unit":"%"},
+                "latitude": {"zh":"纬度","unit":"°"},
+                "longitude": {"zh":"经度","unit":"°"},
+                "height": {"zh":"海拔高度","unit":"m"},
+                "battery.capacity_percent": {"zh":"电池电量","unit":"%"},
+                "horizontal_speed": {"zh":"水平速度","unit":"m/s"},
+                "vertical_speed": {"zh":"垂直速度","unit":"m/s"},
+                "attitude_head": {"zh":"航向角","unit":"°"},
+                "attitude_pitch": {"zh":"俯仰角","unit":"°"},
+                "attitude_roll": {"zh":"横滚角","unit":"°"},
+                "home_distance": {"zh":"距Home距离","unit":"m"},
+                "mode_code": {"zh":"模式码","unit":"","values":{"0":"待机","4":"自动起飞","5":"航线飞行","9":"自动返航","10":"自动降落"}},
+                "drone_in_dock": {"zh":"飞机在舱","unit":"","values":{"0":"否","1":"是"}},
+                "cover_state": {"zh":"舱盖","unit":"","values":{"0":"关闭","1":"打开"}},
+                "position_state.gps_number": {"zh":"GPS搜星","unit":""},
+                "position_state.rtk_number": {"zh":"RTK搜星","unit":""}
+            },
+            "groups": [
+                {"id":"basic","label":"📋 基础信息","keys":["job_number","mode_code","drone_in_dock","cover_state"]},
+                {"id":"power","label":"🔋 电源","keys":["electric_supply_voltage","working_voltage","battery.capacity_percent"]},
+                {"id":"flight","label":"✈ 飞行","keys":["horizontal_speed","vertical_speed","attitude_head","attitude_pitch","attitude_roll","home_distance"]},
+                {"id":"position","label":"📍 定位","keys":["latitude","longitude","height","position_state.gps_number","position_state.rtk_number"]},
+                {"id":"environment","label":"🌡 环境","keys":["wind_speed","environment_temperature","humidity"]}
+            ]
+        }
+    }
+}
+)";
 
 MainWindow::MainWindow(DeviceManager* devMgr, QWidget* parent)
     : QMainWindow(parent), mDevMgr(devMgr)
@@ -269,14 +312,23 @@ void MainWindow::setupLayout() {
     // OSD | JSON
     mOsdPanel = new OsdPanel(this);
     mRawJsonPanel = new RawJsonPanel(this);
+    mOsdParsePanel = new OsdParsePanel(this);
 
     auto* osdScroll = new QScrollArea(this);
     osdScroll->setWidget(mOsdPanel);
     osdScroll->setWidgetResizable(true);
     osdScroll->setFrameShape(QFrame::NoFrame);
 
+    // 左半区：OSD 面板 + JSON 解析面板 垂直堆叠
+    auto* leftHalf = new QWidget(this);
+    auto* leftHalfLayout = new QVBoxLayout(leftHalf);
+    leftHalfLayout->setContentsMargins(0, 0, 0, 0);
+    leftHalfLayout->setSpacing(4);
+    leftHalfLayout->addWidget(osdScroll, 3);      // OSD 占 3 份
+    leftHalfLayout->addWidget(mOsdParsePanel, 2);  // 解析占 2 份
+
     mRightSplitter = new QSplitter(Qt::Horizontal, this);
-    mRightSplitter->addWidget(osdScroll);
+    mRightSplitter->addWidget(leftHalf);
     mRightSplitter->addWidget(mRawJsonPanel);
     mRightSplitter->setStretchFactor(0, 2);
     mRightSplitter->setStretchFactor(1, 3);
@@ -409,6 +461,32 @@ void MainWindow::connectSignals() {
         mDeviceTree->rebuild(mDevMgr->topLevelDevices(), mDevMgr->allDevices());
     });
 
+    // OsdParsePanel: topic 选中变化 → 更新解析面板
+    connect(mTopicListWidget, &TopicListWidget::topicSelectionChanged,
+            mOsdParsePanel, [this](const QString& selectedTopic) {
+        QString sn = mDeviceTree->selectedDeviceSn();
+        mOsdParsePanel->setTopic(sn, selectedTopic);
+    });
+
+    // 加载 topic 映射配置
+    {
+        TopicMapping* mapping = new TopicMapping(this);
+        QString mappingPath = QApplication::applicationDirPath() + "/topic_mappings.json";
+        if (!mapping->load(mappingPath)) {
+            qWarning() << "MainWindow: failed to load topic_mappings.json, using built-in fallback";
+            mapping->loadFromString(TOPIC_MAPPINGS_BUILTIN);
+            // Auto-generate default file on first launch
+            QFile outFile(mappingPath);
+            if (outFile.open(QIODevice::WriteOnly)) {
+                outFile.write(TOPIC_MAPPINGS_BUILTIN);
+                outFile.close();
+                qDebug() << "MainWindow: auto-generated default topic_mappings.json";
+            }
+        }
+        mOsdParsePanel->setTopicMapping(mapping);
+    }
+    mOsdParsePanel->setDeviceManager(mDevMgr);
+
     mDeviceTree->rebuild(mDevMgr->topLevelDevices(), mDevMgr->allDevices());
     mDisconnectAct->setEnabled(false);
     updateStatusBar();
@@ -422,6 +500,7 @@ void MainWindow::onDeviceSelected(const QString& sn) {
         mRawJsonPanel->clear();
         mPublishPanel->setTopics({});
         mTopicListWidget->clearTopics();
+        mOsdParsePanel->clear();
         mDeleteDeviceBtn->setEnabled(false);
         mAddDeviceBtn->setEnabled(true);
         return;
@@ -449,6 +528,10 @@ void MainWindow::onDeviceSelected(const QString& sn) {
     } else {
         mAddDeviceBtn->setEnabled(true);
     }
+
+    // 更新 OsdParsePanel
+    QString selectedTopic = mTopicListWidget->selectedTopic();
+    mOsdParsePanel->setTopic(sn, selectedTopic);
 }
 
 void MainWindow::onOsdUpdated(const QString& sn, const QString& topic, const QString& rawJson) {
