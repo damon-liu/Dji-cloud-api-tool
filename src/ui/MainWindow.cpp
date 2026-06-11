@@ -470,20 +470,22 @@ void MainWindow::connectSignals() {
 
     // 加载 topic 映射配置
     {
-        TopicMapping* mapping = new TopicMapping();
+        mTopicMapping = new TopicMapping();
         QString mappingPath = QApplication::applicationDirPath() + "/topic_mappings.json";
-        if (!mapping->load(mappingPath)) {
+        if (!mTopicMapping->load(mappingPath)) {
             qWarning() << "MainWindow: failed to load topic_mappings.json, using built-in fallback";
-            mapping->loadFromString(TOPIC_MAPPINGS_BUILTIN);
-            // Auto-generate default file on first launch
-            QFile outFile(mappingPath);
-            if (outFile.open(QIODevice::WriteOnly)) {
-                outFile.write(TOPIC_MAPPINGS_BUILTIN);
-                outFile.close();
-                qDebug() << "MainWindow: auto-generated default topic_mappings.json";
+            mTopicMapping->loadFromString(TOPIC_MAPPINGS_BUILTIN);
+            // Only auto-generate if file is genuinely missing (not just corrupt)
+            if (!QFile::exists(mappingPath)) {
+                QFile outFile(mappingPath);
+                if (outFile.open(QIODevice::WriteOnly)) {
+                    outFile.write(TOPIC_MAPPINGS_BUILTIN);
+                    outFile.close();
+                    qDebug() << "MainWindow: auto-generated default topic_mappings.json";
+                }
             }
         }
-        mOsdParsePanel->setTopicMapping(mapping);
+        mOsdParsePanel->setTopicMapping(mTopicMapping);
     }
     mOsdParsePanel->setDeviceManager(mDevMgr);
 

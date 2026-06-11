@@ -58,6 +58,7 @@ private:
     QPushButton*       mDeleteDeviceBtn;
     TopicListWidget*   mTopicListWidget;
     OsdParsePanel*    mOsdParsePanel;
+    TopicMapping*     mTopicMapping;
 
     // Stylesheet helper
     void applyStyle();
