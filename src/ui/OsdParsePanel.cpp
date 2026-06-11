@@ -216,10 +216,7 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
     // 按分组渲染
     for (const auto& group : cfg.groups) {
         auto* groupBox = new QGroupBox(group.label);
-        groupBox->setStyleSheet(
-            "QGroupBox { font-weight: bold; color: #333; border: 1px solid #e0e0e0; "
-            "border-radius: 4px; margin-top: 8px; padding: 12px 8px 8px 8px; background: #ffffff; }"
-            "QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px; }");
+        // 不设内联样式，继承 MainWindow 全局 QGroupBox 样式，与 OsdPanel 对齐
 
         auto* formLayout = new QFormLayout(groupBox);
         formLayout->setSpacing(2);
