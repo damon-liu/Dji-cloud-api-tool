@@ -16,6 +16,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QSet>
+#include <QEvent>
 #include "TopicMapping.h"
 
 class DeviceManager;
@@ -29,6 +30,9 @@ public:
     void setTopic(const QString& deviceSn, const QString& topic);
     void setTopicMapping(TopicMapping* mapping) { mMapping = mapping; }
     void clear();
+
+protected:
+    bool eventFilter(QObject* obj, QEvent* event) override;
 
 public slots:
     void refresh();

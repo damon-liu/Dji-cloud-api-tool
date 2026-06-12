@@ -2,6 +2,9 @@
 #include "DeviceManager.h"
 #include <QFrame>
 #include <QPointer>
+#include <QClipboard>
+#include <QApplication>
+#include <QMouseEvent>
 
 // Helper: convert QJsonValue to display string
 static QString valToString(const QJsonValue& val) {
@@ -117,6 +120,31 @@ void OsdParsePanel::setTopic(const QString& deviceSn, const QString& topic) {
     }
 
     refresh();
+}
+
+bool OsdParsePanel::eventFilter(QObject* obj, QEvent* event) {
+    if (event->type() == QEvent::MouseButtonPress) {
+        QLabel* label = qobject_cast<QLabel*>(obj);
+        if (label) {
+            QString key = label->property("copyKey").toString();
+            if (!key.isEmpty()) {
+                QApplication::clipboard()->setText(key);
+                // 短暂显示已复制提示
+                QString orig = label->text();
+                label->setText("已复制: " + key);
+                label->setStyleSheet("color: #1a73e8; font-size: 11px;");
+                QPointer<QLabel> weakLabel(label);
+                QTimer::singleShot(1500, this, [weakLabel, orig]() {
+                    if (weakLabel) {
+                        weakLabel->setText(orig);
+                        weakLabel->setStyleSheet("color: #5f6368; font-size: 11px;");
+                    }
+                });
+                return true;
+            }
+        }
+    }
+    return QWidget::eventFilter(obj, event);
 }
 
 void OsdParsePanel::clear() {
@@ -248,6 +276,10 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
 
             auto* nameLabel = new QLabel(zhName);
             nameLabel->setStyleSheet("color: #5f6368; font-size: 11px;");
+            nameLabel->setCursor(Qt::PointingHandCursor);
+            nameLabel->setToolTip("点击复制: " + key);
+            nameLabel->installEventFilter(this);
+            nameLabel->setProperty("copyKey", key);
 
             auto* valueLabel = new QLabel(displayValue);
             valueLabel->setStyleSheet("font-size: 11px; font-weight: 500;");
@@ -265,7 +297,7 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
         }
     }
 
-    // 未映射字段（灰色显示在底部）
+    // 未映射字段（正常显示，与已映射字段风格一致）
     QStringList unmappedKeys;
     for (auto it = flatData.begin(); it != flatData.end(); ++it) {
         if (!renderedKeys.contains(it.key()))
@@ -273,11 +305,8 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
     }
 
     if (!unmappedKeys.isEmpty()) {
-        auto* unmappedGroup = new QGroupBox("未映射字段");
-        unmappedGroup->setStyleSheet(
-            "QGroupBox { font-weight: bold; color: #9e9e9e; border: 1px solid #e0e0e0; "
-            "border-radius: 4px; margin-top: 8px; padding: 12px 8px 8px 8px; background: #fafafa; }"
-            "QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px; }");
+        auto* unmappedGroup = new QGroupBox("其他字段");
+        // 继承全局 QGroupBox 样式，正常显示
 
         auto* unmappedLayout = new QFormLayout(unmappedGroup);
         unmappedLayout->setSpacing(2);
@@ -285,10 +314,14 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
 
         for (const auto& key : unmappedKeys) {
             auto* keyLabel = new QLabel(key);
-            keyLabel->setStyleSheet("color: #b0b0b0; font-size: 10px;");
+            keyLabel->setStyleSheet("color: #5f6368; font-size: 11px;");
+            keyLabel->setCursor(Qt::PointingHandCursor);
+            keyLabel->setToolTip("点击复制: " + key);
+            keyLabel->installEventFilter(this);
+            keyLabel->setProperty("copyKey", key);
 
             auto* valLabel = new QLabel(flatData[key]);
-            valLabel->setStyleSheet("color: #b0b0b0; font-size: 10px;");
+            valLabel->setStyleSheet("font-size: 11px; font-weight: 500;");
 
             unmappedLayout->addRow(keyLabel, valLabel);
             newValues[key] = flatData[key];
