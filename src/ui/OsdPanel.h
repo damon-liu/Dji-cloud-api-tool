@@ -37,6 +37,9 @@ private:
 
     // 飞机专属
     QGroupBox* mAircraftGroup;
+    QLabel* mLatitudeAir;
+    QLabel* mLongitudeAir;
+    QLabel* mAltitudeAir;
     QLabel* mBatteryPercent;
     QLabel* mBatteryVoltage;
     QLabel* mSpeedH;
@@ -51,6 +54,9 @@ private:
 
     // 机场专属
     QGroupBox* mDockGroup;
+    QLabel* mLatitudeDock;
+    QLabel* mLongitudeDock;
+    QLabel* mAltitudeDock;
     QLabel* mCoverState;
     QLabel* mPutterState;
     QLabel* mDroneInDock;
@@ -62,12 +68,6 @@ private:
     QLabel* mEnvHumidity;
     QLabel* mAltLandLat;
     QLabel* mAltLandLon;
-
-    // 定位信息（飞机和机场共用）
-    QGroupBox* mPositionGroup;
-    QLabel* mLatitude;
-    QLabel* mLongitude;
-    QLabel* mAltitude;
 
     QVBoxLayout* mMainLayout;
 };
