@@ -53,6 +53,7 @@ private:
     QLabel* mRcSignal;
 
     // 机场专属
+    QWidget*   mDockRow;    // 水平容器：设备信息 + 机场数据
     QGroupBox* mDockGroup;
     QLabel* mLatitudeDock;
     QLabel* mLongitudeDock;

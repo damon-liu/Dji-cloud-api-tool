@@ -28,7 +28,34 @@ void OsdPanel::setupUi() {
     headerLayout->addRow("类型:", mDeviceTypeLabel);
     headerLayout->addRow("状态:", mOnlineLabel);
     headerLayout->addRow("更新:", mUpdateTimeLabel);
-    mMainLayout->addWidget(headerBox);
+
+    // ——— 机场数据 ———
+    mDockGroup = new QGroupBox("机场数据", this);
+    auto* dockLayout = new QFormLayout(mDockGroup);
+    dockLayout->setSpacing(4);
+    mLatitudeDock  = new QLabel("-", this);
+    mLongitudeDock = new QLabel("-", this);
+    mCoverState    = new QLabel("-", this);
+    mPutterState   = new QLabel("-", this);
+    mWindSpeed     = new QLabel("-", this);
+    mAltLandLat    = new QLabel("-", this);
+    mAltLandLon    = new QLabel("-", this);
+    dockLayout->addRow("纬度:", mLatitudeDock);
+    dockLayout->addRow("经度:", mLongitudeDock);
+    dockLayout->addRow("舱盖:", mCoverState);
+    dockLayout->addRow("推杆:", mPutterState);
+    dockLayout->addRow("风速:", mWindSpeed);
+    dockLayout->addRow("备降点纬度:", mAltLandLat);
+    dockLayout->addRow("备降点经度:", mAltLandLon);
+
+    // 设备信息 + 机场数据 并排（机场时）或设备信息单独（飞机时）
+    mDockRow = new QWidget(this);
+    auto* dockRowLayout = new QHBoxLayout(mDockRow);
+    dockRowLayout->setContentsMargins(0, 0, 0, 0);
+    dockRowLayout->setSpacing(6);
+    dockRowLayout->addWidget(headerBox);
+    dockRowLayout->addWidget(mDockGroup);
+    mMainLayout->addWidget(mDockRow);
 
     // ——— 飞机飞行数据 ———
     mAircraftGroup = new QGroupBox("飞行数据", this);
@@ -64,26 +91,6 @@ void OsdPanel::setupUi() {
     airLayout->addRow("信号:", mRcSignal);
     mMainLayout->addWidget(mAircraftGroup);
 
-    // ——— 机场数据 ———
-    mDockGroup = new QGroupBox("机场数据", this);
-    auto* dockLayout = new QFormLayout(mDockGroup);
-    dockLayout->setSpacing(4);
-    mLatitudeDock  = new QLabel("-", this);
-    mLongitudeDock = new QLabel("-", this);
-    mCoverState    = new QLabel("-", this);
-    mPutterState   = new QLabel("-", this);
-    mWindSpeed     = new QLabel("-", this);
-    mAltLandLat    = new QLabel("-", this);
-    mAltLandLon    = new QLabel("-", this);
-    dockLayout->addRow("纬度:", mLatitudeDock);
-    dockLayout->addRow("经度:", mLongitudeDock);
-    dockLayout->addRow("舱盖:", mCoverState);
-    dockLayout->addRow("推杆:", mPutterState);
-    dockLayout->addRow("风速:", mWindSpeed);
-    dockLayout->addRow("备降点纬度:", mAltLandLat);
-    dockLayout->addRow("备降点经度:", mAltLandLon);
-    mMainLayout->addWidget(mDockGroup);
-
     mMainLayout->addStretch();
 }
 
@@ -110,7 +117,7 @@ void OsdPanel::showOsd(const DeviceInfo* device,
         showAircraftOsd(*aircraftOsd);
     } else if (device->type == DeviceType::Dock && dockOsd && dockOsd->valid) {
         mAircraftGroup->hide();
-        mDockGroup->show();
+        mDockGroup->show();     // 设备信息 + 机场数据 并排显示
         showDockOsd(*dockOsd);
     } else {
         mAircraftGroup->hide();
