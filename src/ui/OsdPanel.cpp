@@ -53,8 +53,9 @@ void OsdPanel::setupUi() {
     auto* dockRowLayout = new QHBoxLayout(mDockRow);
     dockRowLayout->setContentsMargins(0, 0, 0, 0);
     dockRowLayout->setSpacing(6);
-    dockRowLayout->addWidget(headerBox);
-    dockRowLayout->addWidget(mDockGroup);
+    dockRowLayout->addWidget(headerBox, 1);
+    dockRowLayout->addWidget(mDockGroup, 1);
+    mDockGroup->hide();  // 默认隐藏，机场选中时才显示
     mMainLayout->addWidget(mDockRow);
 
     // ——— 飞机飞行数据 ———
