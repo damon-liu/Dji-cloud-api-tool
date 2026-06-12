@@ -301,8 +301,8 @@ void MainWindow::setupLayout() {
 
     // === Topic 列表面板（设备树下方） ===
     mTopicListWidget = new TopicListWidget(this);
-    mTopicListWidget->setMaximumHeight(200);
-    leftLayout->addWidget(mTopicListWidget);
+    mTopicListWidget->setMaximumHeight(800);
+    leftLayout->addWidget(mTopicListWidget, 1);
 
     // === 右侧：OSD + JSON 水平分割 ===
     auto* rightPanel = new QWidget(this);

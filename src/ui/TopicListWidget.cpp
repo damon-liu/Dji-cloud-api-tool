@@ -61,7 +61,7 @@ TopicListWidget::TopicListWidget(QWidget* parent)
     mTopicList = new QListWidget(this);
     mTopicList->setMinimumWidth(310);
     mTopicList->setMaximumWidth(440);
-    mTopicList->setMaximumHeight(160);
+    mTopicList->setMaximumHeight(640);
     mTopicList->setStyleSheet(
         "QListWidget { background: #ffffff; border: 1px solid #e0e0e0; border-radius: 4px; "
         "font-size: 12px; }"
