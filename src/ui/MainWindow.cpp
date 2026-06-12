@@ -183,7 +183,8 @@ void MainWindow::applyStyle() {
             border: none;
             background: #f1f3f4;
             color: #5f6368;
-            font-size: 12px;
+            font-size: 13px;
+            font-weight: bold;
             padding: 4px 8px;
             border-radius: 4px;
         }
