@@ -329,8 +329,8 @@ void MainWindow::setupLayout() {
     auto* leftHalfLayout = new QVBoxLayout(leftHalf);
     leftHalfLayout->setContentsMargins(0, 0, 0, 0);
     leftHalfLayout->setSpacing(4);
-    leftHalfLayout->addWidget(osdScroll, 3);       // OSD 占 3 份
-    leftHalfLayout->addWidget(parseScroll, 2);     // 解析占 2 份
+    leftHalfLayout->addWidget(osdScroll, 1);       // OSD 设备信息
+    leftHalfLayout->addWidget(parseScroll, 2);     // JSON 解析
 
     mRightSplitter = new QSplitter(Qt::Horizontal, this);
     mRightSplitter->addWidget(leftHalf);
