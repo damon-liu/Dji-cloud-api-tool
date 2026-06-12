@@ -333,12 +333,14 @@ void MainWindow::setupLayout() {
     leftHalfLayout->addWidget(osdScroll, 1);       // OSD 设备信息
     leftHalfLayout->addWidget(parseScroll, 4);     // JSON 解析
 
+    mRawJsonPanel->setMaximumWidth(440);  // 与设备列表宽度一致
+
     mRightSplitter = new QSplitter(Qt::Horizontal, this);
     mRightSplitter->addWidget(leftHalf);
     mRightSplitter->addWidget(mRawJsonPanel);
-    mRightSplitter->setStretchFactor(0, 2);
-    mRightSplitter->setStretchFactor(1, 3);
-    mRightSplitter->setSizes({400, 600});
+    mRightSplitter->setStretchFactor(0, 3);
+    mRightSplitter->setStretchFactor(1, 1);
+    mRightSplitter->setSizes({600, 440});
 
     rightLayout->addWidget(mRightSplitter, 1);
 
