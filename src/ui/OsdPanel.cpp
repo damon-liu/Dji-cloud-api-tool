@@ -68,32 +68,18 @@ void OsdPanel::setupUi() {
     mDockGroup = new QGroupBox("机场数据", this);
     auto* dockLayout = new QFormLayout(mDockGroup);
     dockLayout->setSpacing(4);
-    mCoverState    = new QLabel("-", this);
-    mPutterState   = new QLabel("-", this);
-    mDroneInDock   = new QLabel("-", this);
-    mWorkVoltage   = new QLabel("-", this);
-    mWorkCurrent   = new QLabel("-", this);
-    mBackupBattery = new QLabel("-", this);
-    mWindSpeed     = new QLabel("-", this);
-    mEnvTemp       = new QLabel("-", this);
-    mEnvHumidity   = new QLabel("-", this);
     mLatitudeDock  = new QLabel("-", this);
     mLongitudeDock = new QLabel("-", this);
-    mAltitudeDock  = new QLabel("-", this);
+    mCoverState    = new QLabel("-", this);
+    mPutterState   = new QLabel("-", this);
+    mWindSpeed     = new QLabel("-", this);
     mAltLandLat    = new QLabel("-", this);
     mAltLandLon    = new QLabel("-", this);
     dockLayout->addRow("纬度:", mLatitudeDock);
     dockLayout->addRow("经度:", mLongitudeDock);
-    dockLayout->addRow("海拔:", mAltitudeDock);
     dockLayout->addRow("舱盖:", mCoverState);
     dockLayout->addRow("推杆:", mPutterState);
-    dockLayout->addRow("飞机在舱:", mDroneInDock);
-    dockLayout->addRow("工作电压:", mWorkVoltage);
-    dockLayout->addRow("工作电流:", mWorkCurrent);
-    dockLayout->addRow("备用电池:", mBackupBattery);
     dockLayout->addRow("风速:", mWindSpeed);
-    dockLayout->addRow("环境温度:", mEnvTemp);
-    dockLayout->addRow("湿度:", mEnvHumidity);
     dockLayout->addRow("备降点纬度:", mAltLandLat);
     dockLayout->addRow("备降点经度:", mAltLandLon);
     mMainLayout->addWidget(mDockGroup);
@@ -185,25 +171,13 @@ void OsdPanel::showAircraftOsd(const AircraftOsd& osd) {
 void OsdPanel::showDockOsd(const DockOsd& osd) {
     setFieldValue(mLatitudeDock, formatCoord(osd.latitude),  true);
     setFieldValue(mLongitudeDock,formatCoord(osd.longitude), true);
-    setFieldValue(mAltitudeDock, osd.altitude > 0 ? QString::number(osd.altitude, 'f', 1) + " m" : "-", false);
-    setFieldValue(mCoverState,  coverText(osd.cover_state), false);
-    setFieldValue(mPutterState, putterText(osd.putter_state), false);
-    setFieldValue(mDroneInDock, osd.drone_in_dock ? "是" : "否", false);
-    setFieldValue(mWorkVoltage, osd.working_voltage > 0
-        ? QString::number(osd.working_voltage / 1000.0, 'f', 1) + " V" : "-", false);
-    setFieldValue(mWorkCurrent, osd.working_current > 0
-        ? QString::number(osd.working_current, 'f', 0) + " mA" : "-", false);
-    setFieldValue(mBackupBattery, osd.backup_battery_voltage > 0
-        ? QString::number(osd.backup_battery_voltage / 1000.0, 'f', 1) + " V" : "-", false);
-    setFieldValue(mWindSpeed,   osd.wind_speed >= 0
+    setFieldValue(mCoverState,   coverText(osd.cover_state), false);
+    setFieldValue(mPutterState,  putterText(osd.putter_state), false);
+    setFieldValue(mWindSpeed,    osd.wind_speed >= 0
         ? QString::number(osd.wind_speed, 'f', 1) + " m/s" : "-", false);
-    setFieldValue(mEnvTemp,     osd.environment_temp > -273
-        ? QString::number(osd.environment_temp, 'f', 1) + " ℃" : "-", false);
-    setFieldValue(mEnvHumidity, osd.environment_humidity >= 0
-        ? QString::number(osd.environment_humidity, 'f', 0) + " %" : "-", false);
-    setFieldValue(mAltLandLat,  osd.alternate_land_lat != 0
+    setFieldValue(mAltLandLat,   osd.alternate_land_lat != 0
         ? formatCoord(osd.alternate_land_lat) : "-", false);
-    setFieldValue(mAltLandLon,  osd.alternate_land_lon != 0
+    setFieldValue(mAltLandLon,   osd.alternate_land_lon != 0
         ? formatCoord(osd.alternate_land_lon) : "-", false);
 }
 

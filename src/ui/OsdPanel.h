@@ -56,16 +56,9 @@ private:
     QGroupBox* mDockGroup;
     QLabel* mLatitudeDock;
     QLabel* mLongitudeDock;
-    QLabel* mAltitudeDock;
     QLabel* mCoverState;
     QLabel* mPutterState;
-    QLabel* mDroneInDock;
-    QLabel* mWorkVoltage;
-    QLabel* mWorkCurrent;
-    QLabel* mBackupBattery;
     QLabel* mWindSpeed;
-    QLabel* mEnvTemp;
-    QLabel* mEnvHumidity;
     QLabel* mAltLandLat;
     QLabel* mAltLandLon;
 
