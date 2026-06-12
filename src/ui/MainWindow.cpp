@@ -330,7 +330,7 @@ void MainWindow::setupLayout() {
     leftHalfLayout->setContentsMargins(0, 0, 0, 0);
     leftHalfLayout->setSpacing(4);
     leftHalfLayout->addWidget(osdScroll, 1);       // OSD 设备信息
-    leftHalfLayout->addWidget(parseScroll, 2);     // JSON 解析
+    leftHalfLayout->addWidget(parseScroll, 3);     // JSON 解析
 
     mRightSplitter = new QSplitter(Qt::Horizontal, this);
     mRightSplitter->addWidget(leftHalf);
