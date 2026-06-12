@@ -318,6 +318,7 @@ void MainWindow::setupLayout() {
     osdScroll->setWidget(mOsdPanel);
     osdScroll->setWidgetResizable(true);
     osdScroll->setFrameShape(QFrame::NoFrame);
+    osdScroll->setMinimumHeight(180);  // 确保并排的 GroupBox 有足够空间
 
     auto* parseScroll = new QScrollArea(this);
     parseScroll->setWidget(mOsdParsePanel);
