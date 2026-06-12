@@ -30,6 +30,18 @@ void OsdPanel::setupUi() {
     headerLayout->addRow("更新:", mUpdateTimeLabel);
     mMainLayout->addWidget(headerBox);
 
+    // ——— 定位信息（通用） ———
+    mPositionGroup = new QGroupBox("定位信息", this);
+    auto* posLayout = new QFormLayout(mPositionGroup);
+    posLayout->setSpacing(4);
+    mLatitude  = new QLabel("-", this);
+    mLongitude = new QLabel("-", this);
+    mAltitude  = new QLabel("-", this);
+    posLayout->addRow("纬度:", mLatitude);
+    posLayout->addRow("经度:", mLongitude);
+    posLayout->addRow("海拔:", mAltitude);
+    mMainLayout->addWidget(mPositionGroup);
+
     // ——— 飞机飞行数据 ———
     mAircraftGroup = new QGroupBox("飞行数据", this);
     auto* airLayout = new QFormLayout(mAircraftGroup);
@@ -58,6 +70,34 @@ void OsdPanel::setupUi() {
     airLayout->addRow("信号:", mRcSignal);
     mMainLayout->addWidget(mAircraftGroup);
 
+    // ——— 机场数据 ———
+    mDockGroup = new QGroupBox("机场数据", this);
+    auto* dockLayout = new QFormLayout(mDockGroup);
+    dockLayout->setSpacing(4);
+    mCoverState    = new QLabel("-", this);
+    mPutterState   = new QLabel("-", this);
+    mDroneInDock   = new QLabel("-", this);
+    mWorkVoltage   = new QLabel("-", this);
+    mWorkCurrent   = new QLabel("-", this);
+    mBackupBattery = new QLabel("-", this);
+    mWindSpeed     = new QLabel("-", this);
+    mEnvTemp       = new QLabel("-", this);
+    mEnvHumidity   = new QLabel("-", this);
+    mAltLandLat    = new QLabel("-", this);
+    mAltLandLon    = new QLabel("-", this);
+    dockLayout->addRow("舱盖:", mCoverState);
+    dockLayout->addRow("推杆:", mPutterState);
+    dockLayout->addRow("飞机在舱:", mDroneInDock);
+    dockLayout->addRow("工作电压:", mWorkVoltage);
+    dockLayout->addRow("工作电流:", mWorkCurrent);
+    dockLayout->addRow("备用电池:", mBackupBattery);
+    dockLayout->addRow("风速:", mWindSpeed);
+    dockLayout->addRow("环境温度:", mEnvTemp);
+    dockLayout->addRow("湿度:", mEnvHumidity);
+    dockLayout->addRow("备降点纬度:", mAltLandLat);
+    dockLayout->addRow("备降点经度:", mAltLandLon);
+    mMainLayout->addWidget(mDockGroup);
+
     mMainLayout->addStretch();
 }
 
@@ -80,12 +120,15 @@ void OsdPanel::showOsd(const DeviceInfo* device,
 
     if (device->type == DeviceType::Aircraft && aircraftOsd && aircraftOsd->valid) {
         mAircraftGroup->show();
+        mDockGroup->hide();
         showAircraftOsd(*aircraftOsd);
     } else if (device->type == DeviceType::Dock && dockOsd && dockOsd->valid) {
         mAircraftGroup->hide();
+        mDockGroup->show();
         showDockOsd(*dockOsd);
     } else {
         mAircraftGroup->hide();
+        mDockGroup->hide();
     }
 }
 
@@ -96,10 +139,38 @@ void OsdPanel::clear() {
     mOnlineLabel->setText("⚪ 未知");
     mOnlineLabel->setStyleSheet("");
     mUpdateTimeLabel->setText("-");
+    mLatitude->setText("-");
+    mLongitude->setText("-");
+    mAltitude->setText("-");
     mAircraftGroup->hide();
+    mDockGroup->hide();
+}
+
+// 格式化经纬度：保留 7 位小数（≈1cm 精度）
+static QString formatCoord(double val) {
+    if (val == 0.0) return "-";
+    return QString::number(val, 'f', 7);
+}
+
+static QString coverText(const QString& state) {
+    if (state == "open" || state == "1") return "打开";
+    if (state == "closed" || state == "0") return "关闭";
+    return state.isEmpty() ? "-" : state;
+}
+
+static QString putterText(int state) {
+    if (state == 0) return "收回";
+    if (state == 1) return "推出";
+    return state < 0 ? "-" : QString::number(state);
 }
 
 void OsdPanel::showAircraftOsd(const AircraftOsd& osd) {
+    // 定位信息
+    setFieldValue(mLatitude,  formatCoord(osd.latitude),  true);
+    setFieldValue(mLongitude, formatCoord(osd.longitude), true);
+    setFieldValue(mAltitude,  osd.altitude > 0 ? QString::number(osd.altitude, 'f', 1) + " m" : "-", false);
+
+    // 飞行数据
     setFieldValue(mBatteryPercent, osd.battery_percent >= 0
         ? QString::number(osd.battery_percent) + "%" : "-", false);
     setFieldValue(mBatteryVoltage,  osd.battery_voltage > 0
@@ -119,7 +190,31 @@ void OsdPanel::showAircraftOsd(const AircraftOsd& osd) {
 }
 
 void OsdPanel::showDockOsd(const DockOsd& osd) {
-    Q_UNUSED(osd)
+    // 定位信息
+    setFieldValue(mLatitude,  formatCoord(osd.latitude),  true);
+    setFieldValue(mLongitude, formatCoord(osd.longitude), true);
+    setFieldValue(mAltitude,  osd.altitude > 0 ? QString::number(osd.altitude, 'f', 1) + " m" : "-", false);
+
+    // 机场数据
+    setFieldValue(mCoverState,    coverText(osd.cover_state), false);
+    setFieldValue(mPutterState,   putterText(osd.putter_state), false);
+    setFieldValue(mDroneInDock,   osd.drone_in_dock ? "是" : "否", false);
+    setFieldValue(mWorkVoltage,   osd.working_voltage > 0
+        ? QString::number(osd.working_voltage / 1000.0, 'f', 1) + " V" : "-", false);
+    setFieldValue(mWorkCurrent,   osd.working_current > 0
+        ? QString::number(osd.working_current, 'f', 0) + " mA" : "-", false);
+    setFieldValue(mBackupBattery, osd.backup_battery_voltage > 0
+        ? QString::number(osd.backup_battery_voltage / 1000.0, 'f', 1) + " V" : "-", false);
+    setFieldValue(mWindSpeed,     osd.wind_speed >= 0
+        ? QString::number(osd.wind_speed, 'f', 1) + " m/s" : "-", false);
+    setFieldValue(mEnvTemp,       osd.environment_temp > -273
+        ? QString::number(osd.environment_temp, 'f', 1) + " ℃" : "-", false);
+    setFieldValue(mEnvHumidity,   osd.environment_humidity >= 0
+        ? QString::number(osd.environment_humidity, 'f', 0) + " %" : "-", false);
+    setFieldValue(mAltLandLat,    osd.alternate_land_lat != 0
+        ? formatCoord(osd.alternate_land_lat) : "-", false);
+    setFieldValue(mAltLandLon,    osd.alternate_land_lon != 0
+        ? formatCoord(osd.alternate_land_lon) : "-", false);
 }
 
 void OsdPanel::setFieldValue(QLabel* label, const QString& value, bool highlight) {

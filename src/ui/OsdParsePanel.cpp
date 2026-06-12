@@ -11,7 +11,11 @@ static QString valToString(const QJsonValue& val) {
         double d = val.toDouble();
         if (d == static_cast<qint64>(d))
             return QString::number(static_cast<qint64>(d));
-        return QString::number(d, 'f', 2);
+        // 保留最多 7 位小数，去除尾部多余的零
+        QString s = QString::number(d, 'f', 7);
+        while (s.endsWith('0') && !s.endsWith(".0"))
+            s.chop(1);
+        return s;
     }
     if (val.isString())
         return val.toString();

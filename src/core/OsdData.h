@@ -74,6 +74,9 @@ struct DockOsd : public OsdBase {
     double  wind_speed             = -1;   // m/s, -1 表示无数据
     double  environment_temp       = -273; // ℃, -273 表示无数据
     double  environment_humidity   = -1;   // %, -1 表示无数据
+    double  alternate_land_lat     = 0;    // 备降点纬度
+    double  alternate_land_lon     = 0;    // 备降点经度
+    int     putter_state           = -1;   // 推杆状态: 0=收回, 1=推出, -1=未知
 
     void parse(const QJsonObject& data) {
         parseCommon(data);
@@ -85,10 +88,19 @@ struct DockOsd : public OsdBase {
 
         if (data.contains("wind_speed"))
             wind_speed = data["wind_speed"].toDouble();
-        if (data.contains("environment_temp"))
-            environment_temp = data["environment_temp"].toDouble();
+        if (data.contains("environment_temperature"))
+            environment_temp = data["environment_temperature"].toDouble();
         if (data.contains("environment_humidity"))
             environment_humidity = data["environment_humidity"].toDouble();
+        if (data.contains("alternate_land_point")) {
+            QJsonObject alp = data["alternate_land_point"].toObject();
+            if (alp.contains("latitude"))
+                alternate_land_lat = alp["latitude"].toDouble();
+            if (alp.contains("longitude"))
+                alternate_land_lon = alp["longitude"].toDouble();
+        }
+        if (data.contains("putter_state"))
+            putter_state = data["putter_state"].toInt();
     }
 
     static DockOsd fromJson(const QJsonObject& data) {

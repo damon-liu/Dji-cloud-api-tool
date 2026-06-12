@@ -15,13 +15,11 @@ class OsdPanel : public QWidget {
 public:
     explicit OsdPanel(QWidget* parent = nullptr);
 
-    // 显示设备的 OSD 数据
     void showOsd(const DeviceInfo* device,
                  const AircraftOsd* aircraftOsd,
                  const DockOsd* dockOsd,
                  const QString& rawJson);
 
-    // 清空显示
     void clear();
 
 private:
@@ -50,6 +48,26 @@ private:
     QLabel* mHomeDist;
     QLabel* mFlightTime;
     QLabel* mRcSignal;
+
+    // 机场专属
+    QGroupBox* mDockGroup;
+    QLabel* mCoverState;
+    QLabel* mPutterState;
+    QLabel* mDroneInDock;
+    QLabel* mWorkVoltage;
+    QLabel* mWorkCurrent;
+    QLabel* mBackupBattery;
+    QLabel* mWindSpeed;
+    QLabel* mEnvTemp;
+    QLabel* mEnvHumidity;
+    QLabel* mAltLandLat;
+    QLabel* mAltLandLon;
+
+    // 定位信息（飞机和机场共用）
+    QGroupBox* mPositionGroup;
+    QLabel* mLatitude;
+    QLabel* mLongitude;
+    QLabel* mAltitude;
 
     QVBoxLayout* mMainLayout;
 };
