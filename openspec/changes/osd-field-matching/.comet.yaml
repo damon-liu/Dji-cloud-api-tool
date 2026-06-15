@@ -1,5 +1,5 @@
 workflow: full
-phase: build
+phase: verify
 context_compression: off
 build_mode: subagent-driven-development
 build_pause: null
@@ -8,6 +8,7 @@ tdd_mode: direct
 isolation: branch
 verify_mode: null
 auto_transition: true
+build_command: cmake --build build_mingw
 base_ref: d8ff9499b63f2edfca8f7510114901eb79f79000
 design_doc: docs/superpowers/specs/2026-06-15-osd-field-matching-design.md
 plan: docs/superpowers/plans/2026-06-15-osd-field-matching.md
