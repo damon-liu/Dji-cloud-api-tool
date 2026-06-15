@@ -1,0 +1,13 @@
+{
+  "change": "device-property-push-match",
+  "phase": "design",
+  "mode": "compact",
+  "canonical_spec": "openspec",
+  "generated_by": "comet-handoff.sh",
+  "context_hash": "e7349358e32dd12feabb3fa3911d32b489030443c04c0c51509bcf2bba34548f",
+  "files": [
+    { "path": "openspec/changes/device-property-push-match/proposal.md", "sha256": "f6c03db7b2965e3a5fddb9c6559b7877c54f0b79e89bcd614fe6e1e98879f9f0" },
+    { "path": "openspec/changes/device-property-push-match/design.md", "sha256": "13f59c0dc11b27edd0d8ac516d4d7bd997afd20fc1124ec0ab6fe75a92e26b56" },
+    { "path": "openspec/changes/device-property-push-match/tasks.md", "sha256": "d2270a8ddaad3e5fd33af3a83273530c33bca067d774c7766a34bd0e9d2348a9" }
+  ]
+}

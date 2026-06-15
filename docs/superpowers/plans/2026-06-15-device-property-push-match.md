@@ -2,6 +2,7 @@
 change: device-property-push-match
 design-doc: docs/superpowers/specs/2026-06-15-device-property-push-match-design.md
 base-ref: 8887a91175bdc8864c9d405bb9474c8b0a36a358
+archived-with: 2026-06-15-device-property-push-match
 ---
 
 # 设备属性推送匹配 实施计划
@@ -12,6 +13,7 @@ base-ref: 8887a91175bdc8864c9d405bb9474c8b0a36a358
 
 **Tech Stack:** Qt 6 C++17, CMake, MinGW
 
+archived-with: 2026-06-15-device-property-push-match
 ---
 
 ## 文件结构总览
@@ -29,6 +31,7 @@ base-ref: 8887a91175bdc8864c9d405bb9474c8b0a36a358
 | `src/core/DeviceManager.cpp` | 修改 | 实现 |
 | `config/topic_mappings.json` | 修改 | 新增映射 |
 
+archived-with: 2026-06-15-device-property-push-match
 ---
 
 ### Task 1: 重命名 OsdParsePanel → TopicParsePanel
@@ -45,6 +48,7 @@ base-ref: 8887a91175bdc8864c9d405bb9474c8b0a36a358
 - [x] Step 7: 编译验证 `cmake --build build_mingw`
 - [x] Step 8: 提交
 
+archived-with: 2026-06-15-device-property-push-match
 ---
 
 ### Task 2: DeviceManager mRawJsonCache 改为 per-topic 存储
@@ -58,6 +62,7 @@ base-ref: 8887a91175bdc8864c9d405bb9474c8b0a36a358
 - [x] Step 4: 编译验证
 - [x] Step 5: 提交
 
+archived-with: 2026-06-15-device-property-push-match
 ---
 
 ### Task 3: TopicParsePanel 传入 topic 获取精确数据
@@ -69,6 +74,7 @@ base-ref: 8887a91175bdc8864c9d405bb9474c8b0a36a358
 - [x] Step 2: 编译验证
 - [x] Step 3: 提交
 
+archived-with: 2026-06-15-device-property-push-match
 ---
 
 ### Task 4: topic_mappings.json 新增 state 和 status 映射
@@ -83,6 +89,7 @@ base-ref: 8887a91175bdc8864c9d405bb9474c8b0a36a358
 - [x] Step 5: 编译验证
 - [x] Step 6: 提交
 
+archived-with: 2026-06-15-device-property-push-match
 ---
 
 ### Task 5: 全量编译 + 回归验证
@@ -95,6 +102,7 @@ base-ref: 8887a91175bdc8864c9d405bb9474c8b0a36a358
 - [x] Step 3: 部署文件同步
 - [x] Step 4: 提交
 
+archived-with: 2026-06-15-device-property-push-match
 ---
 
 ## 依赖关系
