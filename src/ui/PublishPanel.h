@@ -12,6 +12,9 @@
 class PublishPanel : public QWidget {
     Q_OBJECT
 public:
+    // 5 个下发专用 topic 预设（不订阅，仅用于 ComboBox 下拉选择）
+    static const QStringList PUBLISH_PRESETS;
+
     explicit PublishPanel(QWidget* parent = nullptr)
         : QWidget(parent)
     {
@@ -62,15 +65,36 @@ public:
         });
     }
 
-    void setTopics(const QStringList& topics) {
+    // 设置当前设备 SN（用于替换 {sn} 占位符）
+    void setDeviceSn(const QString& sn) { mDeviceSn = sn; }
+
+    // 设置已订阅的 topic 列表，合并显示预设 topic
+    void setTopics(const QStringList& subscribed) {
         mTopicCombo->clear();
-        mTopicCombo->addItems(topics);
+        mTopicCombo->addItems(subscribed);
+
+        // 分隔线 + 下发预设（仅当有 SN 时显示）
+        if (!mDeviceSn.isEmpty()) {
+            mTopicCombo->insertSeparator(mTopicCombo->count());
+            for (const auto& tpl : PUBLISH_PRESETS)
+                mTopicCombo->addItem(QString(tpl).replace("{sn}", mDeviceSn));
+        }
     }
 
 private:
     QComboBox*      mTopicCombo;
     QPlainTextEdit* mEditor;
     QPushButton*    mSendBtn;
+    QString         mDeviceSn;  // 当前设备 SN
+};
+
+// 静态常量定义（头文件末尾，#endif 之前）
+inline const QStringList PublishPanel::PUBLISH_PRESETS = {
+    "thing/product/{sn}/property/set",
+    "thing/product/{sn}/services",
+    "thing/product/{sn}/events_reply",
+    "thing/product/{sn}/requests_reply",
+    "sys/product/{sn}/status_reply",
 };
 
 #endif // PUBLISHPANEL_H

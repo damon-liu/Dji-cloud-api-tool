@@ -19,7 +19,7 @@
   连接 `topicOrderChanged` 信号到 DeviceManager，更新 topic 顺序并持久化。
   - 文件: `src/ui/MainWindow.cpp`
 
-- [ ] 4. **PublishPanel 下发预设 topic**
+- [x] 4. **PublishPanel 下发预设 topic**
   新增 5 个下发专用 topic 预设，合并到 ComboBox 中（不去订阅）。
   - 文件: `src/ui/PublishPanel.h`
   - 新增 `setDeviceSn(sn)` 方法用于替换 {sn}

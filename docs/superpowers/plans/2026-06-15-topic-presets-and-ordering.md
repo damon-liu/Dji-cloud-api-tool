@@ -562,7 +562,7 @@ cmake --build build_mingw
 **Files:**
 - Modify: `src/ui/PublishPanel.h`
 
-- [ ] **Step 1: 修改 PublishPanel.h — 新增 mDeviceSn + 预设常量 + setDeviceSn() + 更新 setTopics()**
+- [x] **Step 1: 修改 PublishPanel.h — 新增 mDeviceSn + 预设常量 + setDeviceSn() + 更新 setTopics()**
 
 ```cpp
 #ifndef PUBLISHPANEL_H
@@ -669,7 +669,7 @@ inline const QStringList PublishPanel::PUBLISH_PRESETS = {
 
 > **注意:** 由于 `PublishPanel` 是纯头文件内联实现，新增的 `mDeviceSn` 成员和 `PUBLISH_PRESETS` 静态常量均在此文件内定义。
 
-- [ ] **Step 2: 编译验证 Task 5**
+- [x] **Step 2: 编译验证 Task 5**
 
 ```bash
 cmake --build build_mingw
