@@ -1,5 +1,5 @@
-#ifndef OSDPARSEPANEL_H
-#define OSDPARSEPANEL_H
+#ifndef TOPICPARSEPANEL_H
+#define TOPICPARSEPANEL_H
 
 #include <QWidget>
 #include <QVBoxLayout>
@@ -21,10 +21,10 @@
 
 class DeviceManager;
 
-class OsdParsePanel : public QWidget {
+class TopicParsePanel : public QWidget {
     Q_OBJECT
 public:
-    explicit OsdParsePanel(QWidget* parent = nullptr);
+    explicit TopicParsePanel(QWidget* parent = nullptr);
 
     void setDeviceManager(DeviceManager* mgr) { mDevMgr = mgr; }
     void setTopic(const QString& deviceSn, const QString& topic);
@@ -63,4 +63,4 @@ private:
     QMap<QString, QString> mPrevValues;
 };
 
-#endif // OSDPARSEPANEL_H
+#endif // TOPICPARSEPANEL_H

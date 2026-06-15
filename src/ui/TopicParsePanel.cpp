@@ -1,4 +1,4 @@
-#include "OsdParsePanel.h"
+#include "TopicParsePanel.h"
 #include "DeviceManager.h"
 #include <QFrame>
 #include <QPointer>
@@ -25,18 +25,18 @@ static QString valToString(const QJsonValue& val) {
     return val.toVariant().toString();
 }
 
-OsdParsePanel::OsdParsePanel(QWidget* parent)
+TopicParsePanel::TopicParsePanel(QWidget* parent)
     : QWidget(parent)
 {
     setupUi();
 
     mRefreshTimer = new QTimer(this);
     mRefreshTimer->setInterval(mIntervalMs);
-    connect(mRefreshTimer, &QTimer::timeout, this, &OsdParsePanel::refresh);
+    connect(mRefreshTimer, &QTimer::timeout, this, &TopicParsePanel::refresh);
     mRefreshTimer->start();
 }
 
-void OsdParsePanel::setupUi() {
+void TopicParsePanel::setupUi() {
     auto* mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(4);
@@ -79,7 +79,7 @@ void OsdParsePanel::setupUi() {
         "QPushButton { border: 1px solid #dadce0; border-radius: 4px; padding: 4px 12px; "
         "font-size: 12px; background: #fff; color: #5f6368; }"
         "QPushButton:hover { background: #f1f3f4; }");
-    connect(mPauseBtn, &QPushButton::clicked, this, &OsdParsePanel::togglePause);
+    connect(mPauseBtn, &QPushButton::clicked, this, &TopicParsePanel::togglePause);
 
     header->addWidget(intervalLabel);
     header->addWidget(mIntervalCombo);
@@ -108,7 +108,7 @@ void OsdParsePanel::setupUi() {
     mainLayout->addWidget(mScrollArea, 1);
 }
 
-void OsdParsePanel::setTopic(const QString& deviceSn, const QString& topic) {
+void TopicParsePanel::setTopic(const QString& deviceSn, const QString& topic) {
     mDeviceSn = deviceSn;
     mTopic    = topic;
     mPrevValues.clear();
@@ -122,7 +122,7 @@ void OsdParsePanel::setTopic(const QString& deviceSn, const QString& topic) {
     refresh();
 }
 
-bool OsdParsePanel::eventFilter(QObject* obj, QEvent* event) {
+bool TopicParsePanel::eventFilter(QObject* obj, QEvent* event) {
     if (event->type() == QEvent::MouseButtonPress) {
         QLabel* label = qobject_cast<QLabel*>(obj);
         if (label) {
@@ -147,7 +147,7 @@ bool OsdParsePanel::eventFilter(QObject* obj, QEvent* event) {
     return QWidget::eventFilter(obj, event);
 }
 
-void OsdParsePanel::clear() {
+void TopicParsePanel::clear() {
     QLayoutItem* item;
     while ((item = mContentLayout->takeAt(0)) != nullptr) {
         if (item->widget()) {
@@ -159,7 +159,7 @@ void OsdParsePanel::clear() {
     mTopicLabel->setText("");
 }
 
-void OsdParsePanel::refresh() {
+void TopicParsePanel::refresh() {
     if (!mDevMgr || mDeviceSn.isEmpty() || mTopic.isEmpty())
         return;
 
@@ -170,7 +170,7 @@ void OsdParsePanel::refresh() {
     QJsonParseError parseErr;
     QJsonDocument doc = QJsonDocument::fromJson(rawJson.toUtf8(), &parseErr);
     if (parseErr.error != QJsonParseError::NoError) {
-        qWarning() << "OsdParsePanel: JSON parse error:" << parseErr.errorString();
+        qWarning() << "TopicParsePanel: JSON parse error:" << parseErr.errorString();
         return;
     }
     if (!doc.isObject())
@@ -184,7 +184,7 @@ void OsdParsePanel::refresh() {
     renderGroups(data);
 }
 
-void OsdParsePanel::togglePause() {
+void TopicParsePanel::togglePause() {
     mPaused = !mPaused;
     if (mPaused) {
         mRefreshTimer->stop();
@@ -196,7 +196,7 @@ void OsdParsePanel::togglePause() {
     }
 }
 
-QMap<QString, QString> OsdParsePanel::flattenJson(const QJsonObject& obj, const QString& prefix) const {
+QMap<QString, QString> TopicParsePanel::flattenJson(const QJsonObject& obj, const QString& prefix) const {
     QMap<QString, QString> result;
     for (auto it = obj.begin(); it != obj.end(); ++it) {
         QString key = prefix.isEmpty() ? it.key() : prefix + "." + it.key();
@@ -221,7 +221,7 @@ QMap<QString, QString> OsdParsePanel::flattenJson(const QJsonObject& obj, const 
     return result;
 }
 
-void OsdParsePanel::renderGroups(const QJsonObject& data) {
+void TopicParsePanel::renderGroups(const QJsonObject& data) {
     QMap<QString, QString> flatData = flattenJson(data);
 
     TopicMappingConfig cfg;
@@ -248,7 +248,6 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
     // 按分组渲染
     for (const auto& group : cfg.groups) {
         auto* groupBox = new QGroupBox(group.label);
-        // 不设内联样式，继承 MainWindow 全局 QGroupBox 样式，与 OsdPanel 对齐
 
         auto* formLayout = new QFormLayout(groupBox);
         formLayout->setSpacing(2);
@@ -297,7 +296,7 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
         }
     }
 
-    // 未映射字段（正常显示，与已映射字段风格一致）
+    // 未映射字段
     QStringList unmappedKeys;
     for (auto it = flatData.begin(); it != flatData.end(); ++it) {
         if (!renderedKeys.contains(it.key()))
@@ -306,7 +305,6 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
 
     if (!unmappedKeys.isEmpty()) {
         auto* unmappedGroup = new QGroupBox("其他字段");
-        // 继承全局 QGroupBox 样式，正常显示
 
         auto* unmappedLayout = new QFormLayout(unmappedGroup);
         unmappedLayout->setSpacing(2);
@@ -330,7 +328,7 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
         mContentLayout->insertWidget(mContentLayout->count() - 1, unmappedGroup);
     }
 
-    // 值变化高亮（对比保存的旧值）
+    // 值变化高亮
     for (auto it = newValues.begin(); it != newValues.end(); ++it) {
         QString oldVal = prevValues.value(it.key());
         bool changed = !oldVal.isEmpty() && oldVal != it.value();
@@ -363,7 +361,7 @@ void OsdParsePanel::renderGroups(const QJsonObject& data) {
     mPrevValues = newValues;
 }
 
-void OsdParsePanel::setFieldValue(QLabel* label, const QString& value, bool highlight) {
+void TopicParsePanel::setFieldValue(QLabel* label, const QString& value, bool highlight) {
     label->setText(value);
     if (highlight) {
         label->setStyleSheet("color: #1a73e8; font-weight: bold; font-size: 11px;");

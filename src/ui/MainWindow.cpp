@@ -313,7 +313,7 @@ void MainWindow::setupLayout() {
     // OSD | JSON
     mOsdPanel = new OsdPanel(this);
     mRawJsonPanel = new RawJsonPanel(this);
-    mOsdParsePanel = new OsdParsePanel(this);
+    mTopicParsePanel = new TopicParsePanel(this);
 
     auto* osdScroll = new QScrollArea(this);
     osdScroll->setWidget(mOsdPanel);
@@ -322,7 +322,7 @@ void MainWindow::setupLayout() {
     osdScroll->setMinimumHeight(180);  // 确保并排的 GroupBox 有足够空间
 
     auto* parseScroll = new QScrollArea(this);
-    parseScroll->setWidget(mOsdParsePanel);
+    parseScroll->setWidget(mTopicParsePanel);
     parseScroll->setWidgetResizable(true);
     parseScroll->setFrameShape(QFrame::NoFrame);
 
@@ -470,11 +470,11 @@ void MainWindow::connectSignals() {
         mDeviceTree->rebuild(mDevMgr->topLevelDevices(), mDevMgr->allDevices());
     });
 
-    // OsdParsePanel: topic 选中变化 → 更新解析面板
+    // TopicParsePanel: topic 选中变化 → 更新解析面板
     connect(mTopicListWidget, &TopicListWidget::topicSelectionChanged,
-            mOsdParsePanel, [this](const QString& selectedTopic) {
+            mTopicParsePanel, [this](const QString& selectedTopic) {
         QString sn = mDeviceTree->selectedDeviceSn();
-        mOsdParsePanel->setTopic(sn, selectedTopic);
+        mTopicParsePanel->setTopic(sn, selectedTopic);
     });
 
     // 加载 topic 映射配置
@@ -494,9 +494,9 @@ void MainWindow::connectSignals() {
                 }
             }
         }
-        mOsdParsePanel->setTopicMapping(mTopicMapping);
+        mTopicParsePanel->setTopicMapping(mTopicMapping);
     }
-    mOsdParsePanel->setDeviceManager(mDevMgr);
+    mTopicParsePanel->setDeviceManager(mDevMgr);
 
     mDeviceTree->rebuild(mDevMgr->topLevelDevices(), mDevMgr->allDevices());
     mDisconnectAct->setEnabled(false);
@@ -511,7 +511,7 @@ void MainWindow::onDeviceSelected(const QString& sn) {
         mRawJsonPanel->clear();
         mPublishPanel->setTopics({});
         mTopicListWidget->clearTopics();
-        mOsdParsePanel->clear();
+        mTopicParsePanel->clear();
         mDeleteDeviceBtn->setEnabled(false);
         mAddDeviceBtn->setEnabled(true);
         return;
@@ -540,9 +540,9 @@ void MainWindow::onDeviceSelected(const QString& sn) {
         mAddDeviceBtn->setEnabled(true);
     }
 
-    // 更新 OsdParsePanel
+    // 更新 TopicParsePanel
     QString selectedTopic = mTopicListWidget->selectedTopic();
-    mOsdParsePanel->setTopic(sn, selectedTopic);
+    mTopicParsePanel->setTopic(sn, selectedTopic);
 }
 
 void MainWindow::onOsdUpdated(const QString& sn, const QString& topic, const QString& rawJson) {
