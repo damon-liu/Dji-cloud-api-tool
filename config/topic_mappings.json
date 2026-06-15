@@ -1,221 +1,1219 @@
 {
-    "topics": {
-        "thing/product/{sn}/osd": {
-            "description": "机场/无人机 OSD 遥测数据 (0.5Hz 定时上报)",
-            "fields": {
-                "job_number": { "zh": "累计作业次数", "unit": "次" },
-                "acc_time": { "zh": "累计运行时间", "unit": "秒" },
-                "electric_supply_voltage": { "zh": "供电电压", "unit": "mV" },
-                "working_voltage": { "zh": "工作电压", "unit": "mV" },
-                "working_current": { "zh": "工作电流", "unit": "mA" },
-                "backup_battery.voltage": { "zh": "备用电池电压", "unit": "mV" },
-                "backup_battery.temperature": { "zh": "备用电池温度", "unit": "℃" },
-                "backup_battery.switch": {
-                    "zh": "备用电池开关",
-                    "unit": "",
-                    "values": { "0": "关闭", "1": "开启" }
-                },
-                "drone_charge_state.state": {
-                    "zh": "充电状态",
-                    "unit": "",
-                    "values": { "0": "未充电", "1": "充电中", "2": "充电完成" }
-                },
-                "drone_charge_state.capacity_percent": { "zh": "充电百分比", "unit": "%" },
-                "drone_in_dock": {
-                    "zh": "飞机在舱内",
-                    "unit": "",
-                    "values": { "0": "否", "1": "是" }
-                },
-                "rainfall": { "zh": "降雨量", "unit": "mm" },
-                "wind_speed": { "zh": "风速", "unit": "m/s" },
-                "environment_temperature": { "zh": "环境温度", "unit": "℃" },
-                "temperature": { "zh": "机舱温度", "unit": "℃" },
-                "humidity": { "zh": "湿度", "unit": "%" },
-                "latitude": { "zh": "纬度", "unit": "°" },
-                "longitude": { "zh": "经度", "unit": "°" },
-                "height": { "zh": "海拔高度", "unit": "m" },
-                "position_state.is_fixed": {
-                    "zh": "定位收敛状态",
-                    "unit": "",
-                    "values": { "0": "未开始", "1": "收敛中", "2": "已收敛", "3": "失败" }
-                },
-                "position_state.quality": {
-                    "zh": "搜星质量档位",
-                    "unit": "",
-                    "values": { "1": "1档", "2": "2档", "3": "3档", "4": "4档", "5": "5档" }
-                },
-                "position_state.gps_number": { "zh": "GPS 搜星数", "unit": "" },
-                "position_state.rtk_number": { "zh": "RTK 搜星数", "unit": "" },
-                "cover_state": {
-                    "zh": "舱盖状态",
-                    "unit": "",
-                    "values": { "0": "关闭", "1": "打开" }
-                },
-                "supplement_light_state": {
-                    "zh": "补光灯状态",
-                    "unit": "",
-                    "values": { "0": "关闭", "1": "打开" }
-                },
-                "emergency_stop_state": {
-                    "zh": "急停按钮",
-                    "unit": "",
-                    "values": { "0": "正常", "1": "按下" }
-                },
-                "air_conditioner_mode": {
-                    "zh": "空调模式",
-                    "unit": "",
-                    "values": { "0": "关闭", "1": "制冷", "2": "制热", "3": "通风" }
-                },
-                "battery_store_mode": {
-                    "zh": "电池存储模式",
-                    "unit": "",
-                    "values": { "0": "关闭", "1": "开启" }
-                },
-                "alarm_state": {
-                    "zh": "告警状态",
-                    "unit": "",
-                    "values": { "0": "正常", "1": "告警" }
-                },
-                "putter_state": {
-                    "zh": "推杆状态",
-                    "unit": "",
-                    "values": { "0": "收回", "1": "推出" }
-                },
-                "mode_code": {
-                    "zh": "模式码",
-                    "unit": "",
-                    "values": {
-                        "0": "待机", "4": "自动起飞", "5": "航线飞行",
-                        "9": "自动返航", "10": "自动降落"
-                    }
-                },
-                "network_state.type": {
-                    "zh": "网络类型",
-                    "unit": "",
-                    "values": { "1": "有线", "2": "4G", "3": "5G" }
-                },
-                "network_state.quality": { "zh": "网络质量", "unit": "" },
-                "network_state.rate": { "zh": "网络速率", "unit": "KB/s" },
-                "storage.total": { "zh": "存储总容量", "unit": "KB" },
-                "storage.used": { "zh": "已用容量", "unit": "KB" },
-                "alternate_land_point.latitude": { "zh": "备降点纬度", "unit": "°" },
-                "alternate_land_point.longitude": { "zh": "备降点经度", "unit": "°" },
-                "alternate_land_point.is_configured": {
-                    "zh": "备降点已配置",
-                    "unit": "",
-                    "values": { "0": "否", "1": "是" }
-                },
-                "drone_battery_maintenance_info.maintenance_state": {
-                    "zh": "电池保养状态",
-                    "unit": "",
-                    "values": { "0": "无需保养", "1": "需要保养" }
-                },
-                "drone_battery_maintenance_info.maintenance_time_left": { "zh": "剩余保养时间", "unit": "秒" },
-                "battery.capacity_percent": { "zh": "总电池电量", "unit": "%" },
-                "battery.remain_flight_time": { "zh": "剩余飞行时间", "unit": "秒" },
-                "battery.return_home_power": { "zh": "返航所需电量", "unit": "%" },
-                "battery.landing_power": { "zh": "强制降落电量", "unit": "%" },
-                "battery.batteries[0].voltage": { "zh": "左电池电压", "unit": "mV" },
-                "battery.batteries[0].temperature": { "zh": "左电池温度", "unit": "℃" },
-                "battery.batteries[0].loop_times": { "zh": "左电池循环次数", "unit": "次" },
-                "battery.batteries[1].voltage": { "zh": "右电池电压", "unit": "mV" },
-                "battery.batteries[1].temperature": { "zh": "右电池温度", "unit": "℃" },
-                "battery.batteries[1].loop_times": { "zh": "右电池循环次数", "unit": "次" },
-                "horizontal_speed": { "zh": "水平速度", "unit": "m/s" },
-                "vertical_speed": { "zh": "垂直速度", "unit": "m/s" },
-                "elevation": { "zh": "相对起飞点高度", "unit": "m" },
-                "attitude_head": { "zh": "航向角", "unit": "°" },
-                "attitude_pitch": { "zh": "俯仰角", "unit": "°" },
-                "attitude_roll": { "zh": "横滚角", "unit": "°" },
-                "gear": {
-                    "zh": "档位",
-                    "unit": "",
-                    "values": { "0": "A档", "1": "P档", "2": "NAV", "3": "FPV", "5": "S档", "6": "F档", "7": "M档", "9": "T档" }
-                },
-                "home_distance": { "zh": "距 Home 点距离", "unit": "m" },
-                "total_flight_distance": { "zh": "累计飞行里程", "unit": "m" },
-                "total_flight_time": { "zh": "累计飞行时间", "unit": "秒" },
-                "height_limit": { "zh": "限高", "unit": "m" },
-                "wind_direction": {
-                    "zh": "风向",
-                    "unit": "",
-                    "values": { "1": "正北", "2": "东北", "3": "正东", "4": "东南", "5": "正南", "6": "西南", "7": "正西", "8": "西北" }
-                },
-                "track_id": { "zh": "航迹ID", "unit": "" },
-                "firmware_version": { "zh": "固件版本", "unit": "" }
-            },
-            "groups": [
-                {
-                    "id": "basic",
-                    "label": "📋 基础信息",
-                    "keys": ["job_number", "acc_time", "mode_code", "alarm_state",
-                             "firmware_version", "gear", "track_id"]
-                },
-                {
-                    "id": "power",
-                    "label": "🔋 电源",
-                    "keys": ["electric_supply_voltage", "working_voltage", "working_current",
-                             "backup_battery.voltage", "backup_battery.temperature", "backup_battery.switch",
-                             "battery.capacity_percent", "battery.remain_flight_time",
-                             "battery.return_home_power", "battery.landing_power",
-                             "battery.batteries[0].voltage", "battery.batteries[0].temperature", "battery.batteries[0].loop_times",
-                             "battery.batteries[1].voltage", "battery.batteries[1].temperature", "battery.batteries[1].loop_times"]
-                },
-                {
-                    "id": "charge",
-                    "label": "⚡ 充电状态",
-                    "keys": ["drone_charge_state.state", "drone_charge_state.capacity_percent"]
-                },
-                {
-                    "id": "flight",
-                    "label": "✈ 飞行数据",
-                    "keys": ["horizontal_speed", "vertical_speed", "elevation", "height",
-                             "home_distance", "total_flight_distance", "total_flight_time",
-                             "height_limit", "attitude_head", "attitude_pitch", "attitude_roll"]
-                },
-                {
-                    "id": "position",
-                    "label": "📍 定位",
-                    "keys": ["latitude", "longitude", "position_state.is_fixed",
-                             "position_state.quality", "position_state.gps_number",
-                             "position_state.rtk_number"]
-                },
-                {
-                    "id": "environment",
-                    "label": "🌡 环境",
-                    "keys": ["environment_temperature", "temperature", "humidity",
-                             "wind_speed", "rainfall", "wind_direction"]
-                },
-                {
-                    "id": "device",
-                    "label": "🔧 设备状态",
-                    "keys": ["cover_state", "drone_in_dock", "supplement_light_state",
-                             "emergency_stop_state", "air_conditioner_mode",
-                             "battery_store_mode", "putter_state"]
-                },
-                {
-                    "id": "network",
-                    "label": "📶 网络",
-                    "keys": ["network_state.type", "network_state.quality", "network_state.rate"]
-                },
-                {
-                    "id": "storage",
-                    "label": "💾 存储",
-                    "keys": ["storage.total", "storage.used"]
-                },
-                {
-                    "id": "alternate_land",
-                    "label": "🛬 备降点",
-                    "keys": ["alternate_land_point.latitude", "alternate_land_point.longitude",
-                             "alternate_land_point.is_configured"]
-                },
-                {
-                    "id": "battery_maintenance",
-                    "label": "🔧 电池保养",
-                    "keys": ["drone_battery_maintenance_info.maintenance_state",
-                             "drone_battery_maintenance_info.maintenance_time_left"]
-                }
-            ]
+  "topics": {
+    "thing/product/{sn}/osd": {
+      "description": "机场/无人机 OSD 遥测数据 (0.5Hz 定时上报)",
+      "fields": {
+        "acc_time": {
+          "zh": "累计运行时间",
+          "unit": "秒"
+        },
+        "activation_time": {
+          "zh": "机场激活时间(unix 时间戳)",
+          "unit": "s"
+        },
+        "air_conditioner.air_conditioner_state": {
+          "zh": "机场空调状态",
+          "unit": "",
+          "values": {
+            "0": "空闲模式(无制冷、制热、除湿等)",
+            "1": "制冷模式",
+            "2": "制热模式",
+            "3": "除湿模式",
+            "4": "制冷退出模式",
+            "5": "制热退出模式",
+            "6": "除湿退出模式",
+            "7": "制冷准备模式",
+            "8": "制热准备模式",
+            "9": "除湿准备模式",
+            "10": "风冷准备中",
+            "11": "风冷中",
+            "12": "风冷退出中",
+            "13": "除雾准备中",
+            "14": "除雾中",
+            "15": "除雾退出中"
+          }
+        },
+        "air_conditioner.switch_time": {
+          "zh": "剩余等待可切换时间",
+          "unit": "s"
+        },
+        "air_conditioner_mode": {
+          "zh": "空调模式",
+          "unit": "",
+          "values": {
+            "0": "关闭",
+            "1": "制冷",
+            "2": "制热",
+            "3": "通风"
+          }
+        },
+        "air_transfer_enable": {
+          "zh": "空中回传",
+          "unit": "",
+          "values": {
+            "false": "关闭",
+            "true": "开启"
+          }
+        },
+        "alarm_state": {
+          "zh": "告警状态",
+          "unit": "",
+          "values": {
+            "0": "正常",
+            "1": "告警"
+          }
+        },
+        "alternate_land_point.height": {
+          "zh": "椭球高度",
+          "unit": ""
+        },
+        "alternate_land_point.is_configured": {
+          "zh": "备降点已配置",
+          "unit": "",
+          "values": {
+            "0": "否",
+            "1": "是"
+          }
+        },
+        "alternate_land_point.latitude": {
+          "zh": "备降点纬度",
+          "unit": "°"
+        },
+        "alternate_land_point.longitude": {
+          "zh": "备降点经度",
+          "unit": "°"
+        },
+        "alternate_land_point.safe_land_height": {
+          "zh": "安全高度(备降转移高)",
+          "unit": ""
+        },
+        "attitude_head": {
+          "zh": "航向角",
+          "unit": "°"
+        },
+        "attitude_pitch": {
+          "zh": "俯仰角",
+          "unit": "°"
+        },
+        "attitude_roll": {
+          "zh": "横滚角",
+          "unit": "°"
+        },
+        "backup_battery.switch": {
+          "zh": "备用电池开关",
+          "unit": "",
+          "values": {
+            "0": "关闭",
+            "1": "开启"
+          }
+        },
+        "backup_battery.temperature": {
+          "zh": "备用电池温度",
+          "unit": "℃"
+        },
+        "backup_battery.voltage": {
+          "zh": "备用电池电压",
+          "unit": "mV"
+        },
+        "battery.batteries[0].loop_times": {
+          "zh": "左电池循环次数",
+          "unit": "次"
+        },
+        "battery.batteries[0].temperature": {
+          "zh": "左电池温度",
+          "unit": "℃"
+        },
+        "battery.batteries[0].voltage": {
+          "zh": "左电池电压",
+          "unit": "mV"
+        },
+        "battery.batteries[1].loop_times": {
+          "zh": "右电池循环次数",
+          "unit": "次"
+        },
+        "battery.batteries[1].temperature": {
+          "zh": "右电池温度",
+          "unit": "℃"
+        },
+        "battery.batteries[1].voltage": {
+          "zh": "右电池电压",
+          "unit": "mV"
+        },
+        "battery.capacity_percent": {
+          "zh": "总电池电量",
+          "unit": "%"
+        },
+        "battery.landing_power": {
+          "zh": "强制降落电量",
+          "unit": "%"
+        },
+        "battery.remain_flight_time": {
+          "zh": "剩余飞行时间",
+          "unit": "秒"
+        },
+        "battery.return_home_power": {
+          "zh": "返航所需电量",
+          "unit": "%"
+        },
+        "battery_store_mode": {
+          "zh": "电池存储模式",
+          "unit": "",
+          "values": {
+            "0": "关闭",
+            "1": "开启"
+          }
+        },
+        "compatible_status": {
+          "zh": "固件一致性",
+          "unit": "",
+          "values": {
+            "0": "不需要一致性升级",
+            "1": "需要一致性升级"
+          }
+        },
+        "cover_state": {
+          "zh": "舱盖状态",
+          "unit": "",
+          "values": {
+            "0": "关闭",
+            "1": "打开"
+          }
+        },
+        "dongle_infos[].dongle_type": {
+          "zh": "Dongle 类型",
+          "unit": "",
+          "values": {
+            "6": "旧 Dongle",
+            "10": "支持 eSIM 的新 Dongle"
+          }
+        },
+        "dongle_infos[].eid": {
+          "zh": "dongle eid",
+          "unit": ""
+        },
+        "dongle_infos[].esim_activate_state": {
+          "zh": "eSIM 激活状态",
+          "unit": "",
+          "values": {
+            "0": "未知",
+            "1": "未激活",
+            "2": "已激活"
+          }
+        },
+        "dongle_infos[].esim_infos[].enabled": {
+          "zh": "eSIM 使能状态",
+          "unit": "",
+          "values": {
+            "false": "未使用",
+            "true": "使用中"
+          }
+        },
+        "dongle_infos[].esim_infos[].iccid": {
+          "zh": "sim iccid",
+          "unit": ""
+        },
+        "dongle_infos[].esim_infos[].telecom_operator": {
+          "zh": "支持的运营商",
+          "unit": "",
+          "values": {
+            "0": "未知",
+            "1": "移动",
+            "2": "联通",
+            "3": "电信"
+          }
+        },
+        "dongle_infos[].imei": {
+          "zh": "dongle imei",
+          "unit": ""
+        },
+        "dongle_infos[].sim_card_state": {
+          "zh": "SIM 卡状态",
+          "unit": "",
+          "values": {
+            "0": "未插入",
+            "1": "已插入"
+          }
+        },
+        "dongle_infos[].sim_info.iccid": {
+          "zh": "sim iccid",
+          "unit": ""
+        },
+        "dongle_infos[].sim_info.sim_type": {
+          "zh": "SIM 卡类型",
+          "unit": "",
+          "values": {
+            "0": "未知",
+            "1": "其他普通 SIM 卡",
+            "2": "三网卡"
+          }
+        },
+        "dongle_infos[].sim_info.telecom_operator": {
+          "zh": "支持的运营商",
+          "unit": "",
+          "values": {
+            "0": "未知",
+            "1": "移动",
+            "2": "联通",
+            "3": "电信"
+          }
+        },
+        "dongle_infos[].sim_slot": {
+          "zh": "SIM 卡槽使能状态",
+          "unit": "",
+          "values": {
+            "0": "未知",
+            "1": "实体 SIM 卡",
+            "2": "eSIM"
+          }
+        },
+        "drc_state": {
+          "zh": "DRC 链路的状态",
+          "unit": "",
+          "values": {
+            "0": "未连接",
+            "1": "连接中",
+            "2": "已连接"
+          }
+        },
+        "drone_battery_maintenance_info.batteries[].capacity_percent": {
+          "zh": "电池剩余电量",
+          "unit": ""
+        },
+        "drone_battery_maintenance_info.batteries[].index": {
+          "zh": "电池序号",
+          "unit": "",
+          "values": {
+            "0": "左电池",
+            "1": "右电池"
+          }
+        },
+        "drone_battery_maintenance_info.batteries[].temperature": {
+          "zh": "温度",
+          "unit": "°C"
+        },
+        "drone_battery_maintenance_info.batteries[].voltage": {
+          "zh": "电压",
+          "unit": "mV"
+        },
+        "drone_battery_maintenance_info.heat_state": {
+          "zh": "电池加热保温状态",
+          "unit": "",
+          "values": {
+            "0": "电池未开启加热或保温",
+            "1": "电池在加热中",
+            "2": "电池在保温中"
+          }
+        },
+        "drone_battery_maintenance_info.maintenance_state": {
+          "zh": "电池保养状态",
+          "unit": "",
+          "values": {
+            "0": "无需保养",
+            "1": "需要保养"
+          }
+        },
+        "drone_battery_maintenance_info.maintenance_time_left": {
+          "zh": "剩余保养时间",
+          "unit": "秒"
+        },
+        "drone_charge_state.capacity_percent": {
+          "zh": "充电百分比",
+          "unit": "%"
+        },
+        "drone_charge_state.state": {
+          "zh": "充电状态",
+          "unit": "",
+          "values": {
+            "0": "未充电",
+            "1": "充电中",
+            "2": "充电完成"
+          }
+        },
+        "drone_in_dock": {
+          "zh": "飞机在舱内",
+          "unit": "",
+          "values": {
+            "0": "否",
+            "1": "是"
+          }
+        },
+        "electric_supply_voltage": {
+          "zh": "供电电压",
+          "unit": "mV"
+        },
+        "elevation": {
+          "zh": "相对起飞点高度",
+          "unit": "m"
+        },
+        "emergency_stop_state": {
+          "zh": "急停按钮",
+          "unit": "",
+          "values": {
+            "0": "正常",
+            "1": "按下"
+          }
+        },
+        "environment_temperature": {
+          "zh": "环境温度",
+          "unit": "℃"
+        },
+        "firmware_upgrade_status": {
+          "zh": "固件升级状态",
+          "unit": "",
+          "values": {
+            "0": "未升级",
+            "1": "升级中"
+          }
+        },
+        "firmware_version": {
+          "zh": "固件版本",
+          "unit": ""
+        },
+        "first_power_on": {
+          "zh": "首次上电时间",
+          "unit": "ms"
+        },
+        "flighttask_step_code": {
+          "zh": "机场任务状态",
+          "unit": "",
+          "values": {
+            "0": "作业准备中",
+            "1": "飞行作业中",
+            "2": "作业后状态恢复",
+            "3": "自定义飞行区更新中",
+            "4": "地形障碍物更新中",
+            "5": "任务空闲",
+            "255": "飞行器异常",
+            "256": "未知状态"
+          }
+        },
+        "gear": {
+          "zh": "档位",
+          "unit": "",
+          "values": {
+            "0": "A档",
+            "1": "P档",
+            "2": "NAV",
+            "3": "FPV",
+            "5": "S档",
+            "6": "F档",
+            "7": "M档",
+            "9": "T档"
+          }
+        },
+        "heading": {
+          "zh": "机场朝向角",
+          "unit": "°"
+        },
+        "height": {
+          "zh": "海拔高度",
+          "unit": "m"
+        },
+        "height_limit": {
+          "zh": "限高",
+          "unit": "m"
+        },
+        "home_distance": {
+          "zh": "距 Home 点距离",
+          "unit": "m"
+        },
+        "home_position_is_valid": {
+          "zh": "home点有效性",
+          "unit": "",
+          "values": {
+            "0": "航向和经纬度坐标都无效",
+            "1": "航向和经纬度坐标都有效",
+            "2": "航向有效，经纬度无效",
+            "3": "经纬度有效，航向无效"
+          }
+        },
+        "horizontal_speed": {
+          "zh": "水平速度",
+          "unit": "m/s"
+        },
+        "humidity": {
+          "zh": "湿度",
+          "unit": "%"
+        },
+        "job_number": {
+          "zh": "累计作业次数",
+          "unit": "次"
+        },
+        "latitude": {
+          "zh": "纬度",
+          "unit": "°"
+        },
+        "live_capacity.available_video_number": {
+          "zh": "可选择推流的码流数量",
+          "unit": ""
+        },
+        "live_capacity.coexist_video_number_max": {
+          "zh": "可同时推流的最大码流数量",
+          "unit": ""
+        },
+        "live_capacity.device_list[].available_video_number": {
+          "zh": "该序列号设备可以被选择推流的码流数",
+          "unit": ""
+        },
+        "live_capacity.device_list[].camera_list[].available_video_number": {
+          "zh": "该相机级别的视频源可以被选择推流的码流数",
+          "unit": ""
+        },
+        "live_capacity.device_list[].camera_list[].camera_index": {
+          "zh": "相机索引",
+          "unit": ""
+        },
+        "live_capacity.device_list[].camera_list[].coexist_video_number_max": {
+          "zh": "该相机级别的视频源可以同时被推流的码流数",
+          "unit": ""
+        },
+        "live_capacity.device_list[].camera_list[].video_list[].video_index": {
+          "zh": "该相机级别的视频源可以选择的码流索引",
+          "unit": ""
+        },
+        "live_capacity.device_list[].camera_list[].video_list[].video_type": {
+          "zh": "该相机级别的视频源可以选择的码流类型",
+          "unit": ""
+        },
+        "live_capacity.device_list[].coexist_video_number_max": {
+          "zh": "该序列号设备可以同时被推流的码流数",
+          "unit": ""
+        },
+        "live_capacity.device_list[].sn": {
+          "zh": "飞行器等视频源设备序列号（SN）",
+          "unit": ""
+        },
+        "live_status[].error_status": {
+          "zh": "错误码",
+          "unit": ""
+        },
+        "live_status[].status": {
+          "zh": "直播状态",
+          "unit": "",
+          "values": {
+            "0": "未直播",
+            "1": "在直播"
+          }
+        },
+        "live_status[].video_id": {
+          "zh": "直播码流标识符",
+          "unit": ""
+        },
+        "live_status[].video_quality": {
+          "zh": "直播码流的质量",
+          "unit": "",
+          "values": {
+            "0": "自适应",
+            "1": "流畅",
+            "2": "标清",
+            "3": "高清",
+            "4": "超清"
+          }
+        },
+        "live_status[].video_type": {
+          "zh": "视频类型",
+          "unit": ""
+        },
+        "longitude": {
+          "zh": "经度",
+          "unit": "°"
+        },
+        "maintain_status.maintain_status_array[].last_maintain_time": {
+          "zh": "上一次保养时间",
+          "unit": "s"
+        },
+        "maintain_status.maintain_status_array[].last_maintain_type": {
+          "zh": "上一次保养类型",
+          "unit": "",
+          "values": {
+            "0": "无保养",
+            "17": "机场常规保养",
+            "18": "机场深度保养"
+          }
+        },
+        "maintain_status.maintain_status_array[].last_maintain_work_sorties": {
+          "zh": "上一次保养时作业架次",
+          "unit": ""
+        },
+        "maintain_status.maintain_status_array[].state": {
+          "zh": "保养状态",
+          "unit": "",
+          "values": {
+            "0": "无保养",
+            "1": "有保养"
+          }
+        },
+        "media_file_detail.remain_upload": {
+          "zh": "待上传数量",
+          "unit": ""
+        },
+        "mode_code": {
+          "zh": "模式码",
+          "unit": "",
+          "values": {
+            "0": "待机",
+            "4": "自动起飞",
+            "5": "航线飞行",
+            "9": "自动返航",
+            "10": "自动降落"
+          }
+        },
+        "network_state.quality": {
+          "zh": "网络质量",
+          "unit": ""
+        },
+        "network_state.rate": {
+          "zh": "网络速率",
+          "unit": "KB/s"
+        },
+        "network_state.type": {
+          "zh": "网络类型",
+          "unit": "",
+          "values": {
+            "1": "有线",
+            "2": "4G",
+            "3": "5G"
+          }
+        },
+        "position_state.gps_number": {
+          "zh": "GPS 搜星数",
+          "unit": ""
+        },
+        "position_state.is_calibration": {
+          "zh": "是否标定",
+          "unit": "",
+          "values": {
+            "0": "未标定",
+            "1": "已标定"
+          }
+        },
+        "position_state.is_fixed": {
+          "zh": "定位收敛状态",
+          "unit": "",
+          "values": {
+            "0": "未开始",
+            "1": "收敛中",
+            "2": "已收敛",
+            "3": "失败"
+          }
+        },
+        "position_state.quality": {
+          "zh": "搜星质量档位",
+          "unit": "",
+          "values": {
+            "1": "1档",
+            "2": "2档",
+            "3": "3档",
+            "4": "4档",
+            "5": "5档"
+          }
+        },
+        "position_state.rtk_number": {
+          "zh": "RTK 搜星数",
+          "unit": ""
+        },
+        "putter_state": {
+          "zh": "推杆状态",
+          "unit": "",
+          "values": {
+            "0": "收回",
+            "1": "推出"
+          }
+        },
+        "rainfall": {
+          "zh": "降雨量",
+          "unit": "mm"
+        },
+        "rtcm_info.host": {
+          "zh": "网络host信息",
+          "unit": ""
+        },
+        "rtcm_info.mount_point": {
+          "zh": "网络RTK挂载点信息",
+          "unit": ""
+        },
+        "rtcm_info.port": {
+          "zh": "网络端口信息",
+          "unit": ""
+        },
+        "rtcm_info.rtcm_device_type": {
+          "zh": "设备类型",
+          "unit": "",
+          "values": {
+            "1": "机场"
+          }
+        },
+        "rtcm_info.source_type": {
+          "zh": "标定类型",
+          "unit": "",
+          "values": {
+            "0": "未标定",
+            "1": "自收敛标定",
+            "2": "手动标定",
+            "3": "网络RTK标定"
+          }
+        },
+        "self_converge_coordinate.height": {
+          "zh": "椭球高度",
+          "unit": "m"
+        },
+        "self_converge_coordinate.latitude": {
+          "zh": "纬度",
+          "unit": ""
+        },
+        "self_converge_coordinate.longitude": {
+          "zh": "经度",
+          "unit": ""
+        },
+        "silent_mode": {
+          "zh": "机场静音模式",
+          "unit": "",
+          "values": {
+            "0": "非静音模式",
+            "1": "静音模式"
+          }
+        },
+        "storage.total": {
+          "zh": "存储总容量",
+          "unit": "KB"
+        },
+        "storage.used": {
+          "zh": "已用容量",
+          "unit": "KB"
+        },
+        "sub_device.device_model_key": {
+          "zh": "子设备枚举值",
+          "unit": ""
+        },
+        "sub_device.device_online_status": {
+          "zh": "机场停机坪上的飞行器开机状态",
+          "unit": "",
+          "values": {
+            "0": "关机",
+            "1": "开机"
+          }
+        },
+        "sub_device.device_paired": {
+          "zh": "机场停机坪上的飞行器是否与机场对频",
+          "unit": "",
+          "values": {
+            "0": "未对频",
+            "1": "已对频"
+          }
+        },
+        "sub_device.device_sn": {
+          "zh": "子设备序列号（SN）",
+          "unit": ""
+        },
+        "supplement_light_state": {
+          "zh": "补光灯状态",
+          "unit": "",
+          "values": {
+            "0": "关闭",
+            "1": "打开"
+          }
+        },
+        "temperature": {
+          "zh": "机舱温度",
+          "unit": "℃"
+        },
+        "total_flight_distance": {
+          "zh": "累计飞行里程",
+          "unit": "m"
+        },
+        "total_flight_time": {
+          "zh": "累计飞行时间",
+          "unit": "秒"
+        },
+        "track_id": {
+          "zh": "航迹ID",
+          "unit": ""
+        },
+        "user_experience_improvement": {
+          "zh": "用户体验改善计划",
+          "unit": "",
+          "values": {
+            "0": "初始状态",
+            "1": "拒绝加入用户体验改善计划",
+            "2": "同意加入用户体验改善计划"
+          }
+        },
+        "vertical_speed": {
+          "zh": "垂直速度",
+          "unit": "m/s"
+        },
+        "wind_direction": {
+          "zh": "风向",
+          "unit": "",
+          "values": {
+            "1": "正北",
+            "2": "东北",
+            "3": "正东",
+            "4": "东南",
+            "5": "正南",
+            "6": "西南",
+            "7": "正西",
+            "8": "西北"
+          }
+        },
+        "wind_speed": {
+          "zh": "风速",
+          "unit": "m/s"
+        },
+        "wireless_link.4g_freq_band": {
+          "zh": "4G 频段",
+          "unit": ""
+        },
+        "wireless_link.4g_gnd_quality": {
+          "zh": "地端 4G 信号质量",
+          "unit": ""
+        },
+        "wireless_link.4g_link_state": {
+          "zh": "4G 链路连接状态",
+          "unit": "",
+          "values": {
+            "0": "断开",
+            "1": "连接"
+          }
+        },
+        "wireless_link.4g_quality": {
+          "zh": "总体 4G 信号质量",
+          "unit": ""
+        },
+        "wireless_link.4g_uav_quality": {
+          "zh": "天端 4G 信号质量",
+          "unit": ""
+        },
+        "wireless_link.dongle_number": {
+          "zh": "飞行器上 Dongle 数量",
+          "unit": ""
+        },
+        "wireless_link.link_workmode": {
+          "zh": "机场的图传链路模式",
+          "unit": "",
+          "values": {
+            "0": "SDR 模式",
+            "1": "4G 融合模式"
+          }
+        },
+        "wireless_link.sdr_freq_band": {
+          "zh": "SDR 频段",
+          "unit": ""
+        },
+        "wireless_link.sdr_link_state": {
+          "zh": "SDR 链路连接状态",
+          "unit": "",
+          "values": {
+            "0": "断开",
+            "1": "连接"
+          }
+        },
+        "wireless_link.sdr_quality": {
+          "zh": "SDR 信号质量",
+          "unit": ""
+        },
+        "wireless_link_topo.center_node.sdr_id": {
+          "zh": "扰码信息",
+          "unit": ""
+        },
+        "wireless_link_topo.center_node.sn": {
+          "zh": "设备sn",
+          "unit": ""
+        },
+        "wireless_link_topo.leaf_nodes[].control_source_index": {
+          "zh": "控制源序号",
+          "unit": ""
+        },
+        "wireless_link_topo.leaf_nodes[].sdr_id": {
+          "zh": "扰码信息",
+          "unit": ""
+        },
+        "wireless_link_topo.leaf_nodes[].sn": {
+          "zh": "设备sn",
+          "unit": ""
+        },
+        "working_current": {
+          "zh": "工作电流",
+          "unit": "mA"
+        },
+        "working_voltage": {
+          "zh": "工作电压",
+          "unit": "mV"
         }
+      },
+      "groups": [
+        {
+          "id": "basic",
+          "label": "📋 基础信息",
+          "keys": [
+            "job_number",
+            "acc_time",
+            "mode_code",
+            "alarm_state",
+            "firmware_version",
+            "gear",
+            "track_id"
+          ]
+        },
+        {
+          "id": "power",
+          "label": "🔋 电源",
+          "keys": [
+            "electric_supply_voltage",
+            "working_voltage",
+            "working_current",
+            "backup_battery.voltage",
+            "backup_battery.temperature",
+            "backup_battery.switch",
+            "battery.capacity_percent",
+            "battery.remain_flight_time",
+            "battery.return_home_power",
+            "battery.landing_power",
+            "battery.batteries[0].voltage",
+            "battery.batteries[0].temperature",
+            "battery.batteries[0].loop_times",
+            "battery.batteries[1].voltage",
+            "battery.batteries[1].temperature",
+            "battery.batteries[1].loop_times"
+          ]
+        },
+        {
+          "id": "charge",
+          "label": "⚡ 充电状态",
+          "keys": [
+            "drone_charge_state.state",
+            "drone_charge_state.capacity_percent"
+          ]
+        },
+        {
+          "id": "flight",
+          "label": "✈ 飞行数据",
+          "keys": [
+            "horizontal_speed",
+            "vertical_speed",
+            "elevation",
+            "height",
+            "home_distance",
+            "total_flight_distance",
+            "total_flight_time",
+            "height_limit",
+            "attitude_head",
+            "attitude_pitch",
+            "attitude_roll"
+          ]
+        },
+        {
+          "id": "position",
+          "label": "📍 定位",
+          "keys": [
+            "latitude",
+            "longitude",
+            "position_state.is_fixed",
+            "position_state.quality",
+            "position_state.gps_number",
+            "position_state.rtk_number"
+          ]
+        },
+        {
+          "id": "environment",
+          "label": "🌡 环境",
+          "keys": [
+            "environment_temperature",
+            "temperature",
+            "humidity",
+            "wind_speed",
+            "rainfall",
+            "wind_direction"
+          ]
+        },
+        {
+          "id": "device",
+          "label": "🔧 设备状态",
+          "keys": [
+            "cover_state",
+            "drone_in_dock",
+            "supplement_light_state",
+            "emergency_stop_state",
+            "air_conditioner_mode",
+            "battery_store_mode",
+            "putter_state"
+          ]
+        },
+        {
+          "id": "network",
+          "label": "📶 网络",
+          "keys": [
+            "network_state.type",
+            "network_state.quality",
+            "network_state.rate"
+          ]
+        },
+        {
+          "id": "storage",
+          "label": "💾 存储",
+          "keys": [
+            "storage.total",
+            "storage.used"
+          ]
+        },
+        {
+          "id": "alternate_land",
+          "label": "🛬 备降点",
+          "keys": [
+            "alternate_land_point.latitude",
+            "alternate_land_point.longitude",
+            "alternate_land_point.is_configured"
+          ]
+        },
+        {
+          "id": "battery_maintenance",
+          "label": "🔧 电池保养",
+          "keys": [
+            "drone_battery_maintenance_info.maintenance_state",
+            "drone_battery_maintenance_info.maintenance_time_left"
+          ]
+        },
+        {
+          "id": "position_ext",
+          "label": "📍 定位扩展",
+          "keys": [
+            "home_position_is_valid",
+            "heading",
+            "position_state.is_calibration",
+            "drc_state",
+            "self_converge_coordinate.latitude",
+            "self_converge_coordinate.longitude",
+            "self_converge_coordinate.height"
+          ]
+        },
+        {
+          "id": "rtcm",
+          "label": "📡 RTK标定",
+          "keys": [
+            "rtcm_info.mount_point",
+            "rtcm_info.port",
+            "rtcm_info.host",
+            "rtcm_info.rtcm_device_type",
+            "rtcm_info.source_type"
+          ]
+        },
+        {
+          "id": "wireless",
+          "label": "📶 图传链路",
+          "keys": [
+            "wireless_link_topo.center_node.sdr_id",
+            "wireless_link_topo.center_node.sn",
+            "wireless_link_topo.leaf_nodes[].sdr_id",
+            "wireless_link_topo.leaf_nodes[].sn",
+            "wireless_link_topo.leaf_nodes[].control_source_index",
+            "wireless_link.dongle_number",
+            "wireless_link.4g_link_state",
+            "wireless_link.sdr_link_state",
+            "wireless_link.link_workmode",
+            "wireless_link.sdr_quality",
+            "wireless_link.4g_quality",
+            "wireless_link.4g_uav_quality",
+            "wireless_link.4g_gnd_quality",
+            "wireless_link.sdr_freq_band",
+            "wireless_link.4g_freq_band"
+          ]
+        },
+        {
+          "id": "air_conditioner",
+          "label": "❄️ 空调",
+          "keys": [
+            "air_conditioner.air_conditioner_state",
+            "air_conditioner.switch_time"
+          ]
+        },
+        {
+          "id": "device_ext",
+          "label": "🔧 设备扩展",
+          "keys": [
+            "air_transfer_enable",
+            "silent_mode",
+            "user_experience_improvement",
+            "drone_battery_maintenance_info.maintenance_state",
+            "drone_battery_maintenance_info.maintenance_time_left",
+            "position_state.is_fixed",
+            "position_state.quality",
+            "position_state.gps_number",
+            "position_state.rtk_number",
+            "emergency_stop_state",
+            "drone_charge_state.capacity_percent",
+            "drone_charge_state.state",
+            "backup_battery.switch",
+            "backup_battery.voltage",
+            "backup_battery.temperature",
+            "alarm_state",
+            "battery_store_mode",
+            "activation_time",
+            "height",
+            "alternate_land_point.longitude",
+            "alternate_land_point.latitude",
+            "alternate_land_point.safe_land_height",
+            "alternate_land_point.is_configured",
+            "alternate_land_point.height",
+            "compatible_status",
+            "acc_time",
+            "first_power_on",
+            "storage.total",
+            "storage.used",
+            "working_current",
+            "working_voltage",
+            "humidity",
+            "temperature",
+            "environment_temperature",
+            "wind_speed",
+            "rainfall",
+            "job_number",
+            "drone_in_dock",
+            "network_state.type",
+            "network_state.quality",
+            "network_state.rate",
+            "supplement_light_state",
+            "cover_state",
+            "flighttask_step_code",
+            "mode_code",
+            "firmware_upgrade_status",
+            "firmware_version",
+            "latitude",
+            "longitude"
+          ]
+        },
+        {
+          "id": "dongle",
+          "label": "📶 4G Dongle",
+          "keys": [
+            "dongle_infos[].imei",
+            "dongle_infos[].dongle_type",
+            "dongle_infos[].eid",
+            "dongle_infos[].esim_activate_state",
+            "dongle_infos[].sim_card_state",
+            "dongle_infos[].sim_slot",
+            "dongle_infos[].esim_infos[].telecom_operator",
+            "dongle_infos[].esim_infos[].enabled",
+            "dongle_infos[].esim_infos[].iccid",
+            "dongle_infos[].sim_info.telecom_operator",
+            "dongle_infos[].sim_info.sim_type",
+            "dongle_infos[].sim_info.iccid"
+          ]
+        },
+        {
+          "id": "battery_ext",
+          "label": "🔋 电池扩展",
+          "keys": [
+            "drone_battery_maintenance_info.heat_state",
+            "drone_battery_maintenance_info.batteries[].capacity_percent",
+            "drone_battery_maintenance_info.batteries[].index",
+            "drone_battery_maintenance_info.batteries[].voltage",
+            "drone_battery_maintenance_info.batteries[].temperature"
+          ]
+        },
+        {
+          "id": "maintain",
+          "label": "🔧 保养",
+          "keys": [
+            "maintain_status.maintain_status_array[].state",
+            "maintain_status.maintain_status_array[].last_maintain_type",
+            "maintain_status.maintain_status_array[].last_maintain_time",
+            "maintain_status.maintain_status_array[].last_maintain_work_sorties"
+          ]
+        },
+        {
+          "id": "live",
+          "label": "🎥 直播",
+          "keys": [
+            "live_capacity.available_video_number",
+            "live_capacity.coexist_video_number_max",
+            "live_capacity.device_list[].sn",
+            "live_capacity.device_list[].available_video_number",
+            "live_capacity.device_list[].coexist_video_number_max",
+            "live_capacity.device_list[].camera_list[].camera_index",
+            "live_capacity.device_list[].camera_list[].available_video_number",
+            "live_capacity.device_list[].camera_list[].coexist_video_number_max",
+            "live_capacity.device_list[].camera_list[].video_list[].video_index",
+            "live_capacity.device_list[].camera_list[].video_list[].video_type",
+            "live_status[].video_id",
+            "live_status[].video_type",
+            "live_status[].video_quality",
+            "live_status[].status",
+            "live_status[].error_status"
+          ]
+        },
+        {
+          "id": "media",
+          "label": "📁 媒体",
+          "keys": [
+            "media_file_detail.remain_upload"
+          ]
+        },
+        {
+          "id": "sub_device",
+          "label": "📱 子设备",
+          "keys": [
+            "sub_device.device_sn",
+            "sub_device.device_model_key",
+            "sub_device.device_online_status",
+            "sub_device.device_paired"
+          ]
+        },
+        {
+          "id": "device_ext",
+          "label": "🔧 设备扩展",
+          "keys": [
+            "air_transfer_enable",
+            "silent_mode",
+            "user_experience_improvement",
+            "drone_battery_maintenance_info.maintenance_state",
+            "drone_battery_maintenance_info.maintenance_time_left",
+            "position_state.is_fixed",
+            "position_state.quality",
+            "position_state.gps_number",
+            "position_state.rtk_number",
+            "emergency_stop_state",
+            "drone_charge_state.capacity_percent",
+            "drone_charge_state.state",
+            "backup_battery.switch",
+            "backup_battery.voltage",
+            "backup_battery.temperature",
+            "alarm_state",
+            "battery_store_mode",
+            "activation_time",
+            "height",
+            "alternate_land_point.longitude",
+            "alternate_land_point.latitude",
+            "alternate_land_point.safe_land_height",
+            "alternate_land_point.is_configured",
+            "alternate_land_point.height",
+            "compatible_status",
+            "acc_time",
+            "first_power_on",
+            "storage.total",
+            "storage.used",
+            "working_current",
+            "working_voltage",
+            "humidity",
+            "temperature",
+            "environment_temperature",
+            "wind_speed",
+            "rainfall",
+            "job_number",
+            "drone_in_dock",
+            "network_state.type",
+            "network_state.quality",
+            "network_state.rate",
+            "supplement_light_state",
+            "cover_state",
+            "flighttask_step_code",
+            "mode_code",
+            "firmware_upgrade_status",
+            "firmware_version",
+            "latitude",
+            "longitude"
+          ]
+        }
+      ]
     }
+  }
 }

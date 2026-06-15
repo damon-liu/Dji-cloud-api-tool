@@ -6,7 +6,7 @@ base-ref: d8ff9499b63f2edfca8f7510114901eb79f79000
 
 # OSD 字段匹配 实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 编写 Python 脚本 `scripts/sync_topic_mappings.py`，解析 `config/dock-osd.md`（DJI Dock OSD 属性表格，约 150 行），与 `config/topic_mappings.json` 对比，自动补充缺失字段映射。
 
@@ -50,7 +50,7 @@ base-ref: d8ff9499b63f2edfca8f7510114901eb79f79000
 
 实现 `parse_dock_osd_md(path)` 函数，从 `config/dock-osd.md` 解析表格行，输出 `List[OsdField]`。
 
-- [ ] **Step 1: 创建脚本骨架和数据结构**
+- [x] **Step 1: 创建脚本骨架和数据结构**
 
 写入 `scripts/sync_topic_mappings.py`：
 
@@ -111,7 +111,7 @@ def _strip_prefix(s: str) -> str:
     return re.sub(r'^[»\s]+', '', content)
 ```
 
-- [ ] **Step 2: 实现 constraint 列 JSON 解析函数**
+- [x] **Step 2: 实现 constraint 列 JSON 解析函数**
 
 追加到 `scripts/sync_topic_mappings.py`（在 `_strip_prefix` 函数之后）：
 
@@ -159,7 +159,7 @@ def _parse_constraint(constraint_raw: str) -> Tuple[Dict[str, str], str]:
     return values, unit
 ```
 
-- [ ] **Step 3: 实现 `parse_dock_osd_md()` 主解析函数**
+- [x] **Step 3: 实现 `parse_dock_osd_md()` 主解析函数**
 
 追加到 `scripts/sync_topic_mappings.py`：
 
@@ -256,7 +256,7 @@ def parse_dock_osd_md(md_path: str) -> List[OsdField]:
     return fields
 ```
 
-- [ ] **Step 4: 编写解析功能自测**
+- [x] **Step 4: 编写解析功能自测**
 
 在 `scripts/sync_topic_mappings.py` 末尾追加临时 `if __name__ == "__main__"` 块：
 
@@ -294,7 +294,7 @@ if __name__ == "__main__":
             print(f"  ✗ {chk}: 未找到!")
 ```
 
-- [ ] **Step 5: 运行解析自测验证**
+- [x] **Step 5: 运行解析自测验证**
 
 ```bash
 cd D:/project/damon/C/Dji-cloud-api-tool/Dji-cloud-api-tool
@@ -308,11 +308,11 @@ python scripts/sync_topic_mappings.py
 - `heading` 的 unit 为 `"°"`
 - `wireless_link.4g_link_state` 的 values 为 `{"0":"断开","1":"连接"}`
 
-- [ ] **Step 6: 移除临时自测代码**
+- [x] **Step 6: 移除临时自测代码**
 
 在进入 Task 2 前，删除 `if __name__ == "__main__":` 下所有临时自测代码（保留该 guard 行，后续 Task 3 会重新填充）。
 
-- [ ] **Step 7: 提交**
+- [x] **Step 7: 提交**
 
 ```bash
 cd D:/project/damon/C/Dji-cloud-api-tool/Dji-cloud-api-tool
@@ -329,7 +329,7 @@ git commit -m "feat: 添加 Markdown 表格解析模块 — parse_dock_osd_md()"
 
 实现 `merge_fields()` 函数，加载现有 `topic_mappings.json`，与解析出的 `OsdField` 列表对比，只添加缺失字段，保留独有字段，按分组规则生成 groups。
 
-- [ ] **Step 1: 定义分组规则和辅助函数**
+- [x] **Step 1: 定义分组规则和辅助函数**
 
 在 `parse_dock_osd_md()` 函数之后追加：
 
@@ -379,7 +379,7 @@ def _build_zones(fields: List[OsdField]) -> Dict[str, List[str]]:
     return groups
 ```
 
-- [ ] **Step 2: 实现 `merge_fields()` 函数**
+- [x] **Step 2: 实现 `merge_fields()` 函数**
 
 追加到 `_build_zones` 函数之后：
 
@@ -467,7 +467,7 @@ def merge_fields(
     return result
 ```
 
-- [ ] **Step 3: 重构 `merge_fields` 解决 `_get_pre_merge_keys` 未定义问题**
+- [x] **Step 3: 重构 `merge_fields` 解决 `_get_pre_merge_keys` 未定义问题**
 
 上一步中引用了不存在的 `_get_pre_merge_keys`。需要修正 `merge_fields` 中新增字段计数的逻辑。将 `merge_fields` 函数中那两行替换为正确的实现：
 
@@ -493,7 +493,7 @@ def merge_fields(
 
 即删除 `new_field_groups` 行及其注释，保留 `all_zones` 行。
 
-- [ ] **Step 4: 提交**
+- [x] **Step 4: 提交**
 
 ```bash
 cd D:/project/damon/C/Dji-cloud-api-tool/Dji-cloud-api-tool
@@ -510,7 +510,7 @@ git commit -m "feat: 添加字段合并逻辑 — merge_fields()"
 
 实现 `main()` 函数，串联解析 → 合并 → 输出流程，支持 `--dry-run`。
 
-- [ ] **Step 1: 实现 `main()` 函数**
+- [x] **Step 1: 实现 `main()` 函数**
 
 追加到 `scripts/sync_topic_mappings.py` 末尾（在 `merge_fields` 函数之后）：
 
@@ -575,7 +575,7 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 2: 运行 `--dry-run` 验证**
+- [x] **Step 2: 运行 `--dry-run` 验证**
 
 ```bash
 cd D:/project/damon/C/Dji-cloud-api-tool/Dji-cloud-api-tool
@@ -587,7 +587,7 @@ python scripts/sync_topic_mappings.py --dry-run
 - 新增字段数 > 0
 - 不修改 `topic_mappings.json` 文件
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```bash
 cd D:/project/damon/C/Dji-cloud-api-tool/Dji-cloud-api-tool
@@ -604,7 +604,7 @@ git commit -m "feat: 添加 CLI 入口 — main() + --dry-run"
 
 运行脚本，逐项验证设计文档中列出的测试点。
 
-- [ ] **Step 1: 备份原始 JSON 并执行脚本**
+- [x] **Step 1: 备份原始 JSON 并执行脚本**
 
 ```bash
 cd D:/project/damon/C/Dji-cloud-api-tool/Dji-cloud-api-tool
@@ -612,7 +612,7 @@ cp config/topic_mappings.json config/topic_mappings.json.bak
 python scripts/sync_topic_mappings.py
 ```
 
-- [ ] **Step 2: 验证解析正确性 — 字段数**
+- [x] **Step 2: 验证解析正确性 — 字段数**
 
 ```bash
 cd D:/project/damon/C/Dji-cloud-api-tool/Dji-cloud-api-tool
@@ -627,7 +627,7 @@ print(f'总字段数: {len(fs)}')
 
 预期：字段数约 130+（原有 ~65 + 新增 ~65+）。
 
-- [ ] **Step 3: 验证新增字段存在**
+- [x] **Step 3: 验证新增字段存在**
 
 ```bash
 cd D:/project/damon/C/Dji-cloud-api-tool/Dji-cloud-api-tool
@@ -672,7 +672,7 @@ for c in checks:
 
 预期：所有检查项显示 `✓`。
 
-- [ ] **Step 4: 验证独有字段（飞行器专属字段）未丢失**
+- [x] **Step 4: 验证独有字段（飞行器专属字段）未丢失**
 
 ```bash
 cd D:/project/damon/C/Dji-cloud-api-tool/Dji-cloud-api-tool
@@ -703,7 +703,7 @@ for fname in unique_fields:
 
 预期：所有检查项显示 `✓ ... 保留`。
 
-- [ ] **Step 5: 验证幂等性 — 连续执行两次 diff 无变化**
+- [x] **Step 5: 验证幂等性 — 连续执行两次 diff 无变化**
 
 ```bash
 cd D:/project/damon/C/Dji-cloud-api-tool/Dji-cloud-api-tool
@@ -716,7 +716,7 @@ rm config/topic_mappings_pass2.json
 
 预期：`diff` 无输出（文件完全相同）。
 
-- [ ] **Step 6: 验证 JSON 格式有效性**
+- [x] **Step 6: 验证 JSON 格式有效性**
 
 ```bash
 cd D:/project/damon/C/Dji-cloud-api-tool/Dji-cloud-api-tool
@@ -725,7 +725,7 @@ python -m json.tool config/topic_mappings.json > nul && echo "JSON 格式有效"
 
 预期：输出 `JSON 格式有效`。
 
-- [ ] **Step 7: 验证 C++ 项目加载不破坏**
+- [x] **Step 7: 验证 C++ 项目加载不破坏**
 
 ```bash
 cd D:/project/damon/C/Dji-cloud-api-tool/Dji-cloud-api-tool
@@ -734,7 +734,7 @@ cmake --build build_mingw
 
 预期：编译成功，无错误。
 
-- [ ] **Step 8: 清理备份并提交**
+- [x] **Step 8: 清理备份并提交**
 
 ```bash
 cd D:/project/damon/C/Dji-cloud-api-tool/Dji-cloud-api-tool
