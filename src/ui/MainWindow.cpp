@@ -554,7 +554,7 @@ void MainWindow::onOsdUpdated(const QString& sn, const QString& topic, const QSt
     if (dev) {
         const AircraftOsd* airOsd = mDevMgr->latestAircraftOsd(sn);
         const DockOsd* dockOsd   = mDevMgr->latestDockOsd(sn);
-        mOsdPanel->showOsd(dev, airOsd, dockOsd, mDevMgr->latestRawJson(sn));
+        mOsdPanel->showOsd(dev, airOsd, dockOsd, mDevMgr->latestRawJson(sn, topic));
     }
 
     // 按用户选中的 topic 过滤追加
