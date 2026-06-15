@@ -36,6 +36,9 @@ public:
     void removeTopic(const QString& deviceSn, const QString& topic);
     void updateTopic(const QString& deviceSn, const QString& oldTopic, const QString& newTopic);
 
+    // 重排设备 topic 顺序
+    void reorderTopics(const QString& deviceSn, const QStringList& orderedTopics);
+
     // Topic 启用/禁用控制
     void setTopicEnabled(const QString& deviceSn, const QString& topic, bool enabled);
     bool isTopicEnabled(const QString& deviceSn, const QString& topic) const;

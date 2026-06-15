@@ -2,6 +2,17 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QDebug>
+
+static const QStringList DEFAULT_DOCK_TOPICS = {
+    "thing/product/{sn}/state",
+    "thing/product/{sn}/requests",
+    "thing/product/{sn}/events",
+    "thing/product/{sn}/services_reply",
+    "thing/product/{sn}/property/set_reply",
+    "sys/product/{sn}/status",
+    "thing/product/{sn}/drc/up",
+};
+
 DeviceManager::DeviceManager(QObject* parent)
     : QObject(parent)
     , mConfigStore(new ConfigStore(this))
@@ -61,7 +72,26 @@ bool DeviceManager::isConnected() const {
 
 void DeviceManager::addDevice(const DeviceInfo& info, const QStringList& topics) {
     mDevices[info.sn] = info;
-    mTopicManager->setDeviceTopics(info.sn, topics);
+
+    if (info.type == DeviceType::Dock) {
+        // 机场设备：追加 7 个默认 topic，默认禁用
+        QStringList extendedTopics = topics;
+        QSet<QString> newDisabled;
+        for (const auto& tpl : DEFAULT_DOCK_TOPICS) {
+            QString topic = QString(tpl).replace("{sn}", info.sn);
+            if (!extendedTopics.contains(topic)) {
+                extendedTopics.append(topic);
+                newDisabled.insert(topic);
+            }
+        }
+        mTopicManager->setDeviceTopics(info.sn, extendedTopics);
+        // 将已有禁用记录与新增默认禁用的 topic 合并
+        QSet<QString> existingDisabled = mTopicManager->disabledTopicsForDevice(info.sn);
+        existingDisabled.unite(newDisabled);
+        mTopicManager->setDisabledTopicsForDevice(info.sn, existingDisabled);
+    } else {
+        mTopicManager->setDeviceTopics(info.sn, topics);
+    }
 
     // 持久化
     QVector<DeviceInfo> devs;
@@ -231,6 +261,13 @@ void DeviceManager::setTopicEnabled(const QString& deviceSn, const QString& topi
 
 bool DeviceManager::isTopicEnabled(const QString& deviceSn, const QString& topic) const {
     return mTopicManager->isTopicEnabled(deviceSn, topic);
+}
+
+void DeviceManager::reorderTopics(const QString& deviceSn, const QStringList& orderedTopics) {
+    mTopicManager->reorderTopics(deviceSn, orderedTopics);
+    // 持久化顺序变更
+    mConfigStore->setTopicsForDevice(deviceSn, orderedTopics);
+    saveConfig(mConfigPath);
 }
 
 // ——— 私有槽 ———

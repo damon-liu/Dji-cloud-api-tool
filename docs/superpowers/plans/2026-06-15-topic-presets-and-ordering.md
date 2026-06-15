@@ -284,7 +284,7 @@ cmake --build build_mingw
 - Modify: `src/ui/TopicListWidget.h`
 - Modify: `src/ui/TopicListWidget.cpp`
 
-- [ ] **Step 1: 修改 TopicListWidget.h — 新增成员和信号**
+- [x] **Step 1: 修改 TopicListWidget.h — 新增成员和信号**
 
 在 `topicRemoved` signal 之后（第 31 行后）添加新 signal：
 
@@ -474,7 +474,7 @@ cmake --build build_mingw
 - Modify: `src/core/DeviceManager.h`
 - Modify: `src/core/DeviceManager.cpp`
 
-- [ ] **Step 1: 修改 DeviceManager.h — 新增 reorderTopics 公开方法**
+- [x] **Step 1: 修改 DeviceManager.h — 新增 reorderTopics 公开方法**
 
 在 `updateTopic` 声明之后（第 37 行后）添加：
 
@@ -483,7 +483,7 @@ cmake --build build_mingw
     void reorderTopics(const QString& deviceSn, const QStringList& orderedTopics);
 ```
 
-- [ ] **Step 2: 修改 DeviceManager.cpp — 在 addDevice() 中追加默认 topic**
+- [x] **Step 2: 修改 DeviceManager.cpp — 在 addDevice() 中追加默认 topic**
 
 在 `addDevice()` 方法中（第 62-74 行），替换为：
 
@@ -534,7 +534,7 @@ void DeviceManager::addDevice(const DeviceInfo& info, const QStringList& topics)
 }
 ```
 
-- [ ] **Step 3: 新增 DeviceManager.cpp — reorderTopics() 桥接方法**
+- [x] **Step 3: 新增 DeviceManager.cpp — reorderTopics() 桥接方法**
 
 在文件合适位置（如 `isTopicEnabled()` 之后，第 234 行附近）添加：
 
@@ -547,7 +547,7 @@ void DeviceManager::reorderTopics(const QString& deviceSn, const QStringList& or
 }
 ```
 
-- [ ] **Step 4: 编译验证 Task 4**
+- [x] **Step 4: 编译验证 Task 4**
 
 ```bash
 cmake --build build_mingw
