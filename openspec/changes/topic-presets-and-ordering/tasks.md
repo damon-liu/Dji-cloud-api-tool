@@ -15,7 +15,7 @@
   - 按钮仅在选中有效 topic 时启用
   - 保持启用/禁用状态标记
 
-- [ ] 3. **MainWindow 连接排序信号**
+- [x] 3. **MainWindow 连接排序信号**
   连接 `topicOrderChanged` 信号到 DeviceManager，更新 topic 顺序并持久化。
   - 文件: `src/ui/MainWindow.cpp`
 

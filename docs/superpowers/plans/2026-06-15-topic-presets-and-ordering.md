@@ -684,7 +684,7 @@ cmake --build build_mingw
 **Files:**
 - Modify: `src/ui/MainWindow.cpp`
 
-- [ ] **Step 1: 修改 MainWindow.cpp — connectSignals() 中添加排序信号连接**
+- [x] **Step 1: 修改 MainWindow.cpp — connectSignals() 中添加排序信号连接**
 
 在 `connectSignals()` 方法中（第 419 行 `topicRemoved` 连接之后）添加：
 
@@ -697,7 +697,7 @@ cmake --build build_mingw
     });
 ```
 
-- [ ] **Step 2: 修改 MainWindow.cpp — onDeviceSelected() 中传递 SN 给 PublishPanel**
+- [x] **Step 2: 修改 MainWindow.cpp — onDeviceSelected() 中传递 SN 给 PublishPanel**
 
 在 `onDeviceSelected()` 方法中（第 528 行 `mPublishPanel->setTopics(...)` 之前），添加 `setDeviceSn()` 调用：
 
@@ -723,7 +723,7 @@ void MainWindow::onDeviceSelected(const QString& sn) {
 
 具体代码位置：在 `onDeviceSelected()` 中第 528 行之前插入 `mPublishPanel->setDeviceSn(sn);`
 
-- [ ] **Step 3: 编译验证 Task 6**
+- [x] **Step 3: 编译验证 Task 6**
 
 ```bash
 cmake --build build_mingw

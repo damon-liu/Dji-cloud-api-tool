@@ -418,6 +418,13 @@ void MainWindow::connectSignals() {
         refreshTopicList(sn);
     });
 
+    // Topic 排序信号 → DeviceManager 持久化
+    connect(mTopicListWidget, &TopicListWidget::topicOrderChanged,
+            this, [this](const QString& sn, const QStringList& ordered) {
+        mDevMgr->reorderTopics(sn, ordered);
+        refreshTopicList(sn);
+    });
+
     // Topic 选中变化 → 原始 JSON 按 topic 过滤
     connect(mTopicListWidget, &TopicListWidget::topicSelectionChanged,
             this, [this](const QString& selectedTopic) {
@@ -525,6 +532,7 @@ void MainWindow::onDeviceSelected(const QString& sn) {
     mOsdPanel->showOsd(dev, airOsd, dockOsd, mDevMgr->latestRawJson(sn));
 
     mRawJsonPanel->setJson(mDevMgr->jsonHistory(sn));
+    mPublishPanel->setDeviceSn(sn);
     mPublishPanel->setTopics(mDevMgr->topicsForDevice(sn));
 
     // 刷新 topic 列表
