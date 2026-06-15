@@ -735,7 +735,7 @@ cmake --build build_mingw
 
 ### Task 7: 整体编译 + 端到端验证
 
-- [ ] **Step 1: 完整编译项目**
+- [x] **Step 1: 完整编译项目**
 
 ```bash
 cmake --build build_mingw
@@ -743,7 +743,7 @@ cmake --build build_mingw
 
 预期：编译通过，生成 `build_mingw\DjiCloudApi.exe`。
 
-- [ ] **Step 2: 启动应用，创建新机场设备进行验证**
+- [x] **Step 2: 启动应用，创建新机场设备进行验证**
 
 启动 `build_mingw\DjiCloudApi.exe`，执行以下验证：
 
@@ -788,7 +788,7 @@ cmake --build build_mingw
    - 使用旧版 config.json（若存在），确认可正常加载
    - 确认 `config.json` 中的 topics 数组顺序得到保留
 
-- [ ] **Step 3: 提交变更**
+- [x] **Step 3: 提交变更**
 
 ```bash
 git add src/core/TopicManager.h src/core/TopicManager.cpp \
