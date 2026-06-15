@@ -163,7 +163,7 @@ void TopicParsePanel::refresh() {
     if (!mDevMgr || mDeviceSn.isEmpty() || mTopic.isEmpty())
         return;
 
-    QString rawJson = mDevMgr->latestRawJson(mDeviceSn);
+    QString rawJson = mDevMgr->latestRawJson(mDeviceSn, mTopic);
     if (rawJson.isEmpty())
         return;
 
