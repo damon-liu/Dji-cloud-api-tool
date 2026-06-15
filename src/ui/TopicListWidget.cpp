@@ -55,6 +55,31 @@ TopicListWidget::TopicListWidget(QWidget* parent)
         "QPushButton:disabled { background: #f5f5f5; color: #bdbdbd; border-color: #e0e0e0; }");
     titleRow->addWidget(mRemoveBtn);
 
+    // 排序按钮
+    mMoveUpBtn = new QPushButton("▲", this);
+    mMoveUpBtn->setCursor(Qt::PointingHandCursor);
+    mMoveUpBtn->setFixedSize(28, 28);
+    mMoveUpBtn->setToolTip("上移选中 Topic");
+    mMoveUpBtn->setEnabled(false);
+    mMoveUpBtn->setStyleSheet(
+        "QPushButton { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; "
+        "border-radius: 4px; font-size: 13px; font-weight: bold; }"
+        "QPushButton:hover { background: #bbdefb; }"
+        "QPushButton:disabled { background: #f5f5f5; color: #bdbdbd; border-color: #e0e0e0; }");
+    titleRow->addWidget(mMoveUpBtn);
+
+    mMoveDownBtn = new QPushButton("▼", this);
+    mMoveDownBtn->setCursor(Qt::PointingHandCursor);
+    mMoveDownBtn->setFixedSize(28, 28);
+    mMoveDownBtn->setToolTip("下移选中 Topic");
+    mMoveDownBtn->setEnabled(false);
+    mMoveDownBtn->setStyleSheet(
+        "QPushButton { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; "
+        "border-radius: 4px; font-size: 13px; font-weight: bold; }"
+        "QPushButton:hover { background: #bbdefb; }"
+        "QPushButton:disabled { background: #f5f5f5; color: #bdbdbd; border-color: #e0e0e0; }");
+    titleRow->addWidget(mMoveDownBtn);
+
     layout->addLayout(titleRow);
 
     // Topic 列表（占满宽度）
@@ -75,6 +100,8 @@ TopicListWidget::TopicListWidget(QWidget* parent)
     connect(mRemoveBtn, &QPushButton::clicked, this, &TopicListWidget::onRemoveTopic);
     connect(mTopicList, &QListWidget::itemSelectionChanged,
             this, &TopicListWidget::onTopicSelectionChanged);
+    connect(mMoveUpBtn, &QPushButton::clicked, this, &TopicListWidget::onMoveUp);
+    connect(mMoveDownBtn, &QPushButton::clicked, this, &TopicListWidget::onMoveDown);
 
     // 初始状态：无设备选中
     clearTopics();
@@ -97,6 +124,8 @@ void TopicListWidget::clearTopics() {
     mAddBtn->setEnabled(false);
     mToggleBtn->setEnabled(false);
     mRemoveBtn->setEnabled(false);
+    mMoveUpBtn->setEnabled(false);
+    mMoveDownBtn->setEnabled(false);
 
     if (mAllTopics.isEmpty() && mCurrentSn.isEmpty()) {
         mTopicList->addItem("（请选择设备）");
@@ -199,5 +228,57 @@ void TopicListWidget::onTopicSelectionChanged() {
     bool hasSelection = !selectedTopic().isEmpty();
     mToggleBtn->setEnabled(hasSelection);
     mRemoveBtn->setEnabled(hasSelection);
+
+    // 排序按钮：仅当有选中且不是占位行时启用
+    int currentRow = mTopicList->currentRow();
+    bool canMoveUp = hasSelection && currentRow > 0;
+    bool canMoveDown = hasSelection && currentRow < mTopicList->count() - 1;
+    mMoveUpBtn->setEnabled(canMoveUp);
+    mMoveDownBtn->setEnabled(canMoveDown);
+
     emit topicSelectionChanged(hasSelection ? selectedTopic() : QString());
+}
+
+void TopicListWidget::onMoveUp() {
+    QString topic = selectedTopic();
+    if (topic.isEmpty() || mCurrentSn.isEmpty()) return;
+
+    int idx = mAllTopics.indexOf(topic);
+    if (idx <= 0) return;
+
+    // 交换位置
+    mAllTopics.swapItemsAt(idx, idx - 1);
+    refreshList();
+
+    // 保持选中
+    for (int i = 0; i < mTopicList->count(); ++i) {
+        if (mTopicList->item(i)->data(Qt::UserRole).toString() == topic) {
+            mTopicList->setCurrentRow(i);
+            break;
+        }
+    }
+
+    emit topicOrderChanged(mCurrentSn, mAllTopics);
+}
+
+void TopicListWidget::onMoveDown() {
+    QString topic = selectedTopic();
+    if (topic.isEmpty() || mCurrentSn.isEmpty()) return;
+
+    int idx = mAllTopics.indexOf(topic);
+    if (idx < 0 || idx >= mAllTopics.size() - 1) return;
+
+    // 交换位置
+    mAllTopics.swapItemsAt(idx, idx + 1);
+    refreshList();
+
+    // 保持选中
+    for (int i = 0; i < mTopicList->count(); ++i) {
+        if (mTopicList->item(i)->data(Qt::UserRole).toString() == topic) {
+            mTopicList->setCurrentRow(i);
+            break;
+        }
+    }
+
+    emit topicOrderChanged(mCurrentSn, mAllTopics);
 }

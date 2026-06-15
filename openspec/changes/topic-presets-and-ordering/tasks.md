@@ -8,7 +8,7 @@
   - 新增常量 `DEFAULT_DOCK_TOPICS`（7 个 topic 模式）
   - 调用 `mTopicManager->setDisabledTopicsForDevice()` 将新 topic 设为禁用
 
-- [ ] 2. **TopicListWidget 上移/下移按钮**
+- [x] 2. **TopicListWidget 上移/下移按钮**
   新增 ▲ 和 ▼ 按钮，实现 topic 顺序调整功能。
   - 文件: `src/ui/TopicListWidget.h`, `src/ui/TopicListWidget.cpp`
   - 新增 signal: `topicOrderChanged(const QString& sn, const QStringList& orderedTopics)`

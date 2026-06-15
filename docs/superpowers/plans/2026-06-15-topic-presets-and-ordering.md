@@ -325,7 +325,7 @@ private slots:
     void onMoveDown();     // 新增
 ```
 
-- [ ] **Step 2: 修改 TopicListWidget.cpp — 在构造函数中添加排序按钮**
+- [x] **Step 2: 修改 TopicListWidget.cpp — 在构造函数中添加排序按钮**
 
 在 `mRemoveBtn` 创建代码之后（第 56 行后），添加排序按钮的创建：
 
@@ -363,7 +363,7 @@ private slots:
     connect(mMoveDownBtn, &QPushButton::clicked, this, &TopicListWidget::onMoveDown);
 ```
 
-- [ ] **Step 3: 修改 TopicListWidget.cpp — clearTopics() 禁用排序按钮**
+- [x] **Step 3: 修改 TopicListWidget.cpp — clearTopics() 禁用排序按钮**
 
 在 `clearTopics()` 中追加禁用逻辑（第 99 行后）：
 
@@ -387,7 +387,7 @@ void TopicListWidget::clearTopics() {
 }
 ```
 
-- [ ] **Step 4: 修改 TopicListWidget.cpp — onTopicSelectionChanged() 更新排序按钮状态**
+- [x] **Step 4: 修改 TopicListWidget.cpp — onTopicSelectionChanged() 更新排序按钮状态**
 
 替换现有的 `onTopicSelectionChanged()`：
 
@@ -408,7 +408,7 @@ void TopicListWidget::onTopicSelectionChanged() {
 }
 ```
 
-- [ ] **Step 5: 新增 TopicListWidget.cpp — onMoveUp() 和 onMoveDown() 实现**
+- [x] **Step 5: 新增 TopicListWidget.cpp — onMoveUp() 和 onMoveDown() 实现**
 
 在文件末尾（第 203 行后）添加：
 
@@ -458,7 +458,7 @@ void TopicListWidget::onMoveDown() {
 }
 ```
 
-- [ ] **Step 6: 编译验证 Task 3**
+- [x] **Step 6: 编译验证 Task 3**
 
 ```bash
 cmake --build build_mingw
