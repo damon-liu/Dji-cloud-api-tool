@@ -1,0 +1,13 @@
+{
+  "change": "topic-presets-and-ordering",
+  "phase": "design",
+  "mode": "compact",
+  "canonical_spec": "openspec",
+  "generated_by": "comet-handoff.sh",
+  "context_hash": "f059b3df2fee6ff0c1092070b8ede868781749a94935807d5f93fcca3e9cc33c",
+  "files": [
+    { "path": "openspec/changes/topic-presets-and-ordering/proposal.md", "sha256": "132db552e8d7619545fc85097b4ec3c401e6cfa7a32c063e1e4d7c3d0204e4f3" },
+    { "path": "openspec/changes/topic-presets-and-ordering/design.md", "sha256": "1987b4f1a3558431e3811a645ab74604f1809b6b821b8379bef8115bfa4ac0ed" },
+    { "path": "openspec/changes/topic-presets-and-ordering/tasks.md", "sha256": "78603f963cee375bc65a95e86486246296769a43a485d81db1f428e206b23f45" }
+  ]
+}

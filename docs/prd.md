@@ -45,3 +45,27 @@ Topic:thing/product/*{device_sn}*/osd原始JSON数据对应的key可以从大疆
 
 读取本项目config目录下dock-status.md，当用户手动订阅topic：sys/product/{gateway_sn}/status时，自动在JSON解析栏解析原始JSON上报的数据
 
+#### 1.7 完善订阅和发送topic
+
+topic列表处默认添加以下topic，{gateway_sn}替换成当前所选中的机场或无人机的SN，topic顺序可以手动调准
+
+```
+thing/product/{gateway_sn}/state
+thing/product/{gateway_sn}/requests
+thing/product/{gateway_sn}/events
+thing/product/{gateway_sn}/services_reply
+thing/product/{gateway_sn}/property/set_reply
+sys/product/{gateway_sn}/status
+thing/product/{gateway_sn}/drc/up
+```
+
+在topic下发输入栏新增以下topic供用户选择，{gateway_sn}替换成当前所选中的机场或无人机的SN，topic顺序可以手动调准
+
+```
+thing/product/{gateway_sn}/property/set
+thing/product/{gateway_sn}/services
+thing/product/{gateway_sn}/events_reply
+thing/product/{gateway_sn}/requests_reply
+sys/product/{gateway_sn}/status_reply
+```
+

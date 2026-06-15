@@ -295,8 +295,8 @@ void MainWindow::setupLayout() {
 
     // 设备树（占满宽度）
     mDeviceTree = new DeviceTreeWidget(this);
-    mDeviceTree->setMinimumWidth(310);
-    mDeviceTree->setMaximumWidth(440);
+    mDeviceTree->setMinimumWidth(380);
+    mDeviceTree->setMaximumWidth(520);
     leftLayout->addWidget(mDeviceTree, 1);
 
     // === Topic 列表面板（设备树下方） ===
@@ -334,7 +334,7 @@ void MainWindow::setupLayout() {
     leftHalfLayout->addWidget(osdScroll, 1);       // OSD 设备信息
     leftHalfLayout->addWidget(parseScroll, 4);     // JSON 解析
 
-    mRawJsonPanel->setMaximumWidth(440);  // 与设备列表宽度一致
+    mRawJsonPanel->setMaximumWidth(520);  // 与设备列表宽度一致
 
     mRightSplitter = new QSplitter(Qt::Horizontal, this);
     mRightSplitter->addWidget(leftHalf);

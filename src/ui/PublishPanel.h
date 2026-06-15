@@ -68,14 +68,10 @@ public:
     // 设置当前设备 SN（用于替换 {sn} 占位符）
     void setDeviceSn(const QString& sn) { mDeviceSn = sn; }
 
-    // 设置已订阅的 topic 列表，合并显示预设 topic
-    void setTopics(const QStringList& subscribed) {
+    // 仅显示下发预设 topic（不包含已订阅 topic，避免与 Topic 列表重复）
+    void setTopics(const QStringList& /*subscribed*/) {
         mTopicCombo->clear();
-        mTopicCombo->addItems(subscribed);
-
-        // 分隔线 + 下发预设（仅当有 SN 时显示）
         if (!mDeviceSn.isEmpty()) {
-            mTopicCombo->insertSeparator(mTopicCombo->count());
             for (const auto& tpl : PUBLISH_PRESETS)
                 mTopicCombo->addItem(QString(tpl).replace("{sn}", mDeviceSn));
         }
