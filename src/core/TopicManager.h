@@ -53,6 +53,9 @@ public:
     // 批量设置禁用 topic（供 ConfigStore 加载用）
     void setDisabledTopicsForDevice(const QString& deviceSn, const QSet<QString>& topics);
 
+    // 重排某个设备的 topic 顺序（不改变集合内容，不发射 topicsChanged）
+    void reorderTopics(const QString& deviceSn, const QStringList& orderedTopics);
+
     // 清空所有 topic
     void clear();
 
@@ -61,9 +64,9 @@ signals:
     void topicsChanged(const QStringList& newTopics, const QStringList& removedTopics);
 
 private:
-    QMap<QString, QSet<QString>> mDeviceTopics;    // deviceSn -> set of topics
-    QMap<QString, QString>       mTopicToDevice;    // topic -> deviceSn (反向索引)
-    QMap<QString, QSet<QString>> mDisabledTopics;   // deviceSn -> set of disabled topics
+    QMap<QString, QStringList>   mDeviceTopics;     // deviceSn -> ordered topic list
+    QMap<QString, QString>       mTopicToDevice;     // topic -> deviceSn (反向索引)
+    QMap<QString, QSet<QString>> mDisabledTopics;    // deviceSn -> set of disabled topics
 };
 
 #endif // TOPICMANAGER_H

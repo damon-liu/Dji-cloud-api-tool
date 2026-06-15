@@ -8,15 +8,17 @@ void TopicManager::setDeviceTopics(const QString& deviceSn, const QStringList& t
     // 移除旧 topic
     removeDevice(deviceSn);
 
-    QSet<QString> topicSet;
+    QStringList orderedList;
     for (const auto& t : topics) {
-        topicSet.insert(t);
-        mTopicToDevice[t] = deviceSn;
+        if (!orderedList.contains(t)) {
+            orderedList.append(t);
+            mTopicToDevice[t] = deviceSn;
+        }
     }
-    mDeviceTopics[deviceSn] = topicSet;
+    mDeviceTopics[deviceSn] = orderedList;
 
     // 通知变更（新增所有 topic）
-    emit topicsChanged(topics, {});
+    emit topicsChanged(orderedList, {});
 }
 
 void TopicManager::addTopic(const QString& deviceSn, const QString& topic) {
@@ -29,15 +31,18 @@ void TopicManager::addTopic(const QString& deviceSn, const QString& topic) {
         if (mDisabledTopics[deviceSn].isEmpty())
             mDisabledTopics.remove(deviceSn);
     }
-    mDeviceTopics[deviceSn].insert(topic);
-    mTopicToDevice[topic] = deviceSn;
+    // 去重：已存在则不追加
+    if (!mDeviceTopics[deviceSn].contains(topic)) {
+        mDeviceTopics[deviceSn].append(topic);
+        mTopicToDevice[topic] = deviceSn;
+    }
     emit topicsChanged({topic}, {});
 }
 
 void TopicManager::removeTopic(const QString& deviceSn, const QString& topic) {
     if (!mDeviceTopics.contains(deviceSn))
         return;
-    mDeviceTopics[deviceSn].remove(topic);
+    mDeviceTopics[deviceSn].removeAll(topic);
     mTopicToDevice.remove(topic);
     // 同步清理禁用记录
     if (mDisabledTopics.contains(deviceSn)) {
@@ -56,14 +61,18 @@ void TopicManager::updateTopic(const QString& deviceSn,
 }
 
 QStringList TopicManager::topicsForDevice(const QString& deviceSn) const {
-    return mDeviceTopics.value(deviceSn).values();
+    return mDeviceTopics.value(deviceSn);
 }
 
 QStringList TopicManager::allTopics() const {
-    QSet<QString> result;
-    for (const auto& topics : mDeviceTopics)
-        result.unite(topics);
-    return result.values();
+    QStringList result;
+    for (const auto& topics : mDeviceTopics) {
+        for (const auto& t : topics) {
+            if (!result.contains(t))
+                result.append(t);
+        }
+    }
+    return result;
 }
 
 QString TopicManager::deviceForTopic(const QString& topic) const {
@@ -73,7 +82,7 @@ QString TopicManager::deviceForTopic(const QString& topic) const {
 void TopicManager::removeDevice(const QString& deviceSn) {
     if (!mDeviceTopics.contains(deviceSn))
         return;
-    QStringList removed = mDeviceTopics[deviceSn].values();
+    QStringList removed = mDeviceTopics[deviceSn];
     for (const auto& t : removed)
         mTopicToDevice.remove(t);
     mDeviceTopics.remove(deviceSn);
@@ -90,17 +99,17 @@ void TopicManager::clear() {
 }
 
 QStringList TopicManager::allEnabledTopics() const {
-    QSet<QString> result;
+    QStringList result;
     for (auto it = mDeviceTopics.begin(); it != mDeviceTopics.end(); ++it) {
         const QString& sn = it.key();
-        const QSet<QString>& deviceTopics = it.value();
+        const QStringList& deviceTopics = it.value();
         const QSet<QString> disabled = mDisabledTopics.value(sn);
         for (const auto& t : deviceTopics) {
-            if (!disabled.contains(t))
-                result.insert(t);
+            if (!disabled.contains(t) && !result.contains(t))
+                result.append(t);
         }
     }
-    return result.values();
+    return result;
 }
 
 void TopicManager::setTopicEnabled(const QString& deviceSn, const QString& topic, bool enabled) {
@@ -128,7 +137,7 @@ bool TopicManager::isTopicEnabled(const QString& deviceSn, const QString& topic)
 }
 
 QStringList TopicManager::enabledTopicsForDevice(const QString& deviceSn) const {
-    QSet<QString> deviceTopics = mDeviceTopics.value(deviceSn);
+    QStringList deviceTopics = mDeviceTopics.value(deviceSn);
     QSet<QString> disabled = mDisabledTopics.value(deviceSn);
     QStringList result;
     for (const auto& t : deviceTopics) {
@@ -147,4 +156,26 @@ void TopicManager::setDisabledTopicsForDevice(const QString& deviceSn, const QSe
         mDisabledTopics.remove(deviceSn);
     else
         mDisabledTopics[deviceSn] = topics;
+}
+
+void TopicManager::reorderTopics(const QString& deviceSn, const QStringList& orderedTopics) {
+    if (!mDeviceTopics.contains(deviceSn))
+        return;
+
+    // 安全检查：orderedTopics 的集合必须与当前列表一致
+    QStringList current = mDeviceTopics[deviceSn];
+    if (current.size() != orderedTopics.size())
+        return;
+
+    QSet<QString> currentSet(current.begin(), current.end());
+    QSet<QString> newSet(orderedTopics.begin(), orderedTopics.end());
+    if (currentSet != newSet)
+        return;
+
+    // 仅当顺序确实改变时更新
+    if (current == orderedTopics)
+        return;
+
+    mDeviceTopics[deviceSn] = orderedTopics;
+    // 不发射 topicsChanged — 集合内容未变，无需重新订阅 MQTT
 }
