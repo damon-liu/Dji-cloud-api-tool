@@ -229,7 +229,7 @@ cmake --build build_mingw
 
 > **注意:** 设计文档未显式要求此项变更，但 TopicManager 的顺序需通过 ConfigStore 持久化才能在重启后保留。ConfigStore 内部使用 QSet 会破坏 JSON 数组中的原始顺序。
 
-- [ ] **Step 1: 修改 ConfigStore.h — mDeviceTopics 类型变更**
+- [x] **Step 1: 修改 ConfigStore.h — mDeviceTopics 类型变更**
 
 ```cpp
 // ConfigStore.h 第 56 行，替换：
@@ -240,7 +240,7 @@ private:
     QMap<QString, QSet<QString>>    mDisabledTopics;  // SN -> disabled topics
 ```
 
-- [ ] **Step 2: 修改 ConfigStore.cpp — setTopicsForDevice() 移除 QSet 转换**
+- [x] **Step 2: 修改 ConfigStore.cpp — setTopicsForDevice() 移除 QSet 转换**
 
 ```cpp
 // ConfigStore.cpp 第 215-217 行，替换为：
@@ -249,7 +249,7 @@ void ConfigStore::setTopicsForDevice(const QString& sn, const QStringList& topic
 }
 ```
 
-- [ ] **Step 3: 修改 ConfigStore.cpp — topicsForDevice() 移除 .values() 调用**
+- [x] **Step 3: 修改 ConfigStore.cpp — topicsForDevice() 移除 .values() 调用**
 
 ```cpp
 // ConfigStore.cpp 第 211-213 行，替换为：
@@ -258,7 +258,7 @@ QStringList ConfigStore::topicsForDevice(const QString& sn) const {
 }
 ```
 
-- [ ] **Step 4: 修改 ConfigStore.cpp — 若 load() 中有 QSet 转换，也一并移除**
+- [x] **Step 4: 修改 ConfigStore.cpp — 若 load() 中有 QSet 转换，也一并移除**
 
 需要检查 ConfigStore::load() 的实现。若其内部将 JSON 数组读入 QSet，需改为直接构造 QStringList。
 
@@ -268,7 +268,7 @@ QStringList ConfigStore::topicsForDevice(const QString& sn) const {
 
 检查结果 — `ConfigStore::load()` 通常在解析 JSON 时使用循环 `topics.append(item.toString())` 方式构建 QStringList 再传入 `setTopicsForDevice()`。若当前写法为 `QSet<QString>(list.begin(), list.end())`，需移除该转换。
 
-- [ ] **Step 5: 编译验证 Task 2**
+- [x] **Step 5: 编译验证 Task 2**
 
 ```bash
 cmake --build build_mingw

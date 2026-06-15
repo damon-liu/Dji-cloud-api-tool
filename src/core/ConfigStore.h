@@ -53,7 +53,7 @@ private:
 
     MqttConfig                  mMqttConfig;
     QVector<DeviceInfo>         mDevices;
-    QMap<QString, QSet<QString>> mDeviceTopics;   // SN -> topics
+    QMap<QString, QStringList>  mDeviceTopics;   // SN -> topics (有序)
     QMap<QString, QSet<QString>> mDisabledTopics;  // SN -> disabled topics
 };
 

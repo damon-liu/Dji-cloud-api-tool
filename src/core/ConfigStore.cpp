@@ -42,11 +42,14 @@ bool ConfigStore::load(const QString& filePath) {
         QJsonObject devObj = val.toObject();
         DeviceInfo info = DeviceInfo::fromJson(devObj);
 
-        // 该设备自己的所有 topic
-        QSet<QString> allTopics;
+        // 该设备自己的所有 topic（保持 JSON 数组中的顺序）
+        QStringList allTopics;
         QJsonArray topicArr = devObj["topics"].toArray();
-        for (const auto& t : topicArr)
-            allTopics.insert(t.toString());
+        for (const auto& t : topicArr) {
+            QString topic = t.toString();
+            if (!allTopics.contains(topic))
+                allTopics.append(topic);
+        }
 
         // 该设备禁用的 topic（向后兼容：旧配置无此字段）
         QSet<QString> disabledTopics;
@@ -55,12 +58,12 @@ bool ConfigStore::load(const QString& filePath) {
             disabledTopics.insert(t.toString());
 
         if (info.type == DeviceType::Dock) {
-            // 机场 topics（只保留包含 dock_sn 的）
-            QSet<QString> dockTopics;
+            // 机场 topics（只保留包含 dock_sn 的，保持顺序）
+            QStringList dockTopics;
             QSet<QString> dockDisabled;
             for (const auto& t : allTopics) {
                 if (t.contains(info.sn))
-                    dockTopics.insert(t);
+                    dockTopics.append(t);
             }
             for (const auto& t : disabledTopics) {
                 if (t.contains(info.sn))
@@ -81,12 +84,12 @@ bool ConfigStore::load(const QString& filePath) {
                 child.parentSn = info.sn;
                 mDevices.append(child);
 
-                // 子飞机 topics
-                QSet<QString> childTopics;
+                // 子飞机 topics（保持顺序）
+                QStringList childTopics;
                 QSet<QString> childDisabled;
                 for (const auto& t : allTopics) {
                     if (t.contains(aircraftSn))
-                        childTopics.insert(t);
+                        childTopics.append(t);
                 }
                 for (const auto& t : disabledTopics) {
                     if (t.contains(aircraftSn))
@@ -209,11 +212,11 @@ void ConfigStore::setDevices(const QVector<DeviceInfo>& devices) {
 }
 
 QStringList ConfigStore::topicsForDevice(const QString& sn) const {
-    return mDeviceTopics.value(sn).values();
+    return mDeviceTopics.value(sn); // 直接返回，无需 .values()
 }
 
 void ConfigStore::setTopicsForDevice(const QString& sn, const QStringList& topics) {
-    mDeviceTopics[sn] = QSet<QString>(topics.begin(), topics.end());
+    mDeviceTopics[sn] = topics; // 直接保存 QStringList，保持顺序
 }
 
 QStringList ConfigStore::disabledTopicsForDevice(const QString& sn) const {
