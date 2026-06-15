@@ -43,7 +43,7 @@ public:
     // OSD 缓存
     const AircraftOsd* latestAircraftOsd(const QString& sn) const;
     const DockOsd* latestDockOsd(const QString& sn) const;
-    QString latestRawJson(const QString& sn) const;
+    QString latestRawJson(const QString& sn, const QString& topic = QString()) const;
 
     // JSON 历史数据
     QString jsonHistory(const QString& sn, const QString& topic = {}) const;
@@ -79,7 +79,7 @@ private:
     QMap<QString, DeviceInfo>  mDevices;
     QMap<QString, AircraftOsd> mAircraftOsdCache;
     QMap<QString, DockOsd>     mDockOsdCache;
-    QMap<QString, QString>     mRawJsonCache;
+    QMap<QString, QMap<QString, QString>> mRawJsonCache;  // sn → topic → json
     QMap<QString, QMap<QString, QStringList>> mJsonHistory;  // SN → topic → history[]
     QString                    mConfigPath;
     static constexpr int MAX_JSON_HISTORY = 500;

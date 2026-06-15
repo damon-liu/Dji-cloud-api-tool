@@ -165,8 +165,16 @@ const DockOsd* DeviceManager::latestDockOsd(const QString& sn) const {
     return nullptr;
 }
 
-QString DeviceManager::latestRawJson(const QString& sn) const {
-    return mRawJsonCache.value(sn);
+QString DeviceManager::latestRawJson(const QString& sn, const QString& topic) const {
+    if (!mRawJsonCache.contains(sn))
+        return {};
+    const auto& topicMap = mRawJsonCache[sn];
+    if (!topic.isEmpty() && topicMap.contains(topic))
+        return topicMap[topic];
+    // topic 为空时返回该设备任意一条缓存（兼容旧调用）
+    if (!topicMap.isEmpty())
+        return topicMap.first();
+    return {};
 }
 
 QString DeviceManager::jsonHistory(const QString& sn, const QString& topic) const {
@@ -262,7 +270,7 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
 
     // 保存原始 JSON（最新一条）
     QString formatted = QString::fromUtf8(doc.toJson(QJsonDocument::Indented));
-    mRawJsonCache[sn] = formatted;
+    mRawJsonCache[sn][topic] = formatted;
 
     // 累积 JSON 历史（最多 500 条）
     mJsonHistory[sn][topic].append(formatted);
