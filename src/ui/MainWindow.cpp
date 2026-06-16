@@ -425,12 +425,16 @@ void MainWindow::connectSignals() {
         refreshTopicList(sn);
     });
 
-    // Topic 选中变化 → 原始 JSON 按 topic 过滤
+    // Topic 选中变化 → 原始 JSON 按 topic 过滤（仅显示已启用/订阅的 topic）
     connect(mTopicListWidget, &TopicListWidget::topicSelectionChanged,
             this, [this](const QString& selectedTopic) {
         QString sn = mDeviceTree->selectedDeviceSn();
-        if (!sn.isEmpty())
+        if (sn.isEmpty()) return;
+        // 仅当 topic 已启用（订阅中）时才显示数据，禁用的 topic 不显示
+        if (!selectedTopic.isEmpty() && mDevMgr->isTopicEnabled(sn, selectedTopic))
             mRawJsonPanel->setJson(mDevMgr->jsonHistory(sn, selectedTopic));
+        else
+            mRawJsonPanel->setJson({});
     });
 
     connect(mDevMgr, &DeviceManager::deviceOsdUpdated,
@@ -477,11 +481,15 @@ void MainWindow::connectSignals() {
         mDeviceTree->rebuild(mDevMgr->topLevelDevices(), mDevMgr->allDevices());
     });
 
-    // TopicParsePanel: topic 选中变化 → 更新解析面板
+    // TopicParsePanel: topic 选中变化 → 更新解析面板（仅显示已启用/订阅的 topic）
     connect(mTopicListWidget, &TopicListWidget::topicSelectionChanged,
             mTopicParsePanel, [this](const QString& selectedTopic) {
         QString sn = mDeviceTree->selectedDeviceSn();
-        mTopicParsePanel->setTopic(sn, selectedTopic);
+        // 仅当 topic 已启用时才解析，禁用的 topic 清空面板
+        if (!selectedTopic.isEmpty() && mDevMgr->isTopicEnabled(sn, selectedTopic))
+            mTopicParsePanel->setTopic(sn, selectedTopic);
+        else
+            mTopicParsePanel->setTopic(sn, {});
     });
 
     // 加载 topic 映射配置

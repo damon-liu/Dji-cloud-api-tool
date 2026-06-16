@@ -38,10 +38,16 @@ public:
         copyBtn->setCursor(Qt::PointingHandCursor);
         copyBtn->setFixedWidth(80);
 
+        auto* clearBtn = new QPushButton("🗑 清除");
+        clearBtn->setObjectName("copyBtn");
+        clearBtn->setCursor(Qt::PointingHandCursor);
+        clearBtn->setFixedWidth(80);
+
         header->addWidget(title);
         header->addStretch();
         header->addWidget(mPauseBtn);
         header->addWidget(copyBtn);
+        header->addWidget(clearBtn);
         layout->addLayout(header);
 
         // JSON 编辑器
@@ -71,6 +77,11 @@ public:
                 cursor.movePosition(QTextCursor::End);
                 mEditor->setTextCursor(cursor);
             }
+        });
+
+        connect(clearBtn, &QPushButton::clicked, this, [this]() {
+            mEditor->clear();
+            mPendingBuffer.clear();
         });
     }
 
