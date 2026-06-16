@@ -45,12 +45,14 @@ bool DeviceManager::initialize(const QString& configPath) {
         QStringList topics = mConfigStore->topicsForDevice(info.sn);
         mTopicManager->setDeviceTopics(info.sn, topics);
 
-        // 加载禁用 topic 状态
+        // 加载禁用 topic 状态，并取消订阅已禁用的 topic
         QStringList disabled = mConfigStore->disabledTopicsForDevice(info.sn);
         if (!disabled.isEmpty()) {
             mTopicManager->setDisabledTopicsForDevice(
                 info.sn,
                 QSet<QString>(disabled.begin(), disabled.end()));
+            // 取消订阅禁用 topic（setDeviceTopics 已全部订阅）
+            mTopicManager->unsubscribeTopics(disabled);
         }
     }
 
