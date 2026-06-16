@@ -89,6 +89,10 @@ void DeviceManager::addDevice(const DeviceInfo& info, const QStringList& topics)
         QSet<QString> existingDisabled = mTopicManager->disabledTopicsForDevice(info.sn);
         existingDisabled.unite(newDisabled);
         mTopicManager->setDisabledTopicsForDevice(info.sn, existingDisabled);
+        // 立即取消订阅新增的禁用 topic（setDeviceTopics 已将其全部订阅）
+        QStringList disabledList = newDisabled.values();
+        if (!disabledList.isEmpty())
+            mTopicManager->unsubscribeTopics(disabledList);
     } else {
         mTopicManager->setDeviceTopics(info.sn, topics);
     }

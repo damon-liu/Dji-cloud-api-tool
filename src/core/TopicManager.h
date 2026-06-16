@@ -59,6 +59,9 @@ public:
     // 清空所有 topic
     void clear();
 
+    // 取消订阅指定 topic 列表（用于初始禁用后取消订阅）
+    void unsubscribeTopics(const QStringList& topics) { emit topicsChanged({}, topics); }
+
 signals:
     // topic 变更（需要重新订阅）
     void topicsChanged(const QStringList& newTopics, const QStringList& removedTopics);
