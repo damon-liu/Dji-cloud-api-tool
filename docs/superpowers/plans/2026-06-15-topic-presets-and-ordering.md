@@ -2,6 +2,7 @@
 change: topic-presets-and-ordering
 design-doc: docs/superpowers/specs/2026-06-15-topic-presets-and-ordering-design.md
 base-ref: 2dd40e39b0593599ec1becf5afabf5f9acb503b2
+archived-with: 2026-06-16-topic-presets-and-ordering
 ---
 
 # Topic 预设与排序 — 实施计划
@@ -14,6 +15,7 @@ base-ref: 2dd40e39b0593599ec1becf5afabf5f9acb503b2
 
 **Tech Stack:** C++17, Qt 6 (Core, Widgets, Mqtt), CMake + MinGW
 
+archived-with: 2026-06-16-topic-presets-and-ordering
 ---
 
 ## 文件结构
@@ -31,6 +33,7 @@ base-ref: 2dd40e39b0593599ec1becf5afabf5f9acb503b2
 | `src/ui/PublishPanel.h` | 修改 | 新增 `mDeviceSn` + `PUBLISH_PRESETS`；`setTopics()` 改为合并显示 |
 | `src/ui/MainWindow.cpp` | 修改 | 连接 `topicOrderChanged` 信号；传递 SN 给 PublishPanel |
 
+archived-with: 2026-06-16-topic-presets-and-ordering
 ---
 
 ### Task 1: TopicManager — QSet 迁移为 QStringList
@@ -219,6 +222,7 @@ cmake --build build_mingw
 
 预期：编译通过，无错误。
 
+archived-with: 2026-06-16-topic-presets-and-ordering
 ---
 
 ### Task 2: ConfigStore — QSet 迁移为 QStringList（保持顺序持久化）
@@ -276,6 +280,7 @@ cmake --build build_mingw
 
 预期：编译通过，无错误。
 
+archived-with: 2026-06-16-topic-presets-and-ordering
 ---
 
 ### Task 3: TopicListWidget — 排序按钮 UI
@@ -466,6 +471,7 @@ cmake --build build_mingw
 
 预期：编译通过。若 `refreshList()` 调用了 `mTopicList->clear()` 会导致选中状态丢失，排序按钮在 `onTopicSelectionChanged` 中会重新计算状态，因为 `setCurrentRow` 会触发 `itemSelectionChanged`，进而调用 `onTopicSelectionChanged`。无需额外处理。
 
+archived-with: 2026-06-16-topic-presets-and-ordering
 ---
 
 ### Task 4: DeviceManager — 默认 topic 自动追加 + reorderTopics 桥接
@@ -555,6 +561,7 @@ cmake --build build_mingw
 
 预期：编译通过。
 
+archived-with: 2026-06-16-topic-presets-and-ordering
 ---
 
 ### Task 5: PublishPanel — 下发预设 topic
@@ -677,6 +684,7 @@ cmake --build build_mingw
 
 预期：编译通过。
 
+archived-with: 2026-06-16-topic-presets-and-ordering
 ---
 
 ### Task 6: MainWindow — 连接排序信号 + 传递 SN 给 PublishPanel
@@ -731,6 +739,7 @@ cmake --build build_mingw
 
 预期：编译通过，无错误。
 
+archived-with: 2026-06-16-topic-presets-and-ordering
 ---
 
 ### Task 7: 整体编译 + 端到端验证
@@ -805,6 +814,7 @@ git commit -m "feat: topic 预设自动追加、排序功能、下发面板预�
 - MainWindow: 连接排序信号，传递设备 SN 给下发面板"
 ```
 
+archived-with: 2026-06-16-topic-presets-and-ordering
 ---
 
 ## 自我审查
@@ -846,6 +856,7 @@ Task 执行必须严格按顺序：1→2→3→4→5→6→7。原因：
 - Task 4 使用 Task 1 的新 `reorderTopics()`
 - Task 6 连接 Task 3 的新 signal，调用 Task 4 的新方法
 
+archived-with: 2026-06-16-topic-presets-and-ordering
 ---
 
 **Plan complete.**

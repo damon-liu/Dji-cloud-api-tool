@@ -2,6 +2,8 @@
 comet_change: topic-presets-and-ordering
 role: technical-design
 canonical_spec: openspec
+archived-with: 2026-06-16-topic-presets-and-ordering
+status: final
 ---
 
 # Topic 预设与排序 — 技术设计
