@@ -447,6 +447,8 @@ void MainWindow::connectSignals() {
         mBrokerLabel->setStyleSheet("color: #2e7d32; font-size: 12px; padding: 0 12px;");
         mConnectAct->setEnabled(false);
         mDisconnectAct->setEnabled(true);
+        mOsdPanel->resume();
+        mTopicParsePanel->resume();
         updateStatusBar();
     });
     connect(mDevMgr, &DeviceManager::brokerDisconnected, this, [this]() {
@@ -455,6 +457,8 @@ void MainWindow::connectSignals() {
         mBrokerLabel->setStyleSheet("color: #9e9e9e; font-size: 12px; padding: 0 12px;");
         mConnectAct->setEnabled(true);
         mDisconnectAct->setEnabled(false);
+        mOsdPanel->pause();
+        mTopicParsePanel->pause();
     });
     connect(mDevMgr, &DeviceManager::brokerError, this, [this](const QString& err) {
         statusBar()->showMessage("MQTT 错误: " + err, 5000);
@@ -513,6 +517,15 @@ void MainWindow::connectSignals() {
     }
     mTopicParsePanel->setDeviceManager(mDevMgr);
 
+    // Topic 全量切换
+    connect(mTopicListWidget, &TopicListWidget::topicAllToggled,
+            this, [this](const QString& sn, bool enabled) {
+        mDevMgr->setAllTopicsEnabled(sn, enabled);
+        refreshTopicList(sn);
+    });
+
+    mOsdPanel->setDeviceManager(mDevMgr);
+
     mDeviceTree->rebuild(mDevMgr->topLevelDevices(), mDevMgr->allDevices());
     mDisconnectAct->setEnabled(false);
     updateStatusBar();
@@ -538,6 +551,7 @@ void MainWindow::onDeviceSelected(const QString& sn) {
     const AircraftOsd* airOsd = mDevMgr->latestAircraftOsd(sn);
     const DockOsd* dockOsd   = mDevMgr->latestDockOsd(sn);
     mOsdPanel->showOsd(dev, airOsd, dockOsd, mDevMgr->latestRawJson(sn));
+    mOsdPanel->setCurrentSn(sn);
 
     mRawJsonPanel->setJson(mDevMgr->jsonHistory(sn));
     mPublishPanel->setDeviceSn(sn);
