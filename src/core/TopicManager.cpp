@@ -132,6 +132,37 @@ void TopicManager::setTopicEnabled(const QString& deviceSn, const QString& topic
     // 状态未变则不操作
 }
 
+void TopicManager::setAllTopicsEnabled(const QString& deviceSn, bool enabled) {
+    if (!mDeviceTopics.contains(deviceSn))
+        return;
+
+    const QStringList topics = mDeviceTopics[deviceSn];
+    if (topics.isEmpty())
+        return;
+
+    QStringList toAdd;
+    QStringList toRemove;
+
+    for (const auto& topic : topics) {
+        bool currentlyEnabled = !mDisabledTopics.value(deviceSn).contains(topic);
+        if (enabled && !currentlyEnabled) {
+            mDisabledTopics[deviceSn].remove(topic);
+            toAdd.append(topic);
+        } else if (!enabled && currentlyEnabled) {
+            mDisabledTopics[deviceSn].insert(topic);
+            toRemove.append(topic);
+        }
+    }
+
+    // 清理空的禁用集合
+    if (mDisabledTopics.contains(deviceSn) && mDisabledTopics[deviceSn].isEmpty())
+        mDisabledTopics.remove(deviceSn);
+
+    // 批量发出变更信号
+    if (!toAdd.isEmpty() || !toRemove.isEmpty())
+        emit topicsChanged(toAdd, toRemove);
+}
+
 bool TopicManager::isTopicEnabled(const QString& deviceSn, const QString& topic) const {
     return !mDisabledTopics.value(deviceSn).contains(topic);
 }

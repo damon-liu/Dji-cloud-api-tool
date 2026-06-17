@@ -42,6 +42,10 @@ public:
 
     // 设置/查询某个 topic 的启用/禁用状态
     void setTopicEnabled(const QString& deviceSn, const QString& topic, bool enabled);
+
+    // 批量设置某设备所有 topic 的启用/禁用状态
+    void setAllTopicsEnabled(const QString& deviceSn, bool enabled);
+
     bool isTopicEnabled(const QString& deviceSn, const QString& topic) const;
 
     // 获取某个设备所有启用的 topic
