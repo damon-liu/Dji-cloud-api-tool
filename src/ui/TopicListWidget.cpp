@@ -80,6 +80,19 @@ TopicListWidget::TopicListWidget(QWidget* parent)
         "QPushButton:disabled { background: #f5f5f5; color: #bdbdbd; border-color: #e0e0e0; }");
     titleRow->addWidget(mMoveDownBtn);
 
+    // 全量切换按钮
+    mToggleAllBtn = new QPushButton(QString::fromUtf8("⊘"), this);
+    mToggleAllBtn->setCursor(Qt::PointingHandCursor);
+    mToggleAllBtn->setFixedSize(28, 28);
+    mToggleAllBtn->setToolTip(QString::fromUtf8("全部启用/禁用"));
+    mToggleAllBtn->setEnabled(false);
+    mToggleAllBtn->setStyleSheet(
+        "QPushButton { background: #fce4ec; color: #ad1457; border: 1px solid #f8bbd0; "
+        "border-radius: 4px; font-size: 13px; font-weight: bold; }"
+        "QPushButton:hover { background: #f8bbd0; }"
+        "QPushButton:disabled { background: #f5f5f5; color: #bdbdbd; border-color: #e0e0e0; }");
+    titleRow->addWidget(mToggleAllBtn);
+
     layout->addLayout(titleRow);
 
     // Topic 列表（占满宽度）
@@ -102,6 +115,7 @@ TopicListWidget::TopicListWidget(QWidget* parent)
             this, &TopicListWidget::onTopicSelectionChanged);
     connect(mMoveUpBtn, &QPushButton::clicked, this, &TopicListWidget::onMoveUp);
     connect(mMoveDownBtn, &QPushButton::clicked, this, &TopicListWidget::onMoveDown);
+    connect(mToggleAllBtn, &QPushButton::clicked, this, &TopicListWidget::onToggleAll);
 
     // 初始状态：无设备选中
     clearTopics();
@@ -126,6 +140,7 @@ void TopicListWidget::clearTopics() {
     mRemoveBtn->setEnabled(false);
     mMoveUpBtn->setEnabled(false);
     mMoveDownBtn->setEnabled(false);
+    mToggleAllBtn->setEnabled(false);
 
     if (mAllTopics.isEmpty() && mCurrentSn.isEmpty()) {
         mTopicList->addItem("（请选择设备）");
@@ -156,6 +171,7 @@ void TopicListWidget::refreshList() {
         mTopicList->item(0)->setFlags(Qt::NoItemFlags);
         mTopicList->item(0)->setForeground(QColor(180, 180, 180));
         mAddBtn->setEnabled(false);
+        mToggleAllBtn->setEnabled(false);
         return;
     }
 
@@ -163,8 +179,11 @@ void TopicListWidget::refreshList() {
         mTopicList->addItem("（无 Topic）");
         mTopicList->item(0)->setFlags(Qt::NoItemFlags);
         mTopicList->item(0)->setForeground(QColor(180, 180, 180));
+        mToggleAllBtn->setEnabled(false);
         return;
     }
+
+    mToggleAllBtn->setEnabled(true);
 
     for (const auto& t : mAllTopics) {
         bool enabled = !mDisabledTopics.contains(t);
@@ -281,4 +300,14 @@ void TopicListWidget::onMoveDown() {
     }
 
     emit topicOrderChanged(mCurrentSn, mAllTopics);
+}
+
+void TopicListWidget::onToggleAll() {
+    if (mCurrentSn.isEmpty() || mAllTopics.isEmpty())
+        return;
+
+    int disabledCount = mDisabledTopics.size();
+    bool enable = (disabledCount > 0);  // 有禁用则全部启用，否则全部禁用
+
+    emit topicAllToggled(mCurrentSn, enable);
 }

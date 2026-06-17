@@ -31,6 +31,7 @@ signals:
     void topicRemoved(const QString& deviceSn, const QString& topic);
     void topicSelectionChanged(const QString& topic);
     void topicOrderChanged(const QString& deviceSn, const QStringList& orderedTopics);
+    void topicAllToggled(const QString& deviceSn, bool enabled);
 
 private slots:
     void onAddTopic();
@@ -39,6 +40,7 @@ private slots:
     void onTopicSelectionChanged();
     void onMoveUp();
     void onMoveDown();
+    void onToggleAll();
 
 private:
     void refreshList();
@@ -50,6 +52,7 @@ private:
     QPushButton* mRemoveBtn;
     QPushButton* mMoveUpBtn;
     QPushButton* mMoveDownBtn;
+    QPushButton* mToggleAllBtn;
 
     QString      mCurrentSn;
     QStringList  mAllTopics;
