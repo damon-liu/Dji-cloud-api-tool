@@ -7,8 +7,13 @@
 #include <QGroupBox>
 #include <QLabel>
 #include <QTimer>
+#include <QComboBox>
+#include <QPushButton>
+#include <QHBoxLayout>
 #include "OsdData.h"
 #include "DeviceInfo.h"
+
+class DeviceManager;
 
 class OsdPanel : public QWidget {
     Q_OBJECT
@@ -21,6 +26,14 @@ public:
                  const QString& rawJson);
 
     void clear();
+
+    void setDeviceManager(DeviceManager* mgr) { mDevMgr = mgr; }
+    void setCurrentSn(const QString& sn) { mCurrentSn = sn; }
+    void pause();
+    void resume();
+
+public slots:
+    void refresh();
 
 private:
     void setupUi();
@@ -64,6 +77,15 @@ private:
     QLabel* mAltLandLon;
 
     QVBoxLayout* mMainLayout;
+
+    // --- 定时刷新 ---
+    DeviceManager* mDevMgr = nullptr;
+    QTimer*        mRefreshTimer = nullptr;
+    QComboBox*     mIntervalCombo = nullptr;
+    QPushButton*   mPauseBtn = nullptr;
+    bool           mPaused = false;
+    bool           mAutoPaused = false;
+    QString        mCurrentSn;
 };
 
 #endif // OSDPANEL_H
