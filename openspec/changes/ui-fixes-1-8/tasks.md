@@ -3,10 +3,10 @@
 ## 任务清单
 
 ### 1. OsdPanel 添加定时刷新 + 间隔配置
-- [ ] 在 OsdPanel 添加 `QTimer` 成员（默认 1000ms）
-- [ ] 添加刷新间隔 `QComboBox`（1s/2s/5s/10s，默认 1s）
-- [ ] 实现定时 `refresh()` 槽函数：从 DeviceManager 缓存读取 OSD 刷新 UI
-- [ ] 添加 `pause()` / `resume()` 公开接口
+- [x] 在 OsdPanel 添加 `QTimer` 成员（默认 1000ms）
+- [x] 添加刷新间隔 `QComboBox`（1s/2s/5s/10s，默认 1s）
+- [x] 实现定时 `refresh()` 槽函数：从 DeviceManager 缓存读取 OSD 刷新 UI
+- [x] 添加 `pause()` / `resume()` 公开接口
 - [ ] 在 MainWindow::setupLayout 中传入 DeviceManager 指针给 OsdPanel
 
 ### 2. TopicParsePanel 公开暂停接口
@@ -19,10 +19,10 @@
 - [ ] 处理手动暂停优先逻辑：断连前若手动暂停则重连后保持暂停
 
 ### 4. TopicManager 添加批量启用/禁用接口
-- [ ] 新增 `setAllTopicsEnabled(deviceSn, enabled)` 方法
+- [x] 新增 `setAllTopicsEnabled(deviceSn, enabled)` 方法
 - [ ] DeviceManager 添加同名代理方法
 
 ### 5. TopicListWidget 添加全部启用/禁用按钮
-- [ ] 标题栏新增全部切换按钮（视觉区分于单个切换 ◎ 按钮）
-- [ ] 实现按钮点击逻辑：判断状态、发射 `topicAllToggled` 信号
+- [x] 标题栏新增全部切换按钮（视觉区分于单个切换 ◎ 按钮）
+- [x] 实现按钮点击逻辑：判断状态、发射 `topicAllToggled` 信号
 - [ ] MainWindow 连接信号到 DeviceManager::setAllTopicsEnabled
