@@ -205,12 +205,13 @@ QString DeviceManager::latestRawJson(const QString& sn, const QString& topic) co
     if (!mRawJsonCache.contains(sn))
         return {};
     const auto& topicMap = mRawJsonCache[sn];
-    if (!topic.isEmpty() && topicMap.contains(topic))
-        return topicMap[topic];
-    // topic 为空时返回该设备任意一条缓存（兼容旧调用）
-    if (!topicMap.isEmpty())
-        return topicMap.first();
-    return {};
+    if (topic.isEmpty()) {
+        // topic 为空时返回该设备任意一条缓存（兼容旧调用）
+        if (!topicMap.isEmpty())
+            return topicMap.first();
+        return {};
+    }
+    return topicMap.value(topic);
 }
 
 QString DeviceManager::jsonHistory(const QString& sn, const QString& topic) const {
@@ -262,6 +263,16 @@ void DeviceManager::setTopicEnabled(const QString& deviceSn, const QString& topi
     // 持久化到 ConfigStore
     QStringList disabled = mTopicManager->disabledTopicsForDevice(deviceSn).values();
     mConfigStore->setDisabledTopicsForDevice(deviceSn, disabled);
+    saveConfig(mConfigPath);
+}
+
+void DeviceManager::setAllTopicsEnabled(const QString& deviceSn, bool enabled) {
+    mTopicManager->setAllTopicsEnabled(deviceSn, enabled);
+
+    // 持久化禁用状态
+    QSet<QString> disabledSet = mTopicManager->disabledTopicsForDevice(deviceSn);
+    mConfigStore->setDisabledTopicsForDevice(deviceSn,
+        QStringList(disabledSet.begin(), disabledSet.end()));
     saveConfig(mConfigPath);
 }
 

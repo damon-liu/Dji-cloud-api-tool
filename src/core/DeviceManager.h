@@ -41,6 +41,7 @@ public:
 
     // Topic 启用/禁用控制
     void setTopicEnabled(const QString& deviceSn, const QString& topic, bool enabled);
+    void setAllTopicsEnabled(const QString& deviceSn, bool enabled);
     bool isTopicEnabled(const QString& deviceSn, const QString& topic) const;
 
     // OSD 缓存
