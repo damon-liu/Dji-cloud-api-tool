@@ -37,6 +37,8 @@ protected:
 public slots:
     void refresh();
     void togglePause();
+    void pause();
+    void resume();
 
 private:
     void setupUi();
@@ -49,6 +51,7 @@ private:
     QString             mDeviceSn;
     QString             mTopic;
     bool                mPaused    = false;
+    bool                mAutoPaused = false;
     int                 mIntervalMs = 2000;
 
     QLabel*             mTitleLabel;

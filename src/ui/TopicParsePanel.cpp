@@ -114,8 +114,10 @@ void TopicParsePanel::setTopic(const QString& deviceSn, const QString& topic) {
     mPrevValues.clear();
     mTopicLabel->setText(topic.isEmpty() ? "" : topic);
 
+    // 切换 topic 时先清除旧内容
+    clear();
+
     if (deviceSn.isEmpty() || topic.isEmpty()) {
-        clear();
         return;
     }
 
@@ -371,5 +373,22 @@ void TopicParsePanel::setFieldValue(QLabel* label, const QString& value, bool hi
                 weakLabel->setStyleSheet("font-size: 11px; font-weight: 500;");
             }
         });
+    }
+}
+
+void TopicParsePanel::pause() {
+    if (!mAutoPaused) {
+        mAutoPaused = true;
+        mRefreshTimer->stop();
+    }
+}
+
+void TopicParsePanel::resume() {
+    if (mAutoPaused) {
+        mAutoPaused = false;
+        if (!mPaused) {
+            mRefreshTimer->start(mIntervalMs);
+            refresh();
+        }
     }
 }
