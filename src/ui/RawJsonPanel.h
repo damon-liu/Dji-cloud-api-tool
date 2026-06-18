@@ -70,11 +70,8 @@ public:
             mPaused = !mPaused;
             mPauseBtn->setText(mPaused ? "▶ 继续" : "⏸ 暂停");
             if (!mPaused) {
-                for (const auto& j : mPendingBuffer) {
-                    if (!mEditor->toPlainText().isEmpty())
-                        mEditor->appendPlainText("---");
+                for (const auto& j : mPendingBuffer)
                     mEditor->appendPlainText(j);
-                }
                 mPendingBuffer.clear();
                 QTextCursor cursor = mEditor->textCursor();
                 cursor.movePosition(QTextCursor::End);
@@ -88,7 +85,10 @@ public:
         });
     }
 
-    // 格式化单条 JSON 的前后缀（topic + timestamp）
+    static constexpr const char* SEPARATOR =
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+
+    // 格式化单条 JSON：topic 头 + JSON + 可读时间尾
     static QString annotateJson(const QString& json, const QString& topic) {
         QString annotated;
         if (!topic.isEmpty())
@@ -101,9 +101,10 @@ public:
             if (!tsVal.isUndefined()) {
                 qint64 ts = tsVal.toVariant().toLongLong();
                 QDateTime dt = QDateTime::fromMSecsSinceEpoch(ts);
-                annotated += "\n[timestamp] " + dt.toString("yyyy-MM-dd hh:mm:ss.zzz");
+                annotated += "\n[time] " + dt.toString("yyyy-MM-dd hh:mm:ss");
             }
         }
+        annotated += "\n" + QString::fromUtf8(SEPARATOR);
         return annotated;
     }
 
@@ -120,7 +121,7 @@ public:
                 if (!entry.trimmed().isEmpty())
                     annotated.append(annotateJson(entry, topic));
             }
-            mEditor->setPlainText(annotated.join("\n---\n"));
+            mEditor->setPlainText(annotated.join("\n"));
         } else {
             mEditor->setPlainText(json);
         }
@@ -139,8 +140,6 @@ public:
                 mPendingBuffer.removeFirst();
             return;
         }
-        if (!mEditor->toPlainText().isEmpty())
-            mEditor->appendPlainText("---");
         mEditor->appendPlainText(annotated);
         QTextCursor cursor = mEditor->textCursor();
         cursor.movePosition(QTextCursor::End);
