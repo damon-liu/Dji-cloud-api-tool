@@ -14,6 +14,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QDateTime>
+#include <QFile>
+#include <QDir>
 
 class RawJsonPanel : public QWidget {
     Q_OBJECT
@@ -36,6 +38,11 @@ public:
         mPauseBtn->setCursor(Qt::PointingHandCursor);
         mPauseBtn->setFixedWidth(80);
 
+        mCaptureBtn = new QPushButton("⬤ 抓包");
+        mCaptureBtn->setObjectName("copyBtn");
+        mCaptureBtn->setCursor(Qt::PointingHandCursor);
+        mCaptureBtn->setFixedWidth(80);
+
         auto* copyBtn = new QPushButton("📋 复制");
         copyBtn->setObjectName("copyBtn");
         copyBtn->setCursor(Qt::PointingHandCursor);
@@ -48,6 +55,7 @@ public:
 
         header->addWidget(title);
         header->addStretch();
+        header->addWidget(mCaptureBtn);
         header->addWidget(mPauseBtn);
         header->addWidget(copyBtn);
         header->addWidget(clearBtn);
@@ -82,6 +90,14 @@ public:
         connect(clearBtn, &QPushButton::clicked, this, [this]() {
             mEditor->clear();
             mPendingBuffer.clear();
+        });
+
+        connect(mCaptureBtn, &QPushButton::clicked, this, [this]() {
+            if (mCapturing) {
+                stopCapture();
+            } else {
+                startCapture();
+            }
         });
     }
 
@@ -131,8 +147,25 @@ public:
         mEditor->clear();
     }
 
+    // 设置抓包目标（TopicListWidget 选中 topic 时由 MainWindow 调用）
+    void setCaptureTarget(const QString& sn, const QString& topic) {
+        mCaptureSn = sn;
+        mCaptureTopic = topic;
+    }
+
     void appendJson(const QString& json, const QString& topic = {}) {
         if (json.isEmpty()) return;
+
+        // 抓包写入文件（仅在被抓包 topic 匹配时写入，与暂停无关）
+        if (mCapturing && !mCaptureTopic.isEmpty() && topic == mCaptureTopic) {
+            if (mCaptureFile && mCaptureFile->isOpen()) {
+                if (mCaptureBytesWritten > 0)
+                    mCaptureFile->write(",\n");
+                mCaptureFile->write(json.toUtf8());
+                mCaptureBytesWritten++;
+            }
+        }
+
         QString annotated = annotateJson(json, topic);
         if (mPaused) {
             mPendingBuffer.append(annotated);
@@ -151,9 +184,55 @@ public:
     }
 
 private:
+    void startCapture() {
+        if (mCaptureSn.isEmpty() || mCaptureTopic.isEmpty())
+            return;
+
+        // 从 topic 路径末尾提取类型缩写（如 osd, state, events 等）
+        QString topicShort = mCaptureTopic.section('/', -1);
+        QString ts = QDateTime::currentDateTime().toString("MMddHHmmss");
+        QString filename = mCaptureSn + "-" + topicShort + "-" + ts + ".json";
+
+        QString dir = QApplication::applicationDirPath() + "/captures";
+        QDir().mkpath(dir);
+
+        mCaptureFile = new QFile(dir + "/" + filename, this);
+        if (!mCaptureFile->open(QIODevice::WriteOnly | QIODevice::Text)) {
+            delete mCaptureFile;
+            mCaptureFile = nullptr;
+            return;
+        }
+
+        mCapturing = true;
+        mCaptureBytesWritten = 0;
+        mCaptureBtn->setStyleSheet(
+            "QPushButton { background: #c62828; color: #fff; border: none; "
+            "border-radius: 4px; padding: 4px 12px; font-size: 12px; }"
+            "QPushButton:hover { background: #b71c1c; }");
+        mCaptureBtn->setText("⏹ 停止");
+    }
+
+    void stopCapture() {
+        mCapturing = false;
+        if (mCaptureFile) {
+            mCaptureFile->close();
+            delete mCaptureFile;
+            mCaptureFile = nullptr;
+        }
+        mCaptureBytesWritten = 0;
+        mCaptureBtn->setText("⬤ 抓包");
+        mCaptureBtn->setStyleSheet("");
+    }
+
     QPlainTextEdit* mEditor;
-    QPushButton*    mPauseBtn       = nullptr;
-    bool            mPaused         = false;
+    QPushButton*    mPauseBtn         = nullptr;
+    QPushButton*    mCaptureBtn       = nullptr;
+    QFile*          mCaptureFile      = nullptr;
+    bool            mPaused           = false;
+    bool            mCapturing        = false;
+    int             mCaptureBytesWritten = 0;
+    QString         mCaptureSn;
+    QString         mCaptureTopic;
     QStringList     mPendingBuffer;
     static constexpr int MAX_BUFFER = 1000;
 };

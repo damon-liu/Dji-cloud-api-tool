@@ -431,8 +431,10 @@ void MainWindow::connectSignals() {
         QString sn = mDeviceTree->selectedDeviceSn();
         if (sn.isEmpty()) return;
         // 仅当 topic 已启用（订阅中）时才显示数据，禁用的 topic 不显示
-        if (!selectedTopic.isEmpty() && mDevMgr->isTopicEnabled(sn, selectedTopic))
+        if (!selectedTopic.isEmpty() && mDevMgr->isTopicEnabled(sn, selectedTopic)) {
+            mRawJsonPanel->setCaptureTarget(sn, selectedTopic);
             mRawJsonPanel->setJson(mDevMgr->jsonHistory(sn, selectedTopic), selectedTopic);
+        }
         else
             mRawJsonPanel->setJson({});
     });
