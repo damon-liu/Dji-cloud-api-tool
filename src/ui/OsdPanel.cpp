@@ -177,7 +177,10 @@ static QString coverText(const QString& state) {
 }
 
 void OsdPanel::showDockOsd(const DockOsd& osd) {
-    // 经纬度合并显示
+    // 核心字段无数据则整块跳过，保持旧值不变
+    if (osd.latitude == 0.0 && osd.longitude == 0.0)
+        return;
+
     setFieldValue(mDockLatLon,
         (osd.latitude != 0 || osd.longitude != 0)
         ? QString("%1, %2").arg(formatCoord(osd.latitude)).arg(formatCoord(osd.longitude))
@@ -215,6 +218,10 @@ static QString modeCodeText(int code) {
 }
 
 void OsdPanel::showAircraftOsd(const AircraftOsd& osd) {
+    // 核心字段无数据则整块跳过，保持旧值不变
+    if (osd.latitude == 0.0 && osd.longitude == 0.0)
+        return;
+
     setFieldValue(mAirModeCode, modeCodeText(osd.mode_code));
     setFieldValue(mAirLatLon,
         (osd.latitude != 0 || osd.longitude != 0)
