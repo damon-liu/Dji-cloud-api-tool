@@ -128,7 +128,7 @@ void OsdPanel::showOsd(const DeviceInfo* device,
     if (!device) { clear(); return; }
 
     // 仅在设备类型变化时才切换面板显隐，避免定时刷新导致闪烁
-    bool typeChanged = (device->type != mLastDeviceType);
+    bool typeChanged = (static_cast<int>(device->type) != mLastDeviceType);
     mLastDeviceType = static_cast<int>(device->type);
 
     if (device->type == DeviceType::Dock) {
