@@ -3,12 +3,11 @@
 
 #include <QWidget>
 #include <QVBoxLayout>
-#include <QFormLayout>
+#include <QGridLayout>
 #include <QGroupBox>
 #include <QLabel>
 #include <QTimer>
 #include <QComboBox>
-#include <QPushButton>
 #include <QHBoxLayout>
 #include "OsdData.h"
 #include "DeviceInfo.h"
@@ -37,48 +36,42 @@ public slots:
 
 private:
     void setupUi();
+    void setupDockPanel();
+    void setupAircraftPanel();
     void showAircraftOsd(const AircraftOsd& osd);
     void showDockOsd(const DockOsd& osd);
     void setFieldValue(QLabel* label, const QString& value, bool highlight);
+    void setDockRow(int row, const QString& label, QLabel*& valLabel);
+    void setAirRow(int row, const QString& label, QLabel*& valLabel);
 
-    // 设备头部信息
-    QLabel* mDeviceNameLabel;
-    QLabel* mDeviceSnLabel;
-    QLabel* mDeviceTypeLabel;
-    QLabel* mOnlineLabel;
-    QLabel* mUpdateTimeLabel;
+    // 布局
+    QVBoxLayout*  mMainLayout;
+    QHBoxLayout*  mPanelsRow;
+    QGroupBox*    mDockPanel;
+    QGroupBox*    mAircraftPanel;
+    QGridLayout*  mDockGrid;
+    QGridLayout*  mAirGrid;
 
-    // 飞机专属
-    QGroupBox* mAircraftGroup;
-    QLabel* mLatitudeAir;
-    QLabel* mLongitudeAir;
-    QLabel* mAltitudeAir;
-    QLabel* mBatteryPercent;
-    QLabel* mBatteryVoltage;
-    QLabel* mSpeedH;
-    QLabel* mSpeedV;
-    QLabel* mHeading;
-    QLabel* mPitch;
-    QLabel* mRoll;
-    QLabel* mYaw;
-    QLabel* mHomeDist;
-    QLabel* mFlightTime;
-    QLabel* mRcSignal;
+    // 机场字段
+    QLabel* mDockLatLon;
+    QLabel* mDockCover;
+    QLabel* mDockDroneIn;
+    QLabel* mDockInsideTemp;
+    QLabel* mDockEnvTemp;
+    QLabel* mDockWind;
+    QLabel* mDockRain;
 
-    // 机场专属
-    QWidget*   mDockRow;    // 水平容器：设备信息 + 机场数据
-    QGroupBox* mDockGroup;
-    QLabel* mLatitudeDock;
-    QLabel* mLongitudeDock;
-    QLabel* mCoverState;
-    QLabel* mPutterState;
-    QLabel* mWindSpeed;
-    QLabel* mAltLandLat;
-    QLabel* mAltLandLon;
+    // 飞机字段
+    QLabel* mAirModeCode;
+    QLabel* mAirLatLon;
+    QLabel* mAirBattery;
+    QLabel* mAirBattTemp;
+    QLabel* mAirHeight;
+    QLabel* mAirHomeDist;
+    QLabel* mAirWind;
+    QLabel* mAirGps;
 
-    QVBoxLayout* mMainLayout;
-
-    // --- 定时刷新 ---
+    // 定时刷新
     DeviceManager* mDevMgr = nullptr;
     QTimer*        mRefreshTimer = nullptr;
     QComboBox*     mIntervalCombo = nullptr;

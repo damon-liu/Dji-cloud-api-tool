@@ -8,9 +8,59 @@ OsdPanel::OsdPanel(QWidget* parent) : QWidget(parent) {
     setupUi();
 
     mRefreshTimer = new QTimer(this);
-    mRefreshTimer->setInterval(1000);  // 默认 1s
+    mRefreshTimer->setInterval(1000);
     connect(mRefreshTimer, &QTimer::timeout, this, &OsdPanel::refresh);
     mRefreshTimer->start();
+}
+
+// —— 辅助：创建 GridLayout 中的 label|value 对 ——
+static void addFieldRow(QGridLayout* grid, int row, int col,
+                         const QString& label, QLabel*& valLabel) {
+    auto* nameLabel = new QLabel(label);
+    nameLabel->setStyleSheet("color: #5f6368; font-size: 11px;");
+    valLabel = new QLabel("-");
+    valLabel->setStyleSheet("font-size: 12px; font-weight: 500;");
+    grid->addWidget(nameLabel, row, col * 2);
+    grid->addWidget(valLabel, row, col * 2 + 1);
+}
+
+void OsdPanel::setupDockPanel() {
+    mDockPanel = new QGroupBox(QString::fromUtf8("\xf0\x9f\x8f\xa2 \xe6\x9c\xba\xe5\x9c\xba\xe4\xbf\xa1\xe6\x81\xaf"), this);
+    mDockGrid = new QGridLayout(mDockPanel);
+    mDockGrid->setSpacing(6);
+    mDockGrid->setContentsMargins(8, 12, 8, 8);
+    mDockGrid->setColumnStretch(1, 1);
+    mDockGrid->setColumnStretch(3, 1);
+
+    addFieldRow(mDockGrid, 0, 0, QString::fromUtf8("\xe7\xbb\x8f\xe7\xba\xac\xe5\xba\xa6:"), mDockLatLon);
+    addFieldRow(mDockGrid, 0, 1, QString::fromUtf8("\xe8\x88\xb1\xe7\x9b\x96:"), mDockCover);
+    addFieldRow(mDockGrid, 1, 0, QString::fromUtf8("\xe9\xa3\x9e\xe8\xa1\x8c\xe5\x99\xa8:"), mDockDroneIn);
+    addFieldRow(mDockGrid, 1, 1, QString::fromUtf8("\xe8\x88\xb1\xe5\x86\x85\xe6\xb8\xa9\xe5\xba\xa6:"), mDockInsideTemp);
+    addFieldRow(mDockGrid, 2, 0, QString::fromUtf8("\xe7\x8e\xaf\xe5\xa2\x83\xe6\xb8\xa9\xe5\xba\xa6:"), mDockEnvTemp);
+    addFieldRow(mDockGrid, 2, 1, QString::fromUtf8("\xe9\xa3\x8e\xe9\x80\x9f:"), mDockWind);
+    addFieldRow(mDockGrid, 3, 0, QString::fromUtf8("\xe9\x99\x8d\xe9\x9b\xa8\xe9\x87\x8f:"), mDockRain);
+
+    mDockPanel->hide();
+}
+
+void OsdPanel::setupAircraftPanel() {
+    mAircraftPanel = new QGroupBox(QString::fromUtf8("\xe2\x9c\x88 \xe9\xa3\x9e\xe6\x9c\xba\xe4\xbf\xa1\xe6\x81\xaf"), this);
+    mAirGrid = new QGridLayout(mAircraftPanel);
+    mAirGrid->setSpacing(6);
+    mAirGrid->setContentsMargins(8, 12, 8, 8);
+    mAirGrid->setColumnStretch(1, 1);
+    mAirGrid->setColumnStretch(3, 1);
+
+    addFieldRow(mAirGrid, 0, 0, QString::fromUtf8("\xe9\xa3\x9e\xe8\xa1\x8c\xe7\x8a\xb6\xe6\x80\x81:"), mAirModeCode);
+    addFieldRow(mAirGrid, 0, 1, QString::fromUtf8("\xe7\xbb\x8f\xe7\xba\xac\xe5\xba\xa6:"), mAirLatLon);
+    addFieldRow(mAirGrid, 1, 0, QString::fromUtf8("\xe7\x94\xb5\xe9\x87\x8f:"), mAirBattery);
+    addFieldRow(mAirGrid, 1, 1, QString::fromUtf8("\xe7\x94\xb5\xe6\xb1\xa0\xe6\xb8\xa9\xe5\xba\xa6:"), mAirBattTemp);
+    addFieldRow(mAirGrid, 2, 0, QString::fromUtf8("\xe9\xab\x98\xe5\xba\xa6:"), mAirHeight);
+    addFieldRow(mAirGrid, 2, 1, QString::fromUtf8("\xe8\xb7\x9dHome:"), mAirHomeDist);
+    addFieldRow(mAirGrid, 3, 0, QString::fromUtf8("\xe9\xa3\x8e\xe9\x80\x9f:"), mAirWind);
+    addFieldRow(mAirGrid, 3, 1, QString::fromUtf8("GPS\xe6\x90\x9c\xe6\x98\x9f:"), mAirGps);
+
+    mAircraftPanel->hide();
 }
 
 void OsdPanel::setupUi() {
@@ -18,13 +68,13 @@ void OsdPanel::setupUi() {
     mMainLayout->setContentsMargins(0, 0, 0, 0);
     mMainLayout->setSpacing(6);
 
-    // ——— 标题栏（刷新控制） ———
+    // 标题栏
     auto* titleBar = new QWidget(this);
     auto* titleLayout = new QHBoxLayout(titleBar);
     titleLayout->setContentsMargins(0, 0, 0, 0);
     titleLayout->setSpacing(8);
 
-    auto* titleLabel = new QLabel(QString::fromUtf8("\xF0\x9F\x93\xA1 OSD \xE9\x9D\xA2\xE6\x9D\xBF"), this);
+    auto* titleLabel = new QLabel(QString::fromUtf8("\xf0\x9f\x93\xa1 OSD \xe9\x9d\xa2\xe6\x9d\xbf"), this);
     titleLabel->setStyleSheet("font-size: 14px; font-weight: bold; color: #333;");
 
     mIntervalCombo = new QComboBox(this);
@@ -38,14 +88,13 @@ void OsdPanel::setupUi() {
             this, [this](int idx) {
         int interval = mIntervalCombo->itemData(idx).toInt();
         mRefreshTimer->setInterval(interval);
-        if (mRefreshTimer->isActive()) {
-            mRefreshTimer->start(interval);  // 重启以应用新间隔
-        }
+        if (mRefreshTimer->isActive())
+            mRefreshTimer->start(interval);
     });
 
     titleLayout->addWidget(titleLabel);
     titleLayout->addStretch();
-    titleLayout->addWidget(new QLabel(QString::fromUtf8("\xE5\x88\xB7\xE6\x96\xB0\xE9\x97\xB4\xE9\x9A\x94:"), this));
+    titleLayout->addWidget(new QLabel(QString::fromUtf8("\xe5\x88\xb7\xe6\x96\xb0\xe9\x97\xb4\xe9\x9a\x94:"), this));
     titleLayout->addWidget(mIntervalCombo);
     mMainLayout->addWidget(titleBar);
 
@@ -55,89 +104,21 @@ void OsdPanel::setupUi() {
     sep->setFrameShadow(QFrame::Sunken);
     mMainLayout->addWidget(sep);
 
-    // ——— 设备头部 ———
-    auto* headerBox = new QGroupBox("设备信息", this);
-    auto* headerLayout = new QFormLayout(headerBox);
-    headerLayout->setSpacing(4);
-    mDeviceNameLabel = new QLabel("-", this);
-    mDeviceNameLabel->setStyleSheet("font-size: 15px; font-weight: bold; color: #1a73e8;");
-    mDeviceSnLabel   = new QLabel("-", this);
-    mDeviceSnLabel->setStyleSheet("color: #80868b; font-size: 11px;");
-    mDeviceTypeLabel = new QLabel("-", this);
-    mOnlineLabel     = new QLabel("⚪ 未知", this);
-    mUpdateTimeLabel = new QLabel("-", this);
-    mUpdateTimeLabel->setStyleSheet("color: #80868b; font-size: 11px;");
-    headerLayout->addRow("名称:", mDeviceNameLabel);
-    headerLayout->addRow("SN:",   mDeviceSnLabel);
-    headerLayout->addRow("类型:", mDeviceTypeLabel);
-    headerLayout->addRow("状态:", mOnlineLabel);
-    headerLayout->addRow("更新:", mUpdateTimeLabel);
+    // 两个子面板并排
+    mPanelsRow = new QHBoxLayout;
+    mPanelsRow->setSpacing(8);
 
-    // ——— 机场数据 ———
-    mDockGroup = new QGroupBox("机场数据", this);
-    auto* dockLayout = new QFormLayout(mDockGroup);
-    dockLayout->setSpacing(4);
-    mLatitudeDock  = new QLabel("-", this);
-    mLongitudeDock = new QLabel("-", this);
-    mCoverState    = new QLabel("-", this);
-    mPutterState   = new QLabel("-", this);
-    mWindSpeed     = new QLabel("-", this);
-    mAltLandLat    = new QLabel("-", this);
-    mAltLandLon    = new QLabel("-", this);
-    dockLayout->addRow("纬度:", mLatitudeDock);
-    dockLayout->addRow("经度:", mLongitudeDock);
-    dockLayout->addRow("舱盖:", mCoverState);
-    dockLayout->addRow("推杆:", mPutterState);
-    dockLayout->addRow("风速:", mWindSpeed);
-    dockLayout->addRow("备降点纬度:", mAltLandLat);
-    dockLayout->addRow("备降点经度:", mAltLandLon);
+    setupDockPanel();
+    setupAircraftPanel();
 
-    // 设备信息 + 机场数据 并排（机场时）或设备信息单独（飞机时）
-    mDockRow = new QWidget(this);
-    auto* dockRowLayout = new QHBoxLayout(mDockRow);
-    dockRowLayout->setContentsMargins(0, 0, 0, 0);
-    dockRowLayout->setSpacing(6);
-    dockRowLayout->addWidget(headerBox, 1);
-    dockRowLayout->addWidget(mDockGroup, 1);
-    mDockGroup->hide();  // 默认隐藏，机场选中时才显示
-    mMainLayout->addWidget(mDockRow);
-
-    // ——— 飞机飞行数据 ———
-    mAircraftGroup = new QGroupBox("飞行数据", this);
-    auto* airLayout = new QFormLayout(mAircraftGroup);
-    airLayout->setSpacing(4);
-    mLatitudeAir    = new QLabel("-", this);
-    mLongitudeAir   = new QLabel("-", this);
-    mAltitudeAir    = new QLabel("-", this);
-    mBatteryPercent = new QLabel("-", this);
-    mBatteryVoltage = new QLabel("-", this);
-    mSpeedH         = new QLabel("-", this);
-    mSpeedV         = new QLabel("-", this);
-    mHeading        = new QLabel("-", this);
-    mPitch          = new QLabel("-", this);
-    mRoll           = new QLabel("-", this);
-    mYaw            = new QLabel("-", this);
-    mHomeDist       = new QLabel("-", this);
-    mFlightTime     = new QLabel("-", this);
-    mRcSignal       = new QLabel("-", this);
-    airLayout->addRow("纬度:", mLatitudeAir);
-    airLayout->addRow("经度:", mLongitudeAir);
-    airLayout->addRow("海拔:", mAltitudeAir);
-    airLayout->addRow("电量:", mBatteryPercent);
-    airLayout->addRow("电压:", mBatteryVoltage);
-    airLayout->addRow("水平速度:", mSpeedH);
-    airLayout->addRow("垂直速度:", mSpeedV);
-    airLayout->addRow("航向:", mHeading);
-    airLayout->addRow("俯仰:", mPitch);
-    airLayout->addRow("横滚:", mRoll);
-    airLayout->addRow("偏航:", mYaw);
-    airLayout->addRow("距Home:", mHomeDist);
-    airLayout->addRow("飞行时间:", mFlightTime);
-    airLayout->addRow("信号:", mRcSignal);
-    mMainLayout->addWidget(mAircraftGroup);
+    mPanelsRow->addWidget(mDockPanel, 1);
+    mPanelsRow->addWidget(mAircraftPanel, 1);
+    mMainLayout->addLayout(mPanelsRow, 1);
 
     mMainLayout->addStretch();
 }
+
+// —— 显示逻辑 ——
 
 void OsdPanel::showOsd(const DeviceInfo* device,
                          const AircraftOsd* aircraftOsd,
@@ -146,40 +127,34 @@ void OsdPanel::showOsd(const DeviceInfo* device,
     Q_UNUSED(rawJson)
     if (!device) { clear(); return; }
 
-    mDeviceNameLabel->setText(device->name);
-    mDeviceSnLabel->setText(device->sn);
-    mDeviceTypeLabel->setText(
-        device->type == DeviceType::Dock ? "机场 (Dock)" : "飞机 (Aircraft)");
-    mOnlineLabel->setText(device->online ? "🟢 在线" : "🔴 离线");
-    mOnlineLabel->setStyleSheet(
-        device->online ? "color: #2e7d32; font-weight: bold;" : "color: #c62828;");
-    mUpdateTimeLabel->setText(
-        QDateTime::currentDateTime().toString("hh:mm:ss.zzz"));
-
-    if (device->type == DeviceType::Aircraft && aircraftOsd && aircraftOsd->valid) {
-        mAircraftGroup->show();
-        mDockGroup->hide();
-        showAircraftOsd(*aircraftOsd);
-    } else if (device->type == DeviceType::Dock && dockOsd && dockOsd->valid) {
-        mAircraftGroup->hide();
-        mDockGroup->show();     // 设备信息 + 机场数据 并排显示
-        showDockOsd(*dockOsd);
+    if (device->type == DeviceType::Dock) {
+        mDockPanel->show();
+        if (dockOsd && dockOsd->valid)
+            showDockOsd(*dockOsd);
+        // 子飞机
+        if (aircraftOsd && aircraftOsd->valid) {
+            mAircraftPanel->show();
+            mAircraftPanel->setTitle(QString::fromUtf8("\xe2\x9c\x88 \xe9\xa3\x9e\xe6\x9c\xba\xe4\xbf\xa1\xe6\x81\xaf"));
+            showAircraftOsd(*aircraftOsd);
+        } else {
+            mAircraftPanel->hide();
+        }
     } else {
-        mAircraftGroup->hide();
-        mDockGroup->hide();
+        // 独立手飞
+        mDockPanel->hide();
+        mAircraftPanel->show();
+        mAircraftPanel->setTitle(QString::fromUtf8("\xe2\x9c\x88 \xe9\xa3\x9e\xe6\x9c\xba\xe4\xbf\xa1\xe6\x81\xaf"));
+        if (aircraftOsd && aircraftOsd->valid)
+            showAircraftOsd(*aircraftOsd);
     }
 }
 
 void OsdPanel::clear() {
-    mDeviceNameLabel->setText("-");
-    mDeviceSnLabel->setText("-");
-    mDeviceTypeLabel->setText("-");
-    mOnlineLabel->setText("⚪ 未知");
-    mOnlineLabel->setStyleSheet("");
-    mUpdateTimeLabel->setText("-");
-    mAircraftGroup->hide();
-    mDockGroup->hide();
+    mDockPanel->hide();
+    mAircraftPanel->hide();
 }
+
+// —— 机场显示 ——
 
 static QString formatCoord(double val) {
     if (val == 0.0) return "-";
@@ -187,62 +162,81 @@ static QString formatCoord(double val) {
 }
 
 static QString coverText(const QString& state) {
-    if (state == "open" || state == "1") return "打开";
-    if (state == "closed" || state == "0") return "关闭";
+    if (state == "open" || state == "1") return QString::fromUtf8("\xe6\x89\x93\xe5\xbc\x80");
+    if (state == "closed" || state == "0") return QString::fromUtf8("\xe5\x85\xb3\xe9\x97\xad");
     return state.isEmpty() ? "-" : state;
 }
 
-static QString putterText(int state) {
-    if (state == 0) return "收回";
-    if (state == 1) return "推出";
-    return state < 0 ? "-" : QString::number(state);
+void OsdPanel::showDockOsd(const DockOsd& osd) {
+    // 经纬度合并显示
+    setFieldValue(mDockLatLon,
+        (osd.latitude != 0 || osd.longitude != 0)
+        ? QString("%1, %2").arg(formatCoord(osd.latitude)).arg(formatCoord(osd.longitude))
+        : "-", true);
+    setFieldValue(mDockCover, coverText(osd.cover_state), false);
+    setFieldValue(mDockDroneIn, osd.drone_in_dock
+        ? QString::fromUtf8("\xe5\x9c\xa8\xe8\x88\xb1\xe5\x86\x85")
+        : QString::fromUtf8("\xe5\xb7\xb2\xe7\xa6\xbb\xe8\x88\xb1"), false);
+    setFieldValue(mDockInsideTemp, osd.dock_inside_temp > -200
+        ? QString::number(osd.dock_inside_temp, 'f', 1) + " \xe2\x84\x83" : "-", false);
+    setFieldValue(mDockEnvTemp, osd.environment_temp > -200
+        ? QString::number(osd.environment_temp, 'f', 1) + " \xe2\x84\x83" : "-", false);
+    setFieldValue(mDockWind, osd.wind_speed >= 0
+        ? QString::number(osd.wind_speed, 'f', 1) + " m/s" : "-", false);
+    setFieldValue(mDockRain, osd.rainfall >= 0
+        ? QString::number(osd.rainfall, 'f', 1) + " mm" : "-", false);
+}
+
+// —— 飞机显示 ——
+
+static QString modeCodeText(int code) {
+    if (code < 0) return "-";
+    switch (code) {
+        case 0:  return QString::fromUtf8("\xe5\xbe\x85\xe6\x9c\xba");
+        case 1:  return QString::fromUtf8("\xe8\xb5\xb7\xe9\xa3\x9e");
+        case 4:  return QString::fromUtf8("\xe8\x87\xaa\xe5\x8a\xa8\xe8\xb5\xb7\xe9\xa3\x9e");
+        case 5:  return QString::fromUtf8("\xe8\x88\xaa\xe7\xba\xbf\xe9\xa3\x9e\xe8\xa1\x8c");
+        case 6:  return QString::fromUtf8("\xe6\x82\xac\xe5\x81\x9c");
+        case 7:  return QString::fromUtf8("\xe8\xbf\x94\xe8\x88\xaa");
+        case 9:  return QString::fromUtf8("\xe8\x87\xaa\xe5\x8a\xa8\xe8\xbf\x94\xe8\x88\xaa");
+        case 10: return QString::fromUtf8("\xe8\x87\xaa\xe5\x8a\xa8\xe9\x99\x8d\xe8\x90\xbd");
+        case 12: return QString::fromUtf8("\xe8\xbf\xab\xe9\x99\x8d");
+        default: return QString::fromUtf8("\xe6\xa8\xa1\xe5\xbc\x8f") + QString::number(code);
+    }
 }
 
 void OsdPanel::showAircraftOsd(const AircraftOsd& osd) {
-    setFieldValue(mLatitudeAir,  formatCoord(osd.latitude),  true);
-    setFieldValue(mLongitudeAir, formatCoord(osd.longitude), true);
-    setFieldValue(mAltitudeAir,  osd.altitude > 0 ? QString::number(osd.altitude, 'f', 1) + " m" : "-", false);
-    setFieldValue(mBatteryPercent, osd.battery_percent >= 0
+    setFieldValue(mAirModeCode, modeCodeText(osd.mode_code), true);
+    setFieldValue(mAirLatLon,
+        (osd.latitude != 0 || osd.longitude != 0)
+        ? QString("%1, %2").arg(formatCoord(osd.latitude)).arg(formatCoord(osd.longitude))
+        : "-", true);
+    setFieldValue(mAirBattery, osd.battery_percent >= 0
         ? QString::number(osd.battery_percent) + "%" : "-", false);
-    setFieldValue(mBatteryVoltage,  osd.battery_voltage > 0
-        ? QString::number(osd.battery_voltage / 1000.0, 'f', 1) + "V" : "-", false);
-    setFieldValue(mSpeedH,  QString::number(osd.speed_horizontal, 'f', 1) + " m/s", true);
-    setFieldValue(mSpeedV,  QString::number(osd.speed_vertical, 'f', 1) + " m/s", true);
-    setFieldValue(mHeading, QString::number(osd.heading, 'f', 0) + "°", true);
-    setFieldValue(mPitch,   QString::number(osd.pitch, 'f', 1) + "°", true);
-    setFieldValue(mRoll,    QString::number(osd.roll, 'f', 1) + "°", true);
-    setFieldValue(mYaw,     QString::number(osd.yaw, 'f', 1) + "°", true);
-    setFieldValue(mHomeDist, osd.home_distance > 0
+    setFieldValue(mAirBattTemp, osd.battery_temperature > -200
+        ? QString::number(osd.battery_temperature, 'f', 1) + " \xe2\x84\x83" : "-", false);
+    setFieldValue(mAirHeight, osd.height > 0
+        ? QString::number(osd.height, 'f', 1) + " m" : "-", false);
+    setFieldValue(mAirHomeDist, osd.home_distance > 0
         ? QString::number(osd.home_distance, 'f', 1) + " m" : "-", false);
-    setFieldValue(mFlightTime, osd.flight_time_sec > 0
-        ? QString("%1:%2").arg(osd.flight_time_sec / 60)
-            .arg(osd.flight_time_sec % 60, 2, 10, QChar('0')) : "-", false);
-    setFieldValue(mRcSignal, QString::number(osd.rc_signal_strength), true);
-}
-
-void OsdPanel::showDockOsd(const DockOsd& osd) {
-    setFieldValue(mLatitudeDock, formatCoord(osd.latitude),  true);
-    setFieldValue(mLongitudeDock,formatCoord(osd.longitude), true);
-    setFieldValue(mCoverState,   coverText(osd.cover_state), false);
-    setFieldValue(mPutterState,  putterText(osd.putter_state), false);
-    setFieldValue(mWindSpeed,    osd.wind_speed >= 0
+    setFieldValue(mAirWind, osd.wind_speed >= 0
         ? QString::number(osd.wind_speed, 'f', 1) + " m/s" : "-", false);
-    setFieldValue(mAltLandLat,   osd.alternate_land_lat != 0
-        ? formatCoord(osd.alternate_land_lat) : "-", false);
-    setFieldValue(mAltLandLon,   osd.alternate_land_lon != 0
-        ? formatCoord(osd.alternate_land_lon) : "-", false);
+    setFieldValue(mAirGps, osd.gps_number > 0
+        ? QString::number(osd.gps_number) + QString::fromUtf8(" \xe9\xa2\x97") : "-", true);
 }
 
 void OsdPanel::setFieldValue(QLabel* label, const QString& value, bool highlight) {
     QString old = label->text();
     label->setText(value);
     if (highlight && old != value) {
-        label->setStyleSheet("color: #1a73e8; font-weight: bold;");
+        label->setStyleSheet("color: #1a73e8; font-weight: bold; font-size: 12px;");
         QTimer::singleShot(1200, this, [label]() {
-            label->setStyleSheet("");
+            label->setStyleSheet("font-size: 12px; font-weight: 500;");
         });
     }
 }
+
+// —— 定时刷新 / 暂停恢复 ——
 
 void OsdPanel::refresh() {
     if (!mDevMgr || mCurrentSn.isEmpty())

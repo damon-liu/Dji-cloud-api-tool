@@ -41,6 +41,11 @@ struct AircraftOsd : public OsdBase {
     double  home_distance        = 0;    // 距home点距离 m
     int     flight_time_sec      = 0;    // 已飞行时间 秒
     int     rc_signal_strength   = 0;    // 遥控信号强度 0-100
+    int     mode_code            = -1;   // 飞行模式码
+    double  battery_temperature  = -273; // 电池温度 ℃
+    double  height               = 0;    // 相对起飞点高度 m
+    int     gps_number           = 0;    // GPS搜星数
+    double  wind_speed           = -1;   // 风速 m/s
 
     void parse(const QJsonObject& data) {
         parseCommon(data);
@@ -55,6 +60,16 @@ struct AircraftOsd : public OsdBase {
         home_distance      = data.value("home_distance").toDouble();
         flight_time_sec    = data.value("flight_time_sec").toInt();
         rc_signal_strength = data.value("rc_signal_strength").toInt();
+        if (data.contains("mode_code"))
+            mode_code = data["mode_code"].toInt();
+        if (data.contains("battery_temperature"))
+            battery_temperature = data["battery_temperature"].toDouble();
+        if (data.contains("height"))
+            height = data["height"].toDouble();
+        if (data.contains("gps_number"))
+            gps_number = data["gps_number"].toInt();
+        if (data.contains("wind_speed"))
+            wind_speed = data["wind_speed"].toDouble();
     }
 
     static AircraftOsd fromJson(const QJsonObject& data) {
@@ -76,6 +91,8 @@ struct DockOsd : public OsdBase {
     double  environment_humidity   = -1;   // %, -1 表示无数据
     double  alternate_land_lat     = 0;    // 备降点纬度
     double  alternate_land_lon     = 0;    // 备降点经度
+    double  dock_inside_temp       = -273; // 舱内温度 ℃, -273 表示无数据
+    double  rainfall               = -1;   // 降雨量 mm, -1 表示无数据
     int     putter_state           = -1;   // 推杆状态: 0=收回, 1=推出, -1=未知
 
     void parse(const QJsonObject& data) {
@@ -101,6 +118,10 @@ struct DockOsd : public OsdBase {
         }
         if (data.contains("putter_state"))
             putter_state = data["putter_state"].toInt();
+        if (data.contains("dock_inside_temperature"))
+            dock_inside_temp = data["dock_inside_temperature"].toDouble();
+        if (data.contains("rainfall"))
+            rainfall = data["rainfall"].toDouble();
     }
 
     static DockOsd fromJson(const QJsonObject& data) {
