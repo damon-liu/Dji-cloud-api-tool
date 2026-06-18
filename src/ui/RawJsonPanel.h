@@ -159,12 +159,12 @@ public:
     void appendJson(const QString& json, const QString& topic = {}) {
         if (json.isEmpty()) return;
 
-        // 抓包写入文件（NDJSON 格式：一行一条JSON，与暂停无关）
+        // 抓包写入文件（JSON 数组格式，保留原始缩进）
         if (mCapturing && !mCaptureTopic.isEmpty() && topic == mCaptureTopic) {
             if (mCaptureFile && mCaptureFile->isOpen()) {
-                mCaptureFile->write(json.toUtf8().replace('\n', ' '));
-                mCaptureFile->write("\n");
-                mCaptureBytesWritten++;
+                mCaptureFile->write(json.toUtf8());
+                mCaptureFile->write(",\n");
+                mCaptureCount++;
             }
         }
 
@@ -207,7 +207,10 @@ private:
         }
 
         mCapturing = true;
-        mCaptureBytesWritten = 0;
+        mCaptureCount = 0;
+
+        // 写入 JSON 数组起始标记
+        mCaptureFile->write("[\n");
         mCaptureBtn->setStyleSheet(
             "QPushButton { background: #c62828; color: #fff; border: none; "
             "border-radius: 4px; padding: 4px 12px; font-size: 12px; }"
@@ -217,13 +220,20 @@ private:
 
     void stopCapture() {
         mCapturing = false;
+        int count = mCaptureCount;
+        mCaptureCount = 0;
+
         QString savedPath = mCaptureFilePath;
         if (mCaptureFile) {
+            // 修正 JSON 数组结尾：去除最后一条的 ",\n" → "\n]"
+            if (count > 0) {
+                mCaptureFile->seek(mCaptureFile->size() - 2);
+            }
+            mCaptureFile->write("\n]");
             mCaptureFile->close();
             delete mCaptureFile;
             mCaptureFile = nullptr;
         }
-        mCaptureBytesWritten = 0;
         mCaptureBtn->setText("⬤ 抓包");
         mCaptureBtn->setStyleSheet("");
 
@@ -234,7 +244,7 @@ private:
             msgBox.setWindowTitle("抓包完成");
             msgBox.setText(QString("数据已保存至：\n%1\n\n共 %2 条记录，文件大小 %3 KB")
                 .arg(QDir::toNativeSeparators(savedPath))
-                .arg(mCaptureBytesWritten)
+                .arg(count)
                 .arg(fi.size() / 1024));
             msgBox.setIcon(QMessageBox::Information);
             QPushButton* openBtn = msgBox.addButton("打开文件夹", QMessageBox::AcceptRole);
@@ -255,7 +265,7 @@ private:
     QFile*          mCaptureFile      = nullptr;
     bool            mPaused           = false;
     bool            mCapturing        = false;
-    int             mCaptureBytesWritten = 0;
+    int             mCaptureCount     = 0;
     QString         mCaptureSn;
     QString         mCaptureTopic;
     QString         mCaptureFilePath;
