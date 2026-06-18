@@ -15,7 +15,10 @@
 #include <QJsonObject>
 #include <QDateTime>
 #include <QFile>
+#include <QFileInfo>
 #include <QDir>
+#include <QMessageBox>
+#include <QProcess>
 
 class RawJsonPanel : public QWidget {
     Q_OBJECT
@@ -195,7 +198,8 @@ private:
         QString dir = QApplication::applicationDirPath() + "/captures";
         QDir().mkpath(dir);
 
-        mCaptureFile = new QFile(dir + "/" + filename, this);
+        mCaptureFilePath = dir + "/" + filename;
+        mCaptureFile = new QFile(mCaptureFilePath, this);
         if (!mCaptureFile->open(QIODevice::WriteOnly | QIODevice::Text)) {
             delete mCaptureFile;
             mCaptureFile = nullptr;
@@ -213,6 +217,7 @@ private:
 
     void stopCapture() {
         mCapturing = false;
+        QString savedPath = mCaptureFilePath;
         if (mCaptureFile) {
             mCaptureFile->close();
             delete mCaptureFile;
@@ -221,6 +226,27 @@ private:
         mCaptureBytesWritten = 0;
         mCaptureBtn->setText("⬤ 抓包");
         mCaptureBtn->setStyleSheet("");
+
+        // 弹窗提示保存路径，可直接跳转
+        if (!savedPath.isEmpty()) {
+            QFileInfo fi(savedPath);
+            QMessageBox msgBox;
+            msgBox.setWindowTitle("抓包完成");
+            msgBox.setText(QString("数据已保存至：\n%1\n\n共 %2 条记录，文件大小 %3 KB")
+                .arg(QDir::toNativeSeparators(savedPath))
+                .arg(mCaptureBytesWritten)
+                .arg(fi.size() / 1024));
+            msgBox.setIcon(QMessageBox::Information);
+            QPushButton* openBtn = msgBox.addButton("打开文件夹", QMessageBox::AcceptRole);
+            msgBox.addButton("确定", QMessageBox::RejectRole);
+            msgBox.exec();
+
+            if (msgBox.clickedButton() == openBtn) {
+                QString folder = QDir::toNativeSeparators(fi.absolutePath());
+                QProcess::startDetached("explorer", {"/select,", folder + "\\" + fi.fileName()});
+            }
+        }
+        mCaptureFilePath.clear();
     }
 
     QPlainTextEdit* mEditor;
@@ -232,6 +258,7 @@ private:
     int             mCaptureBytesWritten = 0;
     QString         mCaptureSn;
     QString         mCaptureTopic;
+    QString         mCaptureFilePath;
     QStringList     mPendingBuffer;
     static constexpr int MAX_BUFFER = 1000;
 };
