@@ -220,10 +220,15 @@ void MainWindow::setupToolBar() {
     auto* configBtn = qobject_cast<QToolButton*>(toolbar->widgetForAction(configAct));
     if (configBtn) configBtn->setObjectName("configBtn");
     connect(configAct, &QAction::triggered, this, [this]() {
-        ConfigDialog dlg(mDevMgr->mqttConfig(), this);
+        ConfigDialog dlg(mDevMgr, this);
         if (dlg.exec() == QDialog::Accepted) {
-            mDevMgr->setMqttConfig(dlg.getConfig());
+            // Profile 切换在对话框内已完成，这里只需保存配置并重连
+            mDevMgr->saveConfig(QApplication::applicationDirPath() + "/config.json");
             if (!mDevMgr->isConnected()) {
+                mDevMgr->connectBroker();
+            } else {
+                // 已连接但配置可能变了，断开重连
+                mDevMgr->disconnectBroker();
                 mDevMgr->connectBroker();
             }
         }
@@ -464,6 +469,14 @@ void MainWindow::connectSignals() {
     });
     connect(mDevMgr, &DeviceManager::brokerError, this, [this](const QString& err) {
         statusBar()->showMessage("MQTT 错误: " + err, 5000);
+    });
+    connect(mDevMgr, &DeviceManager::profileSwitched, this, [this](const QString& name) {
+        mDeviceTree->rebuild(mDevMgr->topLevelDevices(), mDevMgr->allDevices());
+        mOsdPanel->clear();
+        mRawJsonPanel->clear();
+        mTopicListWidget->clearTopics();
+        mTopicParsePanel->clear();
+        updateStatusBar();
     });
 
     connect(mDevMgr, &DeviceManager::deviceAdded, this, [this]() {

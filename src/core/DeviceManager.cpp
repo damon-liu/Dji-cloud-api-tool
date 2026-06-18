@@ -32,6 +32,10 @@ DeviceManager::DeviceManager(QObject* parent)
     // Topic 变更 → MQTT 重新订阅
     connect(mTopicManager, &TopicManager::topicsChanged,
             this, &DeviceManager::onTopicsChanged);
+
+    // Profile 切换信号转发
+    connect(mConfigStore, &ConfigStore::profileSwitched,
+            this, &DeviceManager::profileSwitched);
 }
 
 bool DeviceManager::initialize(const QString& configPath) {
@@ -285,6 +289,75 @@ void DeviceManager::reorderTopics(const QString& deviceSn, const QStringList& or
     // 持久化顺序变更
     mConfigStore->setTopicsForDevice(deviceSn, orderedTopics);
     saveConfig(mConfigPath);
+}
+
+// ——— Profile 管理 ———
+
+QStringList DeviceManager::profileNames() const {
+    return mConfigStore->profileNames();
+}
+
+QString DeviceManager::currentProfileName() const {
+    return mConfigStore->currentProfileName();
+}
+
+void DeviceManager::switchToProfile(const QString& name) {
+    if (mConfigStore->currentProfileName() == name)
+        return;
+
+    bool wasConnected = isConnected();
+    if (wasConnected)
+        disconnectBroker();
+
+    // 清空运行时状态
+    mDevices.clear();
+    mAircraftOsdCache.clear();
+    mDockOsdCache.clear();
+    mRawJsonCache.clear();
+    mJsonHistory.clear();
+    mTopicManager->clear();
+
+    // 切换到新 profile（ConfigStore 内部自动 save 当前状态）
+    mConfigStore->setCurrentProfile(name);
+
+    // 重新加载设备
+    for (const auto& info : mConfigStore->devices()) {
+        mDevices[info.sn] = info;
+        QStringList topics = mConfigStore->topicsForDevice(info.sn);
+        mTopicManager->setDeviceTopics(info.sn, topics);
+
+        QStringList disabled = mConfigStore->disabledTopicsForDevice(info.sn);
+        if (!disabled.isEmpty()) {
+            mTopicManager->setDisabledTopicsForDevice(
+                info.sn,
+                QSet<QString>(disabled.begin(), disabled.end()));
+            mTopicManager->unsubscribeTopics(disabled);
+        }
+    }
+
+    qDebug() << "DeviceManager: switched to profile" << name
+             << "with" << mDevices.size() << "devices";
+
+    if (wasConnected)
+        connectBroker();
+}
+
+bool DeviceManager::addProfile(const QString& name, const MqttConfig& mqtt) {
+    bool ok = mConfigStore->addProfile(name, mqtt);
+    if (ok) emit profileListChanged();
+    return ok;
+}
+
+bool DeviceManager::removeProfile(const QString& name) {
+    bool ok = mConfigStore->removeProfile(name);
+    if (ok) emit profileListChanged();
+    return ok;
+}
+
+bool DeviceManager::renameProfile(const QString& oldName, const QString& newName) {
+    bool ok = mConfigStore->renameProfile(oldName, newName);
+    if (ok) emit profileListChanged();
+    return ok;
 }
 
 // ——— 私有槽 ———

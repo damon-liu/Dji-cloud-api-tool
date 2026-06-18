@@ -17,7 +17,16 @@ struct MqttConfig {
     QString password = "";
 };
 
-// ConfigStore: JSON 配置文件读写
+// 单个 Profile 的完整数据
+struct ProfileData {
+    QString                     name;
+    MqttConfig                  mqtt;
+    QVector<DeviceInfo>         devices;
+    QMap<QString, QStringList>  deviceTopics;      // SN -> topics (有序)
+    QMap<QString, QSet<QString>> disabledTopics;    // SN -> disabled topics
+};
+
+// ConfigStore: JSON 配置文件读写，支持多 Profile
 class ConfigStore : public QObject {
     Q_OBJECT
 public:
@@ -25,36 +34,42 @@ public:
 
     // 加载配置（文件不存在则创建默认）
     bool load(const QString& filePath);
-
     // 保存配置
     bool save(const QString& filePath);
 
-    // MQTT 连接参数
+    // —— Profile 管理 ——
+    QStringList profileNames() const;
+    QString currentProfileName() const;
+    bool setCurrentProfile(const QString& name);   // 切换到指定 profile（内存中）
+    bool addProfile(const QString& name, const MqttConfig& mqtt);
+    bool removeProfile(const QString& name);
+    bool renameProfile(const QString& oldName, const QString& newName);
+
+    // —— 当前 Profile 的 MQTT / 设备操作 ——
     MqttConfig mqttConfig() const;
     void setMqttConfig(const MqttConfig& config);
 
-    // 设备列表
     QVector<DeviceInfo> devices() const;
     void setDevices(const QVector<DeviceInfo>& devices);
 
-    // 获取设备的所有 topic（通过 SN）
     QStringList topicsForDevice(const QString& sn) const;
     void setTopicsForDevice(const QString& sn, const QStringList& topics);
 
-    // 禁用 topic 管理
     QStringList disabledTopicsForDevice(const QString& sn) const;
     void setDisabledTopicsForDevice(const QString& sn, const QStringList& topics);
 
 signals:
     void configChanged();
+    void profileSwitched(const QString& profileName);
 
 private:
     QString defaultConfigPath() const;
+    ProfileData& currentProfileData();
+    const ProfileData& currentProfileData() const;
 
-    MqttConfig                  mMqttConfig;
-    QVector<DeviceInfo>         mDevices;
-    QMap<QString, QStringList>  mDeviceTopics;   // SN -> topics (有序)
-    QMap<QString, QSet<QString>> mDisabledTopics;  // SN -> disabled topics
+    QString                     mConfigPath;
+    QMap<QString, ProfileData>  mProfiles;
+    QString                     mCurrentProfile;
 };
 
 #endif // CONFIGSTORE_H

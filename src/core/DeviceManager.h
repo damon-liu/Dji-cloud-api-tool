@@ -60,6 +60,14 @@ public:
     // 保存配置
     bool saveConfig(const QString& path);
 
+    // Profile 管理（代理到 ConfigStore）
+    QStringList profileNames() const;
+    QString currentProfileName() const;
+    void switchToProfile(const QString& name);
+    bool addProfile(const QString& name, const MqttConfig& mqtt);
+    bool removeProfile(const QString& name);
+    bool renameProfile(const QString& oldName, const QString& newName);
+
 signals:
     void brokerConnected();
     void brokerDisconnected();
@@ -68,6 +76,8 @@ signals:
     void deviceRemoved(const QString& sn);
     void deviceOsdUpdated(const QString& sn, const QString& topic, const QString& rawJson);
     void deviceOnlineChanged(const QString& sn, bool online);
+    void profileSwitched(const QString& name);
+    void profileListChanged();
 
 private slots:
     void onMqttConnected();

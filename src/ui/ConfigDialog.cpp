@@ -1,38 +1,76 @@
 #include "ConfigDialog.h"
+#include "DeviceManager.h"
 #include <QFormLayout>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QDialogButtonBox>
 #include <QMessageBox>
+#include <QInputDialog>
 #include <QLabel>
 
-ConfigDialog::ConfigDialog(const MqttConfig& config, QWidget* parent)
+ConfigDialog::ConfigDialog(DeviceManager* devMgr, QWidget* parent)
     : QDialog(parent)
+    , mDevMgr(devMgr)
 {
     setWindowTitle("MQTT 连接配置");
-    setMinimumWidth(380);
+    setMinimumWidth(420);
 
     auto* layout = new QVBoxLayout(this);
 
+    // ——— Profile 选择器 ———
+    auto* profileRow = new QHBoxLayout;
+
+    mProfileCombo = new QComboBox(this);
+    mProfileCombo->setMinimumWidth(120);
+    connect(mProfileCombo, &QComboBox::currentTextChanged,
+            this, &ConfigDialog::onProfileSelected);
+
+    mAddProfileBtn = new QPushButton("+", this);
+    mAddProfileBtn->setFixedWidth(30);
+    mAddProfileBtn->setToolTip(QString::fromUtf8("\xe6\x96\xb0\xe5\xa2\x9e Profile"));
+    connect(mAddProfileBtn, &QPushButton::clicked, this, &ConfigDialog::onAddProfile);
+
+    mRenameProfileBtn = new QPushButton(QString::fromUtf8("\xe2\x9c\x8e"), this);
+    mRenameProfileBtn->setFixedWidth(30);
+    mRenameProfileBtn->setToolTip(QString::fromUtf8("\xe9\x87\x8d\xe5\x91\xbd\xe5\x90\x8d"));
+    connect(mRenameProfileBtn, &QPushButton::clicked, this, &ConfigDialog::onRenameProfile);
+
+    mDeleteProfileBtn = new QPushButton(QString::fromUtf8("\xe2\x9c\x95"), this);
+    mDeleteProfileBtn->setFixedWidth(30);
+    mDeleteProfileBtn->setToolTip(QString::fromUtf8("\xe5\x88\xa0\xe9\x99\xa4 Profile"));
+    connect(mDeleteProfileBtn, &QPushButton::clicked, this, &ConfigDialog::onDeleteProfile);
+
+    profileRow->addWidget(new QLabel("Profile:", this));
+    profileRow->addWidget(mProfileCombo, 1);
+    profileRow->addWidget(mAddProfileBtn);
+    profileRow->addWidget(mRenameProfileBtn);
+    profileRow->addWidget(mDeleteProfileBtn);
+    layout->addLayout(profileRow);
+
+    // 分隔线
+    auto* sep = new QFrame(this);
+    sep->setFrameShape(QFrame::HLine);
+    sep->setStyleSheet("color: #e0e0e0;");
+    layout->addWidget(sep);
+
+    // ——— MQTT 参数 ———
     auto* form = new QFormLayout;
-    mHostEdit = new QLineEdit(config.host, this);
+    mHostEdit = new QLineEdit(this);
     mPortSpin = new QSpinBox(this);
     mPortSpin->setRange(1, 65535);
-    mPortSpin->setValue(config.port);
-    mUsernameEdit = new QLineEdit(config.username, this);
-    mPasswordEdit = new QLineEdit(config.password, this);
+    mUsernameEdit = new QLineEdit(this);
+    mPasswordEdit = new QLineEdit(this);
     mPasswordEdit->setEchoMode(QLineEdit::Password);
 
     form->addRow("Broker IP:", mHostEdit);
-    form->addRow("端口:", mPortSpin);
-    form->addRow("用户名:", mUsernameEdit);
-    form->addRow("密码:", mPasswordEdit);
+    form->addRow(QString::fromUtf8("\xe7\xab\xaf\xe5\x8f\xa3:"), mPortSpin);
+    form->addRow(QString::fromUtf8("\xe7\x94\xa8\xe6\x88\xb7\xe5\x90\x8d:"), mUsernameEdit);
+    form->addRow(QString::fromUtf8("\xe5\xaf\x86\xe7\xa0\x81:"), mPasswordEdit);
     layout->addLayout(form);
 
     // 底部按钮行
     auto* bottomLayout = new QHBoxLayout;
 
-    // Test 按钮（靠左）
     mTestBtn = new QPushButton("Test", this);
     mTestBtn->setFixedWidth(80);
     connect(mTestBtn, &QPushButton::clicked, this, &ConfigDialog::onTestClicked);
@@ -40,14 +78,46 @@ ConfigDialog::ConfigDialog(const MqttConfig& config, QWidget* parent)
 
     bottomLayout->addStretch();
 
-    // OK / Cancel（靠右）
     auto* buttons = new QDialogButtonBox(
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
-    connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::accepted, this, [this]() {
+        // 保存当前 profile 的 MQTT 配置到内存
+        mDevMgr->setMqttConfig(getConfig());
+        accept();
+    });
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     bottomLayout->addWidget(buttons);
 
     layout->addLayout(bottomLayout);
+
+    // 初始加载
+    refreshProfileList();
+    mSelectedProfile = mDevMgr->currentProfileName();
+    mProfileCombo->setCurrentText(mSelectedProfile);
+    loadProfile(mSelectedProfile);
+}
+
+void ConfigDialog::refreshProfileList() {
+    QString current = mProfileCombo->currentText();
+    mProfileCombo->blockSignals(true);
+    mProfileCombo->clear();
+    mProfileCombo->addItems(mDevMgr->profileNames());
+    mProfileCombo->blockSignals(false);
+
+    bool single = mDevMgr->profileNames().size() <= 1;
+    mDeleteProfileBtn->setEnabled(!single);
+}
+
+void ConfigDialog::loadProfile(const QString& name) {
+    // 从 DeviceManager 获取对应 profile 的 MQTT 配置
+    // 注意：当前 ConfigStore 的 MQTT 是当前 profile 的
+    if (name == mDevMgr->currentProfileName()) {
+        MqttConfig cfg = mDevMgr->mqttConfig();
+        mHostEdit->setText(cfg.host);
+        mPortSpin->setValue(cfg.port);
+        mUsernameEdit->setText(cfg.username);
+        mPasswordEdit->setText(cfg.password);
+    }
 }
 
 MqttConfig ConfigDialog::getConfig() const {
@@ -59,6 +129,83 @@ MqttConfig ConfigDialog::getConfig() const {
     return cfg;
 }
 
+void ConfigDialog::onProfileSelected(const QString& name) {
+    if (name.isEmpty() || name == mSelectedProfile) return;
+
+    // 保存当前编辑内容到当前 profile
+    if (!mSelectedProfile.isEmpty() && mSelectedProfile == mDevMgr->currentProfileName()) {
+        mDevMgr->setMqttConfig(getConfig());
+    }
+
+    // 切换到新 profile（触发设备重新加载）
+    mDevMgr->switchToProfile(name);
+    mSelectedProfile = name;
+    loadProfile(name);
+    refreshProfileList();
+}
+
+void ConfigDialog::onAddProfile() {
+    bool ok;
+    QString name = QInputDialog::getText(this,
+        QString::fromUtf8("\xe6\x96\xb0\xe5\xa2\x9e Profile"),
+        QString::fromUtf8("Profile \xe5\x90\x8d\xe7\xa7\xb0:"),
+        QLineEdit::Normal, "", &ok);
+    if (!ok || name.trimmed().isEmpty()) return;
+
+    MqttConfig cfg;  // 使用默认或复制当前
+    if (!mDevMgr->addProfile(name.trimmed(), cfg)) {
+        QMessageBox::warning(this, QString::fromUtf8("\xe9\x94\x99\xe8\xaf\xaf"),
+            QString::fromUtf8("\xe8\xaf\xa5\xe5\x90\x8d\xe7\xa7\xb0\xe5\xb7\xb2\xe5\xad\x98\xe5\x9c\xa8"));
+        return;
+    }
+    refreshProfileList();
+    mProfileCombo->setCurrentText(name.trimmed());
+}
+
+void ConfigDialog::onRenameProfile() {
+    QString oldName = mProfileCombo->currentText();
+    if (oldName.isEmpty()) return;
+
+    bool ok;
+    QString newName = QInputDialog::getText(this,
+        QString::fromUtf8("\xe9\x87\x8d\xe5\x91\xbd\xe5\x90\x8d Profile"),
+        QString::fromUtf8("\xe6\x96\xb0\xe5\x90\x8d\xe7\xa7\xb0:"),
+        QLineEdit::Normal, oldName, &ok);
+    if (!ok || newName.trimmed().isEmpty() || newName.trimmed() == oldName) return;
+
+    if (!mDevMgr->renameProfile(oldName, newName.trimmed())) {
+        QMessageBox::warning(this, QString::fromUtf8("\xe9\x94\x99\xe8\xaf\xaf"),
+            QString::fromUtf8("\xe9\x87\x8d\xe5\x91\xbd\xe5\x90\x8d\xe5\xa4\xb1\xe8\xb4\xa5\xef\xbc\x8c\xe5\x90\x8d\xe7\xa7\xb0\xe5\x8f\xaf\xe8\x83\xbd\xe5\xb7\xb2\xe5\xad\x98\xe5\x9c\xa8"));
+        return;
+    }
+    mSelectedProfile = newName.trimmed();
+    refreshProfileList();
+    mProfileCombo->setCurrentText(mSelectedProfile);
+}
+
+void ConfigDialog::onDeleteProfile() {
+    QString name = mProfileCombo->currentText();
+    if (name.isEmpty()) return;
+
+    auto ret = QMessageBox::question(this,
+        QString::fromUtf8("\xe5\x88\xa0\xe9\x99\xa4 Profile"),
+        QString::fromUtf8("\xe7\xa1\xae\xe5\xae\x9a\xe5\x88\xa0\xe9\x99\xa4 Profile \"%1\" \xe5\x8f\x8a\xe5\x85\xb6\xe6\x89\x80\xe6\x9c\x89\xe8\xae\xbe\xe5\xa4\x87\xef\xbc\x9f").arg(name),
+        QMessageBox::Yes | QMessageBox::No);
+    if (ret != QMessageBox::Yes) return;
+
+    if (!mDevMgr->removeProfile(name)) {
+        QMessageBox::warning(this, QString::fromUtf8("\xe9\x94\x99\xe8\xaf\xaf"),
+            QString::fromUtf8("\xe4\xb8\x8d\xe8\x83\xbd\xe5\x88\xa0\xe9\x99\xa4\xe6\x9c\x80\xe5\x90\x8e\xe4\xb8\x80\xe4\xb8\xaa Profile"));
+        return;
+    }
+    refreshProfileList();
+    mSelectedProfile = mDevMgr->currentProfileName();
+    mProfileCombo->setCurrentText(mSelectedProfile);
+    loadProfile(mSelectedProfile);
+}
+
+// ——— 以下保持原 Test 逻辑不变 ———
+
 void ConfigDialog::onTestClicked() {
     if (mTestRunning) return;
     startTest();
@@ -69,7 +216,6 @@ void ConfigDialog::startTest() {
     mTestBtn->setEnabled(false);
     mTestBtn->setText("...");
 
-    // 创建临时 MQTT 客户端
     mTestClient = new QMqttClient(this);
     mTestClient->setHostname(mHostEdit->text().trimmed());
     mTestClient->setPort(static_cast<quint16>(mPortSpin->value()));
@@ -78,36 +224,27 @@ void ConfigDialog::startTest() {
     if (!mPasswordEdit->text().isEmpty())
         mTestClient->setPassword(mPasswordEdit->text());
 
-    // 超时定时器（5 秒）
     mTestTimer = new QTimer(this);
     mTestTimer->setSingleShot(true);
 
     connect(mTestClient, &QMqttClient::connected, this, [this]() {
         mTestClient->disconnectFromHost();
         cleanupTest();
-        QMessageBox::information(this, "连接测试", "✓ MQTT 连接成功！");
+        QMessageBox::information(this, QString::fromUtf8("\xe8\xbf\x9e\xe6\x8e\xa5\xe6\xb5\x8b\xe8\xaf\x95"),
+            QString::fromUtf8("\xe2\x9c\x93 MQTT \xe8\xbf\x9e\xe6\x8e\xa5\xe6\x88\x90\xe5\x8a\x9f\xef\xbc\x81"));
     });
 
     connect(mTestClient, &QMqttClient::errorChanged, this, [this](QMqttClient::ClientError error) {
         if (error == QMqttClient::NoError) return;
-        QString errMsg;
-        switch (error) {
-        case QMqttClient::InvalidProtocolVersion: errMsg = "无效的协议版本"; break;
-        case QMqttClient::IdRejected:             errMsg = "Client ID 被拒绝"; break;
-        case QMqttClient::ServerUnavailable:     errMsg = "服务器不可用"; break;
-        case QMqttClient::BadUsernameOrPassword: errMsg = "用户名或密码错误"; break;
-        case QMqttClient::NotAuthorized:         errMsg = "未授权"; break;
-        case QMqttClient::TransportInvalid:      errMsg = "传输层错误（无法连接）"; break;
-        case QMqttClient::ProtocolViolation:     errMsg = "协议违规"; break;
-        default:                                 errMsg = "未知错误"; break;
-        }
         cleanupTest();
-        QMessageBox::warning(this, "连接测试", "连接失败请检查配置参数是否有误");
+        QMessageBox::warning(this, QString::fromUtf8("\xe8\xbf\x9e\xe6\x8e\xa5\xe6\xb5\x8b\xe8\xaf\x95"),
+            QString::fromUtf8("\xe8\xbf\x9e\xe6\x8e\xa5\xe5\xa4\xb1\xe8\xb4\xa5\xe8\xaf\xb7\xe6\xa3\x80\xe6\x9f\xa5\xe9\x85\x8d\xe7\xbd\xae\xe5\x8f\x82\xe6\x95\xb0\xe6\x98\xaf\xe5\x90\xa6\xe6\x9c\x89\xe8\xaf\xaf"));
     });
 
     connect(mTestTimer, &QTimer::timeout, this, [this]() {
         cleanupTest();
-        QMessageBox::warning(this, "连接测试", "连接失败请检查配置参数是否有误");
+        QMessageBox::warning(this, QString::fromUtf8("\xe8\xbf\x9e\xe6\x8e\xa5\xe6\xb5\x8b\xe8\xaf\x95"),
+            QString::fromUtf8("\xe8\xbf\x9e\xe6\x8e\xa5\xe5\xa4\xb1\xe8\xb4\xa5\xe8\xaf\xb7\xe6\xa3\x80\xe6\x9f\xa5\xe9\x85\x8d\xe7\xbd\xae\xe5\x8f\x82\xe6\x95\xb0\xe6\x98\xaf\xe5\x90\xa6\xe6\x9c\x89\xe8\xaf\xaf"));
     });
 
     mTestClient->connectToHost();
