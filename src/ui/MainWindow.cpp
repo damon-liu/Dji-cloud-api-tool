@@ -432,7 +432,7 @@ void MainWindow::connectSignals() {
         if (sn.isEmpty()) return;
         // 仅当 topic 已启用（订阅中）时才显示数据，禁用的 topic 不显示
         if (!selectedTopic.isEmpty() && mDevMgr->isTopicEnabled(sn, selectedTopic))
-            mRawJsonPanel->setJson(mDevMgr->jsonHistory(sn, selectedTopic));
+            mRawJsonPanel->setJson(mDevMgr->jsonHistory(sn, selectedTopic), selectedTopic);
         else
             mRawJsonPanel->setJson({});
     });
@@ -593,7 +593,7 @@ void MainWindow::onOsdUpdated(const QString& sn, const QString& topic, const QSt
         return;  // 不是用户选中的 topic，跳过
 
     if (!rawJson.isEmpty())
-        mRawJsonPanel->appendJson(rawJson);
+        mRawJsonPanel->appendJson(rawJson, topic);
 }
 
 // ——— 连接操作 ———
