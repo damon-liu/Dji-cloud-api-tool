@@ -127,23 +127,31 @@ void OsdPanel::showOsd(const DeviceInfo* device,
     Q_UNUSED(rawJson)
     if (!device) { clear(); return; }
 
+    // 仅在设备类型变化时才切换面板显隐，避免定时刷新导致闪烁
+    bool typeChanged = (device->type != mLastDeviceType);
+    mLastDeviceType = static_cast<int>(device->type);
+
     if (device->type == DeviceType::Dock) {
-        mDockPanel->show();
+        if (typeChanged) {
+            mDockPanel->show();
+        }
         if (dockOsd && dockOsd->valid)
             showDockOsd(*dockOsd);
-        // 子飞机
+
         if (aircraftOsd && aircraftOsd->valid) {
-            mAircraftPanel->show();
-            mAircraftPanel->setTitle(QString::fromUtf8("\xe2\x9c\x88 \xe9\xa3\x9e\xe6\x9c\xba\xe4\xbf\xa1\xe6\x81\xaf"));
+            if (typeChanged) {
+                mAircraftPanel->show();
+                mAircraftPanel->setTitle(QString::fromUtf8("\xe2\x9c\x88 \xe9\xa3\x9e\xe6\x9c\xba\xe4\xbf\xa1\xe6\x81\xaf"));
+            }
             showAircraftOsd(*aircraftOsd);
-        } else {
-            mAircraftPanel->hide();
         }
     } else {
         // 独立手飞
-        mDockPanel->hide();
-        mAircraftPanel->show();
-        mAircraftPanel->setTitle(QString::fromUtf8("\xe2\x9c\x88 \xe9\xa3\x9e\xe6\x9c\xba\xe4\xbf\xa1\xe6\x81\xaf"));
+        if (typeChanged) {
+            mDockPanel->hide();
+            mAircraftPanel->show();
+            mAircraftPanel->setTitle(QString::fromUtf8("\xe2\x9c\x88 \xe9\xa3\x9e\xe6\x9c\xba\xe4\xbf\xa1\xe6\x81\xaf"));
+        }
         if (aircraftOsd && aircraftOsd->valid)
             showAircraftOsd(*aircraftOsd);
     }
@@ -152,6 +160,7 @@ void OsdPanel::showOsd(const DeviceInfo* device,
 void OsdPanel::clear() {
     mDockPanel->hide();
     mAircraftPanel->hide();
+    mLastDeviceType = -1;
 }
 
 // —— 机场显示 ——

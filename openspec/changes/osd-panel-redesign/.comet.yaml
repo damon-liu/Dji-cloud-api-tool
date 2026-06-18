@@ -1,0 +1,23 @@
+workflow: full
+phase: build
+context_compression: off
+build_mode: direct
+build_pause: null
+subagent_dispatch: null
+tdd_mode: direct
+isolation: branch
+verify_mode: full
+auto_transition: true
+base_ref: 1ef328a8c9059e2b8349c8aa77f68e7640769fb1
+design_doc: docs/superpowers/specs/2026-06-18-osd-panel-redesign.md
+plan: null
+verify_result: fail
+verification_report: docs/superpowers/reports/2026-06-18-osd-panel-redesign-verify.md
+branch_status: handled
+created_at: 2026-06-18
+verified_at: null
+archived: false
+handoff_context: openspec/changes/osd-panel-redesign/.comet/handoff/design-context.json
+handoff_hash: 3c8ccef61cc4bb5800ecd958464a434e3e659d3e8ed6e4bf4b8a4e98d51fb3c7
+direct_override: true
+build_command: cmake --build build_mingw

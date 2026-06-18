@@ -77,6 +77,7 @@ private:
     QComboBox*     mIntervalCombo = nullptr;
     bool           mAutoPaused = false;
     QString        mCurrentSn;
+    int            mLastDeviceType = -1;
 };
 
 #endif // OSDPANEL_H
