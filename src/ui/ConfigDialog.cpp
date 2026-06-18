@@ -27,7 +27,7 @@ ConfigDialog::ConfigDialog(DeviceManager* devMgr, QWidget* parent)
 
     mAddProfileBtn = new QPushButton("+", this);
     mAddProfileBtn->setFixedWidth(30);
-    mAddProfileBtn->setToolTip(QString::fromUtf8("\xe6\x96\xb0\xe5\xa2\x9e Profile"));
+    mAddProfileBtn->setToolTip(QString::fromUtf8("\xe6\x96\xb0\xe5\xa2\x9e Connections"));
     connect(mAddProfileBtn, &QPushButton::clicked, this, &ConfigDialog::onAddProfile);
 
     mRenameProfileBtn = new QPushButton(QString::fromUtf8("\xe2\x9c\x8e"), this);
@@ -37,10 +37,10 @@ ConfigDialog::ConfigDialog(DeviceManager* devMgr, QWidget* parent)
 
     mDeleteProfileBtn = new QPushButton(QString::fromUtf8("\xe2\x9c\x95"), this);
     mDeleteProfileBtn->setFixedWidth(30);
-    mDeleteProfileBtn->setToolTip(QString::fromUtf8("\xe5\x88\xa0\xe9\x99\xa4 Profile"));
+    mDeleteProfileBtn->setToolTip(QString::fromUtf8("\xe5\x88\xa0\xe9\x99\xa4 Connections"));
     connect(mDeleteProfileBtn, &QPushButton::clicked, this, &ConfigDialog::onDeleteProfile);
 
-    profileRow->addWidget(new QLabel("Profile:", this));
+    profileRow->addWidget(new QLabel("Connections:", this));
     profileRow->addWidget(mProfileCombo, 1);
     profileRow->addWidget(mAddProfileBtn);
     profileRow->addWidget(mRenameProfileBtn);
@@ -144,8 +144,8 @@ void ConfigDialog::onProfileSelected(const QString& name) {
 void ConfigDialog::onAddProfile() {
     bool ok;
     QString name = QInputDialog::getText(this,
-        QString::fromUtf8("\xe6\x96\xb0\xe5\xa2\x9e Profile"),
-        QString::fromUtf8("Profile \xe5\x90\x8d\xe7\xa7\xb0:"),
+        QString::fromUtf8("\xe6\x96\xb0\xe5\xa2\x9e Connections"),
+        QString::fromUtf8("Connections \xe5\x90\x8d\xe7\xa7\xb0:"),
         QLineEdit::Normal, "", &ok);
     if (!ok || name.trimmed().isEmpty()) return;
 
@@ -165,7 +165,7 @@ void ConfigDialog::onRenameProfile() {
 
     bool ok;
     QString newName = QInputDialog::getText(this,
-        QString::fromUtf8("\xe9\x87\x8d\xe5\x91\xbd\xe5\x90\x8d Profile"),
+        QString::fromUtf8("\xe9\x87\x8d\xe5\x91\xbd\xe5\x90\x8d Connections"),
         QString::fromUtf8("\xe6\x96\xb0\xe5\x90\x8d\xe7\xa7\xb0:"),
         QLineEdit::Normal, oldName, &ok);
     if (!ok || newName.trimmed().isEmpty() || newName.trimmed() == oldName) return;
@@ -185,14 +185,14 @@ void ConfigDialog::onDeleteProfile() {
     if (name.isEmpty()) return;
 
     auto ret = QMessageBox::question(this,
-        QString::fromUtf8("\xe5\x88\xa0\xe9\x99\xa4 Profile"),
-        QString::fromUtf8("\xe7\xa1\xae\xe5\xae\x9a\xe5\x88\xa0\xe9\x99\xa4 Profile \"%1\" \xe5\x8f\x8a\xe5\x85\xb6\xe6\x89\x80\xe6\x9c\x89\xe8\xae\xbe\xe5\xa4\x87\xef\xbc\x9f").arg(name),
+        QString::fromUtf8("\xe5\x88\xa0\xe9\x99\xa4 Connections"),
+        QString::fromUtf8("\xe7\xa1\xae\xe5\xae\x9a\xe5\x88\xa0\xe9\x99\xa4 Connections \"%1\" \xe5\x8f\x8a\xe5\x85\xb6\xe6\x89\x80\xe6\x9c\x89\xe8\xae\xbe\xe5\xa4\x87\xef\xbc\x9f").arg(name),
         QMessageBox::Yes | QMessageBox::No);
     if (ret != QMessageBox::Yes) return;
 
     if (!mDevMgr->removeProfile(name)) {
         QMessageBox::warning(this, QString::fromUtf8("\xe9\x94\x99\xe8\xaf\xaf"),
-            QString::fromUtf8("\xe4\xb8\x8d\xe8\x83\xbd\xe5\x88\xa0\xe9\x99\xa4\xe6\x9c\x80\xe5\x90\x8e\xe4\xb8\x80\xe4\xb8\xaa Profile"));
+            QString::fromUtf8("\xe4\xb8\x8d\xe8\x83\xbd\xe5\x88\xa0\xe9\x99\xa4\xe6\x9c\x80\xe5\x90\x8e\xe4\xb8\x80\xe4\xb8\xaa Connections"));
         return;
     }
     refreshProfileList();
