@@ -235,6 +235,10 @@ void OsdPanel::showAircraftOsd(const AircraftOsd& osd) {
 }
 
 void OsdPanel::setFieldValue(QLabel* label, const QString& value, bool highlight) {
+    // 新值无意义时保持旧值不变，避免有效数据被空值覆盖
+    if (value == "-" || value.isEmpty())
+        return;
+
     QString old = label->text();
     label->setText(value);
     if (highlight && old != value) {
