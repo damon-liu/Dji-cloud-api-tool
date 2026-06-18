@@ -53,6 +53,7 @@ public:
 
     QVector<DeviceInfo> devices() const;
     void setDevices(const QVector<DeviceInfo>& devices);
+    bool renameDevice(const QString& sn, const QString& newName);
 
     QStringList topicsForDevice(const QString& sn) const;
     void setTopicsForDevice(const QString& sn, const QStringList& topics);

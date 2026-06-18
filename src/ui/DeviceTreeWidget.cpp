@@ -1,6 +1,7 @@
 #include "DeviceTreeWidget.h"
 #include <QClipboard>
 #include <QApplication>
+#include <QContextMenuEvent>
 
 DeviceTreeWidget::DeviceTreeWidget(QWidget* parent)
     : QTreeWidget(parent)
@@ -10,6 +11,7 @@ DeviceTreeWidget::DeviceTreeWidget(QWidget* parent)
     setAnimated(true);
     setIndentation(18);
     setFocusPolicy(Qt::StrongFocus);
+    setContextMenuPolicy(Qt::DefaultContextMenu);
 
     connect(this, &QTreeWidget::itemClicked,
             this, &DeviceTreeWidget::onItemClicked);
@@ -29,7 +31,7 @@ void DeviceTreeWidget::rebuild(const QVector<DeviceInfo*>& topLevelDevices,
 
     if (topLevelDevices.isEmpty()) {
         auto* placeholder = new QTreeWidgetItem(this);
-        placeholder->setText(0, "（无设备）");
+        placeholder->setText(0, QString::fromUtf8("\xef\xbc\x88\xe6\x97\xa0\xe8\xae\xbe\xe5\xa4\x87\xef\xbc\x89"));
         placeholder->setFlags(placeholder->flags() & ~Qt::ItemIsSelectable);
         placeholder->setForeground(0, QColor(180, 180, 180));
         return;
@@ -39,9 +41,7 @@ void DeviceTreeWidget::rebuild(const QVector<DeviceInfo*>& topLevelDevices,
         auto* item = new QTreeWidgetItem(this);
         QString status = dev->online ? QString::fromUtf8("\xf0\x9f\x9f\xa2 ")  // 🟢
                                      : QString::fromUtf8("\xf0\x9f\x94\xb4 "); // 🔴
-        QString icon = (dev->type == DeviceType::Dock)
-            ? QString::fromUtf8("\xf0\x9f\x8f\xa2 ") : QString::fromUtf8("\xe2\x9c\x88 ");
-        item->setText(0, status + icon + dev->name + "  " + dev->sn);
+        item->setText(0, status + dev->name + "  " + dev->sn);
         item->setData(0, Qt::UserRole, dev->sn);
         item->setData(0, Qt::UserRole + 1, static_cast<int>(dev->type));
         item->setToolTip(0, dev->sn);
@@ -51,14 +51,12 @@ void DeviceTreeWidget::rebuild(const QVector<DeviceInfo*>& topLevelDevices,
 
         mItemMap[dev->sn] = item;
 
-        // 子设备
         for (auto* child : allDevices) {
             if (child->parentSn == dev->sn) {
                 auto* childItem = new QTreeWidgetItem(item);
                 QString childStatus = child->online ? QString::fromUtf8("\xf0\x9f\x9f\xa2 ")
                                                      : QString::fromUtf8("\xf0\x9f\x94\xb4 ");
-                childItem->setText(0, childStatus + QString::fromUtf8("\xe2\x9c\x88 ")
-                                   + child->name + "  " + child->sn);
+                childItem->setText(0, childStatus + child->name + "  " + child->sn);
                 childItem->setData(0, Qt::UserRole, child->sn);
                 childItem->setData(0, Qt::UserRole + 1, static_cast<int>(child->type));
                 childItem->setToolTip(0, child->sn);
@@ -83,12 +81,41 @@ QString DeviceTreeWidget::selectedDeviceSn() const {
 void DeviceTreeWidget::mousePressEvent(QMouseEvent* event) {
     QTreeWidgetItem* item = itemAt(event->pos());
     if (!item) {
-        // 点击空白区域：取消选中
         clearSelection();
         setCurrentItem(nullptr);
         emit deviceSelected("");
     }
     QTreeWidget::mousePressEvent(event);
+}
+
+void DeviceTreeWidget::contextMenuEvent(QContextMenuEvent* event) {
+    QTreeWidgetItem* item = itemAt(event->pos());
+    if (!item) return;
+    QString sn = item->data(0, Qt::UserRole).toString();
+    if (sn.isEmpty()) return;
+
+    QMenu menu(this);
+    menu.setStyleSheet(
+        "QMenu { background: #fff; border: 1px solid #e0e0e0; padding: 4px; }"
+        "QMenu::item { padding: 6px 24px; }"
+        "QMenu::item:selected { background: #e8f0fe; }");
+
+    QAction* renameAct = menu.addAction(QString::fromUtf8("\xe9\x87\x8d\xe5\x91\xbd\xe5\x90\x8d"));
+    QAction* copyAct   = menu.addAction(QString::fromUtf8("\xe5\xa4\x8d\xe5\x88\xb6 SN"));
+
+    QAction* chosen = menu.exec(event->globalPos());
+    if (chosen == renameAct) {
+        QString oldName = item->text(0).mid(3).section("  ", 0, 0);  // 去掉状态前缀，取名称部分
+        bool ok;
+        QString newName = QInputDialog::getText(this,
+            QString::fromUtf8("\xe9\x87\x8d\xe5\x91\xbd\xe5\x90\x8d\xe8\xae\xbe\xe5\xa4\x87"),
+            QString::fromUtf8("\xe6\x96\xb0\xe5\x90\x8d\xe7\xa7\xb0:"),
+            QLineEdit::Normal, oldName, &ok);
+        if (ok && !newName.trimmed().isEmpty())
+            emit deviceRenameRequested(sn, newName.trimmed());
+    } else if (chosen == copyAct) {
+        QApplication::clipboard()->setText(sn);
+    }
 }
 
 void DeviceTreeWidget::onItemClicked(QTreeWidgetItem* item, int column) {

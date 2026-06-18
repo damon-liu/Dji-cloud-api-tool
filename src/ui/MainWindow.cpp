@@ -404,6 +404,15 @@ void MainWindow::setupStatusBar() {
 void MainWindow::connectSignals() {
     connect(mDeviceTree, &DeviceTreeWidget::deviceSelected,
             this, &MainWindow::onDeviceSelected);
+    connect(mDeviceTree, &DeviceTreeWidget::deviceRenameRequested,
+            this, [this](const QString& sn, const QString& newName) {
+        mDevMgr->renameDevice(sn, newName);
+        mDeviceTree->rebuild(mDevMgr->topLevelDevices(), mDevMgr->allDevices());
+        // 更新 OSD 面板中的设备名称
+        QString currentSn = mDeviceTree->selectedDeviceSn();
+        if (currentSn == sn)
+            onDeviceSelected(sn);
+    });
 
     // TopicListWidget signals → DeviceManager
     connect(mTopicListWidget, &TopicListWidget::topicAdded,

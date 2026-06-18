@@ -26,6 +26,7 @@ public:
     // 设备管理
     void addDevice(const DeviceInfo& info, const QStringList& topics);
     void removeDevice(const QString& sn);
+    void renameDevice(const QString& sn, const QString& newName);
     DeviceInfo* device(const QString& sn);
     QVector<DeviceInfo*> allDevices();
     QVector<DeviceInfo*> topLevelDevices();  // 顶级设备（机场 + 独立手飞）

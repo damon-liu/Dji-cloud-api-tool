@@ -144,6 +144,14 @@ void DeviceManager::removeDevice(const QString& sn) {
     emit deviceRemoved(sn);
 }
 
+void DeviceManager::renameDevice(const QString& sn, const QString& newName) {
+    if (!mDevices.contains(sn)) return;
+    mDevices[sn].name = newName;
+    mConfigStore->renameDevice(sn, newName);
+    saveConfig(mConfigPath);
+    emit deviceAdded(sn);  // 复用 deviceAdded 信号触发 UI 重建
+}
+
 DeviceInfo* DeviceManager::device(const QString& sn) {
     if (mDevices.contains(sn))
         return &mDevices[sn];

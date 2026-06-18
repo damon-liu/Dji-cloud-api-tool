@@ -348,6 +348,17 @@ void ConfigStore::setDevices(const QVector<DeviceInfo>& devices) {
     currentProfileData().devices = devices;
 }
 
+bool ConfigStore::renameDevice(const QString& sn, const QString& newName) {
+    auto& devs = currentProfileData().devices;
+    for (int i = 0; i < devs.size(); ++i) {
+        if (devs[i].sn == sn) {
+            devs[i].name = newName;
+            return true;
+        }
+    }
+    return false;
+}
+
 QStringList ConfigStore::topicsForDevice(const QString& sn) const {
     return currentProfileData().deviceTopics.value(sn);
 }
