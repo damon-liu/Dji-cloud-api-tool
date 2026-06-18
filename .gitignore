@@ -13,6 +13,12 @@ deploy/main.exe
 *.swp
 *.swo
 
+# 配置文件（含MQTT密码等敏感信息）
+config.json
+
+# 抓包输出目录
+captures/
+
 # 临时文件
 -
 
