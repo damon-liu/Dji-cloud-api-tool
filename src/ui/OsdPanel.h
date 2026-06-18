@@ -82,8 +82,6 @@ private:
     DeviceManager* mDevMgr = nullptr;
     QTimer*        mRefreshTimer = nullptr;
     QComboBox*     mIntervalCombo = nullptr;
-    QPushButton*   mPauseBtn = nullptr;
-    bool           mPaused = false;
     bool           mAutoPaused = false;
     QString        mCurrentSn;
 };

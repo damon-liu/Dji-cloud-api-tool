@@ -43,32 +43,10 @@ void OsdPanel::setupUi() {
         }
     });
 
-    mPauseBtn = new QPushButton(QString::fromUtf8("\xE2\x8F\xB8 \xE6\x9A\x82\xE5\x81\x9C"), this);
-    mPauseBtn->setCheckable(true);
-    mPauseBtn->setFixedWidth(80);
-    mPauseBtn->setStyleSheet(
-        "QPushButton { background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; "
-        "padding: 2px 8px; font-size: 12px; }"
-        "QPushButton:checked { background: #e8f5e9; border-color: #66bb6a; color: #2e7d32; }");
-    connect(mPauseBtn, &QPushButton::toggled, this, [this](bool checked) {
-        mPaused = checked;
-        if (checked) {
-            mPauseBtn->setText(QString::fromUtf8("\xE2\x96\xB6 \xE7\xBB\xA7\xE7\xBB\xAD"));
-            mRefreshTimer->stop();
-        } else {
-            mPauseBtn->setText(QString::fromUtf8("\xE2\x8F\xB8 \xE6\x9A\x82\xE5\x81\x9C"));
-            if (!mAutoPaused) {
-                mRefreshTimer->start(mRefreshTimer->interval());
-                refresh();
-            }
-        }
-    });
-
     titleLayout->addWidget(titleLabel);
     titleLayout->addStretch();
     titleLayout->addWidget(new QLabel(QString::fromUtf8("\xE5\x88\xB7\xE6\x96\xB0\xE9\x97\xB4\xE9\x9A\x94:"), this));
     titleLayout->addWidget(mIntervalCombo);
-    titleLayout->addWidget(mPauseBtn);
     mMainLayout->addWidget(titleBar);
 
     // 分隔线
@@ -290,9 +268,7 @@ void OsdPanel::pause() {
 void OsdPanel::resume() {
     if (mAutoPaused) {
         mAutoPaused = false;
-        if (!mPaused) {
-            mRefreshTimer->start(mRefreshTimer->interval());
-            refresh();
-        }
+        mRefreshTimer->start(mRefreshTimer->interval());
+        refresh();
     }
 }
