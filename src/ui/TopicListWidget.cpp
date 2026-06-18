@@ -3,6 +3,8 @@
 #include <QHBoxLayout>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QClipboard>
+#include <QApplication>
 
 TopicListWidget::TopicListWidget(QWidget* parent)
     : QWidget(parent)
@@ -116,6 +118,18 @@ TopicListWidget::TopicListWidget(QWidget* parent)
     connect(mMoveUpBtn, &QPushButton::clicked, this, &TopicListWidget::onMoveUp);
     connect(mMoveDownBtn, &QPushButton::clicked, this, &TopicListWidget::onMoveDown);
     connect(mToggleAllBtn, &QPushButton::clicked, this, &TopicListWidget::onToggleAll);
+
+    connect(mTopicList, &QListWidget::itemDoubleClicked,
+            this, [this](QListWidgetItem* item) {
+        QString topic = item->data(Qt::UserRole).toString();
+        QString text = item->text();
+        if (text.startsWith(QString::fromUtf8("（")))
+            return;
+        if (topic.isEmpty())
+            topic = text.mid(2);
+        if (!topic.isEmpty())
+            QApplication::clipboard()->setText(topic);
+    });
 
     // 初始状态：无设备选中
     clearTopics();

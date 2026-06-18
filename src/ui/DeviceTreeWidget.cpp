@@ -1,5 +1,7 @@
 #include "DeviceTreeWidget.h"
 #include <QHeaderView>
+#include <QClipboard>
+#include <QApplication>
 
 DeviceTreeWidget::DeviceTreeWidget(QWidget* parent)
     : QTreeWidget(parent)
@@ -13,6 +15,13 @@ DeviceTreeWidget::DeviceTreeWidget(QWidget* parent)
 
     connect(this, &QTreeWidget::itemClicked,
             this, &DeviceTreeWidget::onItemClicked);
+
+    connect(this, &QTreeWidget::itemDoubleClicked,
+            this, [this](QTreeWidgetItem* item, int) {
+        QString sn = item->data(0, Qt::UserRole).toString();
+        if (!sn.isEmpty())
+            QApplication::clipboard()->setText(sn);
+    });
 }
 
 void DeviceTreeWidget::rebuild(const QVector<DeviceInfo*>& topLevelDevices,
