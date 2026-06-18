@@ -170,10 +170,10 @@ static QString formatCoord(double val) {
     return QString::number(val, 'f', 7);
 }
 
-static QString coverText(const QString& state) {
-    if (state == "open" || state == "1") return QString::fromUtf8("\xe6\x89\x93\xe5\xbc\x80");
-    if (state == "closed" || state == "0") return QString::fromUtf8("\xe5\x85\xb3\xe9\x97\xad");
-    return state.isEmpty() ? "-" : state;
+static QString coverText(int state) {
+    if (state == 1) return QString::fromUtf8("\xe6\x89\x93\xe5\xbc\x80");
+    if (state == 0) return QString::fromUtf8("\xe5\x85\xb3\xe9\x97\xad");
+    return "-";
 }
 
 void OsdPanel::showDockOsd(const DockOsd& osd) {

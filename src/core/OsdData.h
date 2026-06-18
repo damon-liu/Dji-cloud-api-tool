@@ -81,7 +81,7 @@ struct AircraftOsd : public OsdBase {
 
 // 机场 OSD 数据
 struct DockOsd : public OsdBase {
-    QString cover_state            = "";   // open/closed
+    int     cover_state            = -1;   // 0=关闭, 1=打开
     bool    drone_in_dock          = false;
     double  working_voltage        = 0;    // mV
     double  working_current        = 0;    // mA
@@ -91,13 +91,15 @@ struct DockOsd : public OsdBase {
     double  environment_humidity   = -1;   // %, -1 表示无数据
     double  alternate_land_lat     = 0;    // 备降点纬度
     double  alternate_land_lon     = 0;    // 备降点经度
-    double  dock_inside_temp       = -273; // 舱内温度 ℃, -273 表示无数据
+    double  dock_inside_temp       = -273; // 舱内温度 ℃ (JSON key: temperature)
     double  rainfall               = -1;   // 降雨量 mm, -1 表示无数据
-    int     putter_state           = -1;   // 推杆状态: 0=收回, 1=推出, -1=未知
+    int     putter_state           = -1;   // 推杆状态: 0=收回, 1=推出
+    int     gps_number             = 0;    // GPS搜星数
+    int     rtk_number             = 0;    // RTK搜星数
 
     void parse(const QJsonObject& data) {
         parseCommon(data);
-        cover_state            = data.value("cover_state").toString();
+        cover_state            = data.value("cover_state").toVariant().toInt();  // int 0/1
         drone_in_dock          = data.value("drone_in_dock").toVariant().toInt() != 0;
         working_voltage        = data.value("working_voltage").toDouble();
         working_current        = data.value("working_current").toDouble();
@@ -118,10 +120,19 @@ struct DockOsd : public OsdBase {
         }
         if (data.contains("putter_state"))
             putter_state = data["putter_state"].toInt();
-        if (data.contains("dock_inside_temperature"))
-            dock_inside_temp = data["dock_inside_temperature"].toDouble();
+        // 舱内温度 JSON key 为 "temperature"
+        if (data.contains("temperature"))
+            dock_inside_temp = data["temperature"].toDouble();
         if (data.contains("rainfall"))
             rainfall = data["rainfall"].toDouble();
+        // 解析嵌套 position_state
+        if (data.contains("position_state")) {
+            QJsonObject ps = data["position_state"].toObject();
+            if (ps.contains("gps_number"))
+                gps_number = ps["gps_number"].toInt();
+            if (ps.contains("rtk_number"))
+                rtk_number = ps["rtk_number"].toInt();
+        }
     }
 
     static DockOsd fromJson(const QJsonObject& data) {
