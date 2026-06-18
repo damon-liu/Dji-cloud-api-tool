@@ -112,6 +112,7 @@ void TopicParsePanel::setTopic(const QString& deviceSn, const QString& topic) {
     mDeviceSn = deviceSn;
     mTopic    = topic;
     mPrevValues.clear();
+    mLastJson.clear();
     mTopicLabel->setText(topic.isEmpty() ? "" : topic);
 
     // 切换 topic 时先清除旧内容
@@ -182,6 +183,11 @@ void TopicParsePanel::refresh() {
     QJsonObject data = root.value("data").toObject();
     if (data.isEmpty())
         return;
+
+    // 数据无变化则跳过，避免重复清空重建闪烁
+    if (rawJson == mLastJson)
+        return;
+    mLastJson = rawJson;
 
     renderGroups(data);
 }

@@ -64,6 +64,7 @@ private:
     QTimer*             mRefreshTimer;
 
     QMap<QString, QString> mPrevValues;
+    QString                mLastJson;
 };
 
 #endif // TOPICPARSEPANEL_H
