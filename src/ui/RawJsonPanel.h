@@ -156,12 +156,11 @@ public:
     void appendJson(const QString& json, const QString& topic = {}) {
         if (json.isEmpty()) return;
 
-        // 抓包写入文件（仅在被抓包 topic 匹配时写入，与暂停无关）
+        // 抓包写入文件（NDJSON 格式：一行一条JSON，与暂停无关）
         if (mCapturing && !mCaptureTopic.isEmpty() && topic == mCaptureTopic) {
             if (mCaptureFile && mCaptureFile->isOpen()) {
-                if (mCaptureBytesWritten > 0)
-                    mCaptureFile->write(",\n");
-                mCaptureFile->write(json.toUtf8());
+                mCaptureFile->write(json.toUtf8().replace('\n', ' '));
+                mCaptureFile->write("\n");
                 mCaptureBytesWritten++;
             }
         }
