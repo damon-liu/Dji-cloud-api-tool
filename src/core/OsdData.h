@@ -98,7 +98,7 @@ struct DockOsd : public OsdBase {
     void parse(const QJsonObject& data) {
         parseCommon(data);
         cover_state            = data.value("cover_state").toString();
-        drone_in_dock          = data.value("drone_in_dock").toBool();
+        drone_in_dock          = data.value("drone_in_dock").toVariant().toInt() != 0;
         working_voltage        = data.value("working_voltage").toDouble();
         working_current        = data.value("working_current").toDouble();
         backup_battery_voltage = data.value("backup_battery_voltage").toDouble();
