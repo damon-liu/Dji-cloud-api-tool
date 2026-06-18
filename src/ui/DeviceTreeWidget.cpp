@@ -41,7 +41,7 @@ void DeviceTreeWidget::rebuild(const QVector<DeviceInfo*>& topLevelDevices,
         auto* item = new QTreeWidgetItem(this);
         QString status = dev->online ? QString::fromUtf8("\xf0\x9f\x9f\xa2 ")  // 🟢
                                      : QString::fromUtf8("\xf0\x9f\x94\xb4 "); // 🔴
-        item->setText(0, status + dev->name + "  " + dev->sn);
+        item->setText(0, status + dev->name + "-" + dev->sn);
         item->setData(0, Qt::UserRole, dev->sn);
         item->setData(0, Qt::UserRole + 1, static_cast<int>(dev->type));
         item->setToolTip(0, dev->sn);
@@ -56,7 +56,7 @@ void DeviceTreeWidget::rebuild(const QVector<DeviceInfo*>& topLevelDevices,
                 auto* childItem = new QTreeWidgetItem(item);
                 QString childStatus = child->online ? QString::fromUtf8("\xf0\x9f\x9f\xa2 ")
                                                      : QString::fromUtf8("\xf0\x9f\x94\xb4 ");
-                childItem->setText(0, childStatus + child->name + "  " + child->sn);
+                childItem->setText(0, childStatus + child->name + "-" + child->sn);
                 childItem->setData(0, Qt::UserRole, child->sn);
                 childItem->setData(0, Qt::UserRole + 1, static_cast<int>(child->type));
                 childItem->setToolTip(0, child->sn);
@@ -105,7 +105,7 @@ void DeviceTreeWidget::contextMenuEvent(QContextMenuEvent* event) {
 
     QAction* chosen = menu.exec(event->globalPos());
     if (chosen == renameAct) {
-        QString oldName = item->text(0).mid(3).section("  ", 0, 0);  // 去掉状态前缀，取名称部分
+        QString oldName = item->text(0).mid(3).section("-", 0, 0);  // 去掉状态前缀，取名称部分
         bool ok;
         QString newName = QInputDialog::getText(this,
             QString::fromUtf8("\xe9\x87\x8d\xe5\x91\xbd\xe5\x90\x8d\xe8\xae\xbe\xe5\xa4\x87"),
