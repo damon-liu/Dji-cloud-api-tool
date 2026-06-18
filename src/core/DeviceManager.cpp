@@ -248,6 +248,14 @@ void DeviceManager::setMqttConfig(const MqttConfig& cfg) {
     saveConfig(mConfigPath);
 }
 
+MqttConfig DeviceManager::mqttConfigForProfile(const QString& name) const {
+    return mConfigStore->mqttConfigForProfile(name);
+}
+
+void DeviceManager::setMqttConfigForProfile(const QString& name, const MqttConfig& cfg) {
+    mConfigStore->setMqttConfigForProfile(name, cfg);
+}
+
 bool DeviceManager::saveConfig(const QString& path) {
     // 同步设备列表和 topics 到 ConfigStore
     QVector<DeviceInfo> devs;

@@ -329,6 +329,17 @@ void ConfigStore::setMqttConfig(const MqttConfig& config) {
     currentProfileData().mqtt = config;
 }
 
+MqttConfig ConfigStore::mqttConfigForProfile(const QString& name) const {
+    if (mProfiles.contains(name))
+        return mProfiles[name].mqtt;
+    return {};
+}
+
+void ConfigStore::setMqttConfigForProfile(const QString& name, const MqttConfig& config) {
+    if (mProfiles.contains(name))
+        mProfiles[name].mqtt = config;
+}
+
 QVector<DeviceInfo> ConfigStore::devices() const {
     return currentProfileData().devices;
 }

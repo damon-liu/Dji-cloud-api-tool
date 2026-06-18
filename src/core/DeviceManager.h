@@ -55,7 +55,9 @@ public:
 
     // 配置访问
     MqttConfig mqttConfig() const;
+    MqttConfig mqttConfigForProfile(const QString& name) const;
     void setMqttConfig(const MqttConfig& cfg);
+    void setMqttConfigForProfile(const QString& name, const MqttConfig& cfg);
 
     // 保存配置
     bool saveConfig(const QString& path);

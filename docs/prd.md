@@ -69,3 +69,8 @@ thing/product/{gateway_sn}/requests_reply
 sys/product/{gateway_sn}/status_reply
 ```
 
+#### 1.8 界面问题修复
+
+1. 机场数据默认1s刷新一次，刷新时间间隔支持手动配置
+2. 原始JSON断开时，机场数据和JSON解析数据都应该暂停，继续以后恢复正常
+3. 在设备列表处支持一键禁用或启用设备下所有的topic

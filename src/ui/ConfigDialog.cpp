@@ -81,8 +81,13 @@ ConfigDialog::ConfigDialog(DeviceManager* devMgr, QWidget* parent)
     auto* buttons = new QDialogButtonBox(
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     connect(buttons, &QDialogButtonBox::accepted, this, [this]() {
-        // 保存当前 profile 的 MQTT 配置到内存
-        mDevMgr->setMqttConfig(getConfig());
+        // 保存当前编辑到选中 profile
+        mDevMgr->setMqttConfigForProfile(mSelectedProfile, getConfig());
+        // 如果选中的不是当前活跃 profile，切换过去
+        if (mSelectedProfile != mDevMgr->currentProfileName())
+            mDevMgr->switchToProfile(mSelectedProfile);
+        else
+            mDevMgr->setMqttConfig(getConfig());  // 更新当前 profile 的 MQTT
         accept();
     });
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -109,15 +114,11 @@ void ConfigDialog::refreshProfileList() {
 }
 
 void ConfigDialog::loadProfile(const QString& name) {
-    // 从 DeviceManager 获取对应 profile 的 MQTT 配置
-    // 注意：当前 ConfigStore 的 MQTT 是当前 profile 的
-    if (name == mDevMgr->currentProfileName()) {
-        MqttConfig cfg = mDevMgr->mqttConfig();
-        mHostEdit->setText(cfg.host);
-        mPortSpin->setValue(cfg.port);
-        mUsernameEdit->setText(cfg.username);
-        mPasswordEdit->setText(cfg.password);
-    }
+    MqttConfig cfg = mDevMgr->mqttConfigForProfile(name);
+    mHostEdit->setText(cfg.host);
+    mPortSpin->setValue(cfg.port);
+    mUsernameEdit->setText(cfg.username);
+    mPasswordEdit->setText(cfg.password);
 }
 
 MqttConfig ConfigDialog::getConfig() const {
@@ -132,16 +133,12 @@ MqttConfig ConfigDialog::getConfig() const {
 void ConfigDialog::onProfileSelected(const QString& name) {
     if (name.isEmpty() || name == mSelectedProfile) return;
 
-    // 保存当前编辑内容到当前 profile
-    if (!mSelectedProfile.isEmpty() && mSelectedProfile == mDevMgr->currentProfileName()) {
-        mDevMgr->setMqttConfig(getConfig());
-    }
+    // 保存编辑内容到上一个 profile
+    if (!mSelectedProfile.isEmpty())
+        mDevMgr->setMqttConfigForProfile(mSelectedProfile, getConfig());
 
-    // 切换到新 profile（触发设备重新加载）
-    mDevMgr->switchToProfile(name);
     mSelectedProfile = name;
     loadProfile(name);
-    refreshProfileList();
 }
 
 void ConfigDialog::onAddProfile() {

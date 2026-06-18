@@ -47,7 +47,9 @@ public:
 
     // —— 当前 Profile 的 MQTT / 设备操作 ——
     MqttConfig mqttConfig() const;
+    MqttConfig mqttConfigForProfile(const QString& name) const;
     void setMqttConfig(const MqttConfig& config);
+    void setMqttConfigForProfile(const QString& name, const MqttConfig& config);
 
     QVector<DeviceInfo> devices() const;
     void setDevices(const QVector<DeviceInfo>& devices);
