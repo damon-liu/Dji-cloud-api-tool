@@ -181,19 +181,19 @@ void OsdPanel::showDockOsd(const DockOsd& osd) {
     setFieldValue(mDockLatLon,
         (osd.latitude != 0 || osd.longitude != 0)
         ? QString("%1, %2").arg(formatCoord(osd.latitude)).arg(formatCoord(osd.longitude))
-        : "-", true);
-    setFieldValue(mDockCover, coverText(osd.cover_state), false);
+        : "-");
+    setFieldValue(mDockCover, coverText(osd.cover_state));
     setFieldValue(mDockDroneIn, osd.drone_in_dock
         ? QString::fromUtf8("\xe5\x9c\xa8\xe8\x88\xb1\xe5\x86\x85")
-        : QString::fromUtf8("\xe5\xb7\xb2\xe7\xa6\xbb\xe8\x88\xb1"), false);
+        : QString::fromUtf8("\xe5\xb7\xb2\xe7\xa6\xbb\xe8\x88\xb1"));
     setFieldValue(mDockInsideTemp, osd.dock_inside_temp > -200
-        ? QString::number(osd.dock_inside_temp, 'f', 1) + " \xe2\x84\x83" : "-", false);
+        ? QString::number(osd.dock_inside_temp, 'f', 1) + " \xe2\x84\x83" : "-");
     setFieldValue(mDockEnvTemp, osd.environment_temp > -200
-        ? QString::number(osd.environment_temp, 'f', 1) + " \xe2\x84\x83" : "-", false);
+        ? QString::number(osd.environment_temp, 'f', 1) + " \xe2\x84\x83" : "-");
     setFieldValue(mDockWind, osd.wind_speed >= 0
-        ? QString::number(osd.wind_speed, 'f', 1) + " m/s" : "-", false);
+        ? QString::number(osd.wind_speed, 'f', 1) + " m/s" : "-");
     setFieldValue(mDockRain, osd.rainfall >= 0
-        ? QString::number(osd.rainfall, 'f', 1) + " mm" : "-", false);
+        ? QString::number(osd.rainfall, 'f', 1) + " mm" : "-");
 }
 
 // —— 飞机显示 ——
@@ -215,38 +215,29 @@ static QString modeCodeText(int code) {
 }
 
 void OsdPanel::showAircraftOsd(const AircraftOsd& osd) {
-    setFieldValue(mAirModeCode, modeCodeText(osd.mode_code), true);
+    setFieldValue(mAirModeCode, modeCodeText(osd.mode_code));
     setFieldValue(mAirLatLon,
         (osd.latitude != 0 || osd.longitude != 0)
         ? QString("%1, %2").arg(formatCoord(osd.latitude)).arg(formatCoord(osd.longitude))
-        : "-", true);
+        : "-");
     setFieldValue(mAirBattery, osd.battery_percent >= 0
-        ? QString::number(osd.battery_percent) + "%" : "-", false);
+        ? QString::number(osd.battery_percent) + "%" : "-");
     setFieldValue(mAirBattTemp, osd.battery_temperature > -200
-        ? QString::number(osd.battery_temperature, 'f', 1) + " \xe2\x84\x83" : "-", false);
+        ? QString::number(osd.battery_temperature, 'f', 1) + " \xe2\x84\x83" : "-");
     setFieldValue(mAirHeight, osd.height > 0
-        ? QString::number(osd.height, 'f', 1) + " m" : "-", false);
+        ? QString::number(osd.height, 'f', 1) + " m" : "-");
     setFieldValue(mAirHomeDist, osd.home_distance > 0
-        ? QString::number(osd.home_distance, 'f', 1) + " m" : "-", false);
+        ? QString::number(osd.home_distance, 'f', 1) + " m" : "-");
     setFieldValue(mAirWind, osd.wind_speed >= 0
-        ? QString::number(osd.wind_speed, 'f', 1) + " m/s" : "-", false);
+        ? QString::number(osd.wind_speed, 'f', 1) + " m/s" : "-");
     setFieldValue(mAirGps, osd.gps_number > 0
-        ? QString::number(osd.gps_number) + QString::fromUtf8(" \xe9\xa2\x97") : "-", true);
+        ? QString::number(osd.gps_number) + QString::fromUtf8(" \xe9\xa2\x97") : "-");
 }
 
-void OsdPanel::setFieldValue(QLabel* label, const QString& value, bool highlight) {
-    // 新值无意义时保持旧值不变，避免有效数据被空值覆盖
+void OsdPanel::setFieldValue(QLabel* label, const QString& value) {
     if (value == "-" || value.isEmpty())
         return;
-
-    QString old = label->text();
     label->setText(value);
-    if (highlight && old != value) {
-        label->setStyleSheet("color: #1a73e8; font-weight: bold; font-size: 12px;");
-        QTimer::singleShot(1200, this, [label]() {
-            label->setStyleSheet("font-size: 12px; font-weight: 500;");
-        });
-    }
 }
 
 // —— 定时刷新 / 暂停恢复 ——

@@ -40,7 +40,7 @@ private:
     void setupAircraftPanel();
     void showAircraftOsd(const AircraftOsd& osd);
     void showDockOsd(const DockOsd& osd);
-    void setFieldValue(QLabel* label, const QString& value, bool highlight);
+    void setFieldValue(QLabel* label, const QString& value);
     void setDockRow(int row, const QString& label, QLabel*& valLabel);
     void setAirRow(int row, const QString& label, QLabel*& valLabel);
 
