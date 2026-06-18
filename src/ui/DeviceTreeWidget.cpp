@@ -1,13 +1,11 @@
 #include "DeviceTreeWidget.h"
-#include <QHeaderView>
 #include <QClipboard>
 #include <QApplication>
 
 DeviceTreeWidget::DeviceTreeWidget(QWidget* parent)
     : QTreeWidget(parent)
 {
-    setHeaderLabels({"设备"});
-    header()->setStretchLastSection(true);
+    setHeaderHidden(true);
     setRootIsDecorated(true);
     setAnimated(true);
     setIndentation(18);
@@ -39,9 +37,11 @@ void DeviceTreeWidget::rebuild(const QVector<DeviceInfo*>& topLevelDevices,
 
     for (auto* dev : topLevelDevices) {
         auto* item = new QTreeWidgetItem(this);
+        QString status = dev->online ? QString::fromUtf8("\xf0\x9f\x9f\xa2 ")  // 🟢
+                                     : QString::fromUtf8("\xf0\x9f\x94\xb4 "); // 🔴
         QString icon = (dev->type == DeviceType::Dock)
-            ? QString::fromUtf8("🏢 ") : QString::fromUtf8("✈ ");
-        item->setText(0, icon + dev->name);
+            ? QString::fromUtf8("\xf0\x9f\x8f\xa2 ") : QString::fromUtf8("\xe2\x9c\x88 ");
+        item->setText(0, status + icon + dev->name + "  " + dev->sn);
         item->setData(0, Qt::UserRole, dev->sn);
         item->setData(0, Qt::UserRole + 1, static_cast<int>(dev->type));
         item->setToolTip(0, dev->sn);
@@ -55,7 +55,10 @@ void DeviceTreeWidget::rebuild(const QVector<DeviceInfo*>& topLevelDevices,
         for (auto* child : allDevices) {
             if (child->parentSn == dev->sn) {
                 auto* childItem = new QTreeWidgetItem(item);
-                childItem->setText(0, QString::fromUtf8("✈ ") + child->name);
+                QString childStatus = child->online ? QString::fromUtf8("\xf0\x9f\x9f\xa2 ")
+                                                     : QString::fromUtf8("\xf0\x9f\x94\xb4 ");
+                childItem->setText(0, childStatus + QString::fromUtf8("\xe2\x9c\x88 ")
+                                   + child->name + "  " + child->sn);
                 childItem->setData(0, Qt::UserRole, child->sn);
                 childItem->setData(0, Qt::UserRole + 1, static_cast<int>(child->type));
                 childItem->setToolTip(0, child->sn);

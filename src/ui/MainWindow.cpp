@@ -267,7 +267,7 @@ void MainWindow::setupLayout() {
     // 区域标题 + 操作按钮
     auto* titleRow = new QHBoxLayout;
     titleRow->setSpacing(4);
-    auto* treeTitle = new QLabel("设备列表");
+    auto* treeTitle = new QLabel("Devices");
     treeTitle->setObjectName("sectionTitle");
     titleRow->addWidget(treeTitle);
     titleRow->addStretch();
