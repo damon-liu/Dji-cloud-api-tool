@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { useMonitorStore } from '../stores/monitorStore'
+import { MAX_HISTORY, useMonitorStore } from '../stores/monitorStore'
 import type { MqttRuntimeMessage } from '../types/domain'
 
 function message(overrides: Partial<MqttRuntimeMessage>): MqttRuntimeMessage {
@@ -63,5 +63,22 @@ describe('monitorStore', () => {
 
     store.clear()
     expect(store.history()).toEqual([])
+  })
+
+  it('keeps only 500 latest messages', () => {
+    const store = useMonitorStore()
+
+    for (let index = 0; index < MAX_HISTORY + 20; index += 1) {
+      store.append(
+        message({
+          payloadText: JSON.stringify({ index }),
+          receivedAt: `2026-07-07T00:00:${String(index).padStart(2, '0')}.000Z`,
+        }),
+      )
+    }
+
+    expect(store.history()).toHaveLength(MAX_HISTORY)
+    expect(store.history()[0]?.payloadText).toBe(JSON.stringify({ index: 20 }))
+    expect(store.history().at(-1)?.payloadText).toBe(JSON.stringify({ index: 519 }))
   })
 })
