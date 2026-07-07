@@ -1,9 +1,11 @@
 pub mod config_store;
 pub mod models;
+pub mod topic_matcher;
 
 #[cfg(test)]
 mod tests {
     mod config_store_tests;
+    mod topic_matcher_tests;
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
