@@ -2,6 +2,9 @@
 build/
 build_linux/
 build_mingw/
+dji-cloud-api-tool-next/node_modules/
+dji-cloud-api-tool-next/dist/
+dji-cloud-api-tool-next/src-tauri/target/
 
 # 部署目录中的编译产物（配置文件保留）
 deploy/main
