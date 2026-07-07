@@ -154,19 +154,26 @@ impl MqttService {
                 }
             }
 
-            emit(
-                &app,
-                "mqtt:disconnected",
-                ConnectionEvent {
-                    connection_id: connection_id.clone(),
-                },
-            );
+            let is_current = {
+                let mut state = service.state.lock().await;
+                if state.session_token.as_deref() == Some(session_token.as_str()) {
+                    state.client = None;
+                    state.connection_id = None;
+                    state.session_token = None;
+                    true
+                } else {
+                    false
+                }
+            };
 
-            let mut state = service.state.lock().await;
-            if state.session_token.as_deref() == Some(session_token.as_str()) {
-                state.client = None;
-                state.connection_id = None;
-                state.session_token = None;
+            if is_current {
+                emit(
+                    &app,
+                    "mqtt:disconnected",
+                    ConnectionEvent {
+                        connection_id: connection_id.clone(),
+                    },
+                );
             }
         });
 
