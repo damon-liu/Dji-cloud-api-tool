@@ -18,28 +18,165 @@ select {
   font: inherit;
 }
 
-.app-root {
-  min-height: 100%;
+.shell {
+  height: 100%;
   display: grid;
-  place-items: center;
-  padding: 32px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+.toolbar,
+.statusbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
   box-sizing: border-box;
+  background: #ffffff;
+  border-bottom: 1px solid #dfe3ea;
 }
 
-.app-placeholder {
-  text-align: center;
-}
-
-.app-placeholder h1 {
-  margin: 0 0 12px;
-  font-size: 32px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.app-placeholder p {
-  margin: 0;
+.statusbar {
+  border-top: 1px solid #dfe3ea;
+  border-bottom: 0;
+  justify-content: space-between;
   color: #5e6673;
-  font-size: 16px;
-  line-height: 1.6;
+  font-size: 12px;
+}
+
+.toolbar-spacer {
+  flex: 1;
+}
+
+.broker-label {
+  color: #5e6673;
+  font-size: 13px;
+}
+
+button {
+  border: 1px solid #cfd6df;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #20242a;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+button.primary {
+  background: #1f6feb;
+  border-color: #1f6feb;
+  color: #ffffff;
+}
+
+.workspace {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.left-column,
+.right-column,
+.analysis-column {
+  min-height: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.left-column {
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.right-column {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.monitor-grid {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 520px);
+  gap: 8px;
+}
+
+.analysis-column {
+  grid-template-rows: minmax(140px, 0.8fr) minmax(0, 1.2fr);
+}
+
+.panel {
+  min-height: 0;
+  background: #ffffff;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid #edf0f4;
+}
+
+.panel-header h2 {
+  flex: 1;
+  margin: 0;
+  color: #20242a;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.panel-header button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  line-height: 1;
+}
+
+.panel-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+  box-sizing: border-box;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.publish-panel {
+  min-height: 132px;
+}
+
+.empty {
+  color: #77808c;
+}
+
+@media (max-width: 900px) {
+  .workspace,
+  .monitor-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .shell {
+    overflow: auto;
+  }
+
+  .workspace {
+    overflow: visible;
+  }
+
+  .left-column,
+  .right-column,
+  .analysis-column {
+    min-height: auto;
+  }
+
+  .panel {
+    min-height: 180px;
+  }
 }
