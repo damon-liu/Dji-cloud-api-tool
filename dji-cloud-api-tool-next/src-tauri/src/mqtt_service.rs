@@ -134,6 +134,10 @@ impl MqttService {
                     Ok(Event::Outgoing(Outgoing::Disconnect)) => break,
                     Ok(_) => {}
                     Err(error) => {
+                        if !service.is_current_connection(&connection_id).await {
+                            break;
+                        }
+
                         emit(
                             &app,
                             "mqtt:error",
@@ -163,6 +167,11 @@ impl MqttService {
         });
 
         Ok(())
+    }
+
+    async fn is_current_connection(&self, connection_id: &str) -> bool {
+        let state = self.state.lock().await;
+        state.connection_id.as_deref() == Some(connection_id)
     }
 
     pub async fn disconnect(&self) -> Result<()> {
