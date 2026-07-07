@@ -3,7 +3,7 @@
     <header class="toolbar">
       <button type="button">配置</button>
       <span class="toolbar-spacer" />
-      <span class="broker-label">未连接 broker</span>
+      <span class="broker-label">未连接</span>
       <button type="button" class="primary">连接</button>
       <button type="button">断开</button>
     </header>
