@@ -8,7 +8,7 @@
     </header>
     <div v-if="!collapsed" class="panel-body publish-body">
       <div v-if="!selectedSn" class="empty publish-empty">请选择设备</div>
-      <form class="publish-form" @submit.prevent="publish">
+      <form v-else class="publish-form" @submit.prevent="publish">
         <label class="field sn-field">
           <span>设备 SN</span>
           <input :value="selectedSn ?? ''" readonly placeholder="未选择设备" />
@@ -102,7 +102,7 @@ watch([customTopic, selectedTopic, payloadText], clearStatus)
 
 async function publish() {
   const topic = effectiveTopic.value
-  if (!topic || publishing.value) {
+  if (!selectedSn.value || !topic || publishing.value) {
     return
   }
 
@@ -120,7 +120,7 @@ async function publish() {
     await tauriApi.publishMessage(topic, payloadText.value)
     showStatus('success', '下发成功')
   } catch (error) {
-    showStatus('error', error instanceof Error ? error.message : '下发失败。')
+    showStatus('error', error instanceof Error ? error.message : String(error))
   } finally {
     publishing.value = false
   }

@@ -26,7 +26,7 @@ describe('PublishPanel', () => {
 
   it('blocks invalid JSON payloads before publishing', async () => {
     const topics = useTopicStore()
-    topics.addTopic('dock_001', 'thing/product/dock_001/osd')
+    await topics.addTopic('dock_001', 'thing/product/dock_001/osd')
     mountPanel()
 
     await setPayload('{ bad json')
@@ -36,11 +36,20 @@ describe('PublishPanel', () => {
     expect(document.body.textContent).toContain('JSON 格式错误:')
   })
 
+  it('does not render the publish form without a selected device', async () => {
+    mount(PublishPanel, {
+      attachTo: document.body,
+    })
+
+    expect(document.body.textContent).toContain('请选择设备')
+    expect(document.body.querySelector('[data-test="publish-send"]')).toBeNull()
+  })
+
   it('publishes custom topic over the selected device topic after JSON validation', async () => {
     publishMessage.mockResolvedValue()
     const topics = useTopicStore()
-    topics.addTopic('dock_001', 'thing/product/dock_001/osd')
-    topics.addTopic('dock_001', 'thing/product/dock_001/services')
+    await topics.addTopic('dock_001', 'thing/product/dock_001/osd')
+    await topics.addTopic('dock_001', 'thing/product/dock_001/services')
     topics.selectTopic('dock_001', 'thing/product/dock_001/services')
     mountPanel()
 
@@ -50,6 +59,17 @@ describe('PublishPanel', () => {
 
     expect(publishMessage).toHaveBeenCalledWith('thing/product/dock_001/custom', '{"method":"ping"}')
     expect(document.body.textContent).toContain('下发成功')
+  })
+
+  it('shows string errors returned by the publish command', async () => {
+    publishMessage.mockRejectedValue('not connected')
+    const topics = useTopicStore()
+    await topics.addTopic('dock_001', 'thing/product/dock_001/osd')
+    mountPanel()
+
+    await clickPublish()
+
+    expect(document.body.textContent).toContain('not connected')
   })
 })
 
