@@ -4,10 +4,23 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
+const CONFIG_FILES: &[&str] = &[
+    "connections.json",
+    "devices.json",
+    "topics.json",
+    "topic-mappings.json",
+    "app-settings.json",
+];
+
 #[derive(Debug, Error)]
 pub enum ConfigStoreError {
     #[error("failed to create app data directory: {0}")]
     CreateDir(std::io::Error),
+    #[error("failed to create config directory {path}: {source}")]
+    CreateConfigDir {
+        path: String,
+        source: std::io::Error,
+    },
     #[error("failed to read config file {path}: {source}")]
     Read {
         path: String,
@@ -16,6 +29,12 @@ pub enum ConfigStoreError {
     #[error("failed to write config file {path}: {source}")]
     Write {
         path: String,
+        source: std::io::Error,
+    },
+    #[error("failed to copy config file from {source_path} to {target_path}: {source}")]
+    Copy {
+        source_path: String,
+        target_path: String,
         source: std::io::Error,
     },
     #[error("failed to parse config file {path}: {source}")]
@@ -87,6 +106,34 @@ impl ConfigStore {
         self.save_json("topic-mappings.json", mapping)
     }
 
+    pub fn export_config(&self, directory: &Path) -> Result<()> {
+        Self::create_dir(directory)?;
+
+        for name in CONFIG_FILES {
+            let source = self.path(name);
+            if source.exists() {
+                let target = directory.join(name);
+                Self::copy_file(&source, &target)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn import_config(&self, directory: &Path) -> Result<()> {
+        fs::create_dir_all(&self.root).map_err(ConfigStoreError::CreateDir)?;
+
+        for name in CONFIG_FILES {
+            let source = directory.join(name);
+            if source.exists() {
+                let target = self.path(name);
+                Self::copy_file(&source, &target)?;
+            }
+        }
+
+        Ok(())
+    }
+
     fn load_list<T: DeserializeOwned>(&self, name: &str) -> Result<Vec<T>> {
         let path = self.path(name);
         if !path.exists() {
@@ -129,5 +176,22 @@ impl ConfigStore {
 
     fn path(&self, name: &str) -> PathBuf {
         self.root.join(Path::new(name))
+    }
+
+    fn create_dir(path: &Path) -> Result<()> {
+        fs::create_dir_all(path).map_err(|source| ConfigStoreError::CreateConfigDir {
+            path: path.display().to_string(),
+            source,
+        })
+    }
+
+    fn copy_file(source: &Path, target: &Path) -> Result<()> {
+        fs::copy(source, target)
+            .map(|_| ())
+            .map_err(|copy_error| ConfigStoreError::Copy {
+                source_path: source.display().to_string(),
+                target_path: target.display().to_string(),
+                source: copy_error,
+            })
     }
 }

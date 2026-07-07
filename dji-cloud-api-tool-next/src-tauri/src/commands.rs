@@ -1,6 +1,7 @@
 use crate::config_store::ConfigStore;
 use crate::models::{ConnectionProfile, Device, DeviceTopic};
 use crate::mqtt_service::MqttService;
+use std::path::Path;
 use tauri::{AppHandle, Runtime, State};
 
 fn command_error(error: impl std::fmt::Display) -> String {
@@ -38,6 +39,20 @@ pub fn load_topics(store: State<'_, ConfigStore>) -> Result<Vec<DeviceTopic>, St
 #[tauri::command]
 pub fn save_topics(store: State<'_, ConfigStore>, topics: Vec<DeviceTopic>) -> Result<(), String> {
     store.save_topics(&topics).map_err(command_error)
+}
+
+#[tauri::command]
+pub fn export_config(store: State<'_, ConfigStore>, directory: String) -> Result<(), String> {
+    store
+        .export_config(Path::new(&directory))
+        .map_err(command_error)
+}
+
+#[tauri::command]
+pub fn import_config(store: State<'_, ConfigStore>, directory: String) -> Result<(), String> {
+    store
+        .import_config(Path::new(&directory))
+        .map_err(command_error)
 }
 
 #[tauri::command]

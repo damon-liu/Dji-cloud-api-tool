@@ -27,69 +27,15 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { parseMappedFields, type ParsedFieldRow } from '../services/topicMapping'
+import {
+  defaultTopicMapping,
+  mappingForTopic,
+  parseMappedFields,
+  type ParsedFieldRow,
+} from '../services/topicMapping'
 import { useDeviceStore } from '../stores/deviceStore'
 import { useMonitorStore } from '../stores/monitorStore'
 import { useTopicStore } from '../stores/topicStore'
-import type { TopicMapping } from '../types/domain'
-
-const defaultMapping: TopicMapping = {
-  topics: {
-    'thing/product/{sn}/osd': {
-      description: 'OSD',
-      fields: {
-        battery: { zh: '电量', unit: '%' },
-        capacity_percent: { zh: '电量', unit: '%' },
-        'battery.capacity_percent': { zh: '电量', unit: '%' },
-        speed: { zh: '速度', unit: 'm/s' },
-        horizontal_speed: { zh: '水平速度', unit: 'm/s' },
-        latitude: { zh: '纬度' },
-        longitude: { zh: '经度' },
-        height: { zh: '高度', unit: 'm' },
-        elevation: { zh: '海拔', unit: 'm' },
-        cover_state: { zh: '舱盖状态' },
-        'dock.cover_state': { zh: '舱盖状态' },
-        temperature: { zh: '温度', unit: '℃' },
-        humidity: { zh: '湿度', unit: '%' },
-        'environment.temperature': { zh: '温度', unit: '℃' },
-        'environment.humidity': { zh: '湿度', unit: '%' },
-      },
-      groups: [
-        {
-          id: 'flight',
-          label: '飞行状态',
-          keys: [
-            'battery',
-            'capacity_percent',
-            'battery.capacity_percent',
-            'speed',
-            'horizontal_speed',
-            'latitude',
-            'longitude',
-            'height',
-            'elevation',
-          ],
-        },
-        {
-          id: 'dock',
-          label: '机场环境',
-          keys: [
-            'cover_state',
-            'dock.cover_state',
-            'temperature',
-            'humidity',
-            'environment.temperature',
-            'environment.humidity',
-          ],
-        },
-      ],
-    },
-  },
-}
-
-const groupLabels = new Map(
-  defaultMapping.topics['thing/product/{sn}/osd'].groups.map((group) => [group.id, group.label]),
-)
 
 const devices = useDeviceStore()
 const monitor = useMonitorStore()
@@ -113,6 +59,13 @@ const latestMessage = computed(() => {
   return monitor.history(selectedSn.value, topic.topic).at(-1)
 })
 const parsedPayload = computed(() => parseJsonObject(latestMessage.value?.payloadText))
+const matchedMapping = computed(() => {
+  const topic = latestMessage.value?.topic
+  return topic ? mappingForTopic(defaultTopicMapping, topic) : undefined
+})
+const groupLabels = computed(() => new Map(
+  matchedMapping.value?.groups.map((group) => [group.id, group.label]) ?? [],
+))
 const rows = computed(() => {
   const payload = parsedPayload.value
   const message = latestMessage.value
@@ -121,7 +74,7 @@ const rows = computed(() => {
   }
 
   const data = isRecord(payload.data) ? payload.data : payload
-  return parseMappedFields(defaultMapping, message.topic, data)
+  return parseMappedFields(defaultTopicMapping, message.topic, data)
 })
 const groups = computed(() => {
   const grouped = new Map<string, ParsedFieldRow[]>()
@@ -131,7 +84,7 @@ const groups = computed(() => {
 
   return Array.from(grouped, ([id, groupRows]) => ({
     id,
-    label: groupLabels.get(id) ?? id,
+    label: groupLabels.value.get(id) ?? id,
     rows: groupRows,
   }))
 })

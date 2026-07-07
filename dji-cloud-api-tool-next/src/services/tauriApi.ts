@@ -25,6 +25,14 @@ export function saveTopics(topics: DeviceTopic[]): Promise<void> {
   return invoke('save_topics', { topics })
 }
 
+export function exportConfig(directory: string): Promise<void> {
+  return invoke('export_config', { directory })
+}
+
+export function importConfig(directory: string): Promise<void> {
+  return invoke('import_config', { directory })
+}
+
 export function connect(
   profile: ConnectionProfile,
   topics: DeviceTopic[],
@@ -48,6 +56,8 @@ export const tauriApi = {
   saveDevices,
   loadTopics,
   saveTopics,
+  exportConfig,
+  importConfig,
   connect,
   disconnect,
   publishMessage,

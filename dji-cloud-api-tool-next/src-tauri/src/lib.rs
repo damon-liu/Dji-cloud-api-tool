@@ -24,6 +24,8 @@ pub fn run() {
             commands::save_devices,
             commands::load_topics,
             commands::save_topics,
+            commands::export_config,
+            commands::import_config,
             commands::connect,
             commands::disconnect,
             commands::publish_message,

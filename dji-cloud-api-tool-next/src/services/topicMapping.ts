@@ -1,4 +1,7 @@
 import type { TopicMapping } from '../types/domain'
+import defaultTopicMappings from '../assets/default-topic-mappings.json'
+
+export const defaultTopicMapping = defaultTopicMappings as TopicMapping
 
 export type ParsedFieldRow = {
   key: string
@@ -96,15 +99,18 @@ export function matchTopicTemplate(mapping: TopicMapping, topic: string): string
   return Object.keys(mapping.topics).find((template) => templateToRegex(template).test(topic))
 }
 
+export function mappingForTopic(mapping: TopicMapping, topic: string): TopicMapping['topics'][string] | undefined {
+  const template = matchTopicTemplate(mapping, topic)
+  return template ? mapping.topics[template] : undefined
+}
+
 export function parseMappedFields(
   mapping: TopicMapping,
   topic: string,
   data: Record<string, unknown>,
 ): ParsedFieldRow[] {
-  const template = matchTopicTemplate(mapping, topic)
-  if (!template) return []
-
-  const entry = mapping.topics[template]
+  const entry = mappingForTopic(mapping, topic)
+  if (!entry) return []
 
   return entry.groups.flatMap((group) =>
     group.keys.flatMap((key) => {

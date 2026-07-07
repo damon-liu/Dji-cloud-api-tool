@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getByPath, parseMappedFields } from '../services/topicMapping'
+import { defaultTopicMapping, getByPath, mappingForTopic, parseMappedFields } from '../services/topicMapping'
 import type { TopicMapping } from '../types/domain'
 
 const mapping: TopicMapping = {
@@ -60,6 +60,14 @@ describe('topicMapping', () => {
       { key: 'mode_code', label: '模式码', value: '自动返航', rawValue: 9, unit: '', groupId: 'basic' },
       { key: 'battery.capacity_percent', label: '电池电量', value: '90', rawValue: 90, unit: '%', groupId: 'basic' },
     ])
+  })
+
+  it('exports the bundled default mapping from the legacy topic mapping file', () => {
+    const osdMapping = mappingForTopic(defaultTopicMapping, 'thing/product/dock_001/osd')
+
+    expect(Object.keys(defaultTopicMapping.topics).length).toBeGreaterThan(1)
+    expect(osdMapping?.description).toContain('OSD')
+    expect(osdMapping?.fields.mode_code.zh).toBe('模式码')
   })
 
   it('displays wildcard array values as a joined string', () => {
