@@ -1,10 +1,22 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useDeviceStore } from '../stores/deviceStore'
+import { tauriApi } from '../services/tauriApi'
+
+vi.mock('../services/tauriApi', () => ({
+  tauriApi: {
+    loadDevices: vi.fn(),
+    saveDevices: vi.fn(),
+  },
+}))
+
+const loadDevices = vi.mocked(tauriApi.loadDevices)
+const saveDevices = vi.mocked(tauriApi.saveDevices)
 
 describe('deviceStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    vi.clearAllMocks()
   })
 
   it('rejects blank device SN', () => {
@@ -47,5 +59,36 @@ describe('deviceStore', () => {
 
     expect(store.devices).toEqual([])
     expect(store.selectedSn).toBeUndefined()
+  })
+
+  it('loads devices and selects the first device when needed', async () => {
+    loadDevices.mockResolvedValue([{
+      sn: 'dock_001',
+      name: 'Dock 1',
+      type: 'dock',
+      online: true,
+    }])
+
+    const store = useDeviceStore()
+    await store.load()
+
+    expect(store.devices).toEqual([{
+      sn: 'dock_001',
+      name: 'Dock 1',
+      type: 'dock',
+      online: true,
+    }])
+    expect(store.selectedSn).toBe('dock_001')
+  })
+
+  it('persists device mutations', async () => {
+    saveDevices.mockResolvedValue()
+
+    const store = useDeviceStore()
+    await store.addDevice('dock_001', 'Dock 1', 'dock')
+    await store.removeDevice('dock_001')
+
+    expect(saveDevices).toHaveBeenCalledTimes(2)
+    expect(saveDevices).toHaveBeenLastCalledWith([])
   })
 })

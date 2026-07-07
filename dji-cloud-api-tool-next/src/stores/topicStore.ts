@@ -1,9 +1,13 @@
 import { defineStore } from 'pinia'
+import { tauriApi } from '../services/tauriApi'
 import type { DeviceTopic } from '../types/domain'
 
 type TopicState = {
   topics: DeviceTopic[]
   selectedByDevice: Record<string, string | undefined>
+  loading: boolean
+  saving: boolean
+  error?: string
 }
 
 type MoveDirection = 'up' | 'down'
@@ -20,6 +24,9 @@ export const useTopicStore = defineStore('topics', {
   state: (): TopicState => ({
     topics: [],
     selectedByDevice: {},
+    loading: false,
+    saving: false,
+    error: undefined,
   }),
   getters: {
     topicsForDevice: (state): ((deviceSn: string) => DeviceTopic[]) => {
@@ -37,6 +44,35 @@ export const useTopicStore = defineStore('topics', {
     },
   },
   actions: {
+    async load() {
+      this.loading = true
+      this.error = undefined
+
+      try {
+        this.topics = await tauriApi.loadTopics()
+        this.normalizeOrder()
+        for (const deviceSn of new Set(this.topics.map((topic) => topic.deviceSn))) {
+          this.ensureSelectedTopic(deviceSn)
+        }
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : '加载 Topic 失败。'
+      } finally {
+        this.loading = false
+      }
+    },
+    async save() {
+      this.saving = true
+      this.error = undefined
+
+      try {
+        await tauriApi.saveTopics(this.topics)
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : '保存 Topic 失败。'
+        throw error
+      } finally {
+        this.saving = false
+      }
+    },
     addDefaultTopic(deviceSn: string) {
       this.addTopic(deviceSn, `thing/product/${deviceSn}/osd`)
     },
@@ -54,6 +90,7 @@ export const useTopicStore = defineStore('topics', {
       })
       this.normalizeOrder(deviceSn)
       this.ensureSelectedTopic(deviceSn)
+      void this.save().catch(() => undefined)
     },
     removeTopic(deviceSn: string, topic: string) {
       const found = this.findTopic(deviceSn, topic)
@@ -64,11 +101,13 @@ export const useTopicStore = defineStore('topics', {
       this.topics = this.topics.filter((item) => item !== found)
       this.normalizeOrder(deviceSn)
       this.ensureSelectedTopic(deviceSn)
+      void this.save().catch(() => undefined)
     },
     toggleTopic(deviceSn: string, topic: string) {
       const found = this.findTopic(deviceSn, topic)
       if (found) {
         found.enabled = !found.enabled
+        void this.save().catch(() => undefined)
       }
     },
     setAllEnabled(deviceSn: string, enabled: boolean) {
@@ -77,6 +116,7 @@ export const useTopicStore = defineStore('topics', {
           topic.enabled = enabled
         }
       }
+      void this.save().catch(() => undefined)
     },
     moveTopic(deviceSn: string, topic: string, direction: MoveDirection) {
       const topics = this.topicsForDevice(deviceSn)
@@ -99,6 +139,7 @@ export const useTopicStore = defineStore('topics', {
         }
       })
       this.normalizeOrder(deviceSn)
+      void this.save().catch(() => undefined)
     },
     findTopic(deviceSn: string, topic: string): DeviceTopic | undefined {
       return this.topics.find((item) => item.deviceSn === deviceSn && item.topic === topic)

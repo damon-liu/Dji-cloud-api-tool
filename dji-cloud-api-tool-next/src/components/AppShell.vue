@@ -1,11 +1,15 @@
 <template>
   <div class="shell">
     <header class="toolbar">
-      <button type="button">配置</button>
+      <button type="button" @click="showConnectionDialog = true">配置</button>
       <span class="toolbar-spacer" />
       <span class="broker-label">{{ brokerLabel }}</span>
-      <button type="button" class="primary">连接</button>
-      <button type="button">断开</button>
+      <button type="button" class="primary" :disabled="connecting || connections.connected" @click="connectBroker">
+        {{ connecting ? '连接中' : '连接' }}
+      </button>
+      <button type="button" :disabled="disconnecting || !connections.connected" @click="disconnectBroker">
+        断开
+      </button>
     </header>
 
     <main class="workspace">
@@ -31,29 +35,45 @@
       <span>DJI Cloud API Tool Next</span>
       <span>设备: {{ devices.devices.length }}</span>
     </footer>
+
+    <ConnectionDialog v-if="showConnectionDialog" @close="showConnectionDialog = false" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import ConnectionDialog from './ConnectionDialog.vue'
 import DeviceTree from './DeviceTree.vue'
 import OsdPanel from './OsdPanel.vue'
 import ParsedJsonPanel from './ParsedJsonPanel.vue'
 import PublishPanel from './PublishPanel.vue'
 import RawJsonPanel from './RawJsonPanel.vue'
 import TopicList from './TopicList.vue'
+import { tauriApi } from '../services/tauriApi'
 import { useConnectionStore } from '../stores/connectionStore'
 import { useDeviceStore } from '../stores/deviceStore'
 import { useMonitorStore } from '../stores/monitorStore'
+import { useTopicStore } from '../stores/topicStore'
 import type { MqttRuntimeMessage } from '../types/domain'
 
 const connections = useConnectionStore()
 const devices = useDeviceStore()
 const monitor = useMonitorStore()
+const topics = useTopicStore()
 const unlisteners: UnlistenFn[] = []
+const showConnectionDialog = ref(false)
+const connecting = ref(false)
+const disconnecting = ref(false)
 
-const brokerLabel = computed(() => connections.connected ? '已连接' : '未连接')
+const brokerLabel = computed(() => {
+  if (!connections.connected) {
+    return '未连接'
+  }
+
+  const profile = connections.currentProfile
+  return profile ? `${profile.host}:${profile.port}` : '已连接 broker'
+})
 const connectionStatus = computed(() => {
   if (connections.error) {
     return `错误: ${connections.error}`
@@ -63,6 +83,12 @@ const connectionStatus = computed(() => {
 })
 
 onMounted(async () => {
+  void Promise.all([
+    connections.load(),
+    devices.load(),
+    topics.load(),
+  ])
+
   unlisteners.push(
     await listen<MqttRuntimeMessage>('mqtt:message', (event) => {
       const message = normalizeMqttMessage(event.payload)
@@ -130,5 +156,40 @@ function normalizeError(payload: unknown): string {
   }
 
   return 'MQTT 连接异常'
+}
+
+async function connectBroker() {
+  const profile = connections.currentProfile
+  if (!profile) {
+    connections.error = '请先配置连接。'
+    showConnectionDialog.value = true
+    return
+  }
+
+  connecting.value = true
+  connections.error = undefined
+
+  try {
+    await tauriApi.connect(profile, topics.enabledTopics, devices.devices)
+  } catch (error) {
+    connections.connected = false
+    connections.error = error instanceof Error ? error.message : '连接失败。'
+  } finally {
+    connecting.value = false
+  }
+}
+
+async function disconnectBroker() {
+  disconnecting.value = true
+  connections.error = undefined
+
+  try {
+    await tauriApi.disconnect()
+    connections.connected = false
+  } catch (error) {
+    connections.error = error instanceof Error ? error.message : '断开连接失败。'
+  } finally {
+    disconnecting.value = false
+  }
 }
 </script>

@@ -1,10 +1,22 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useTopicStore } from '../stores/topicStore'
+import { tauriApi } from '../services/tauriApi'
+
+vi.mock('../services/tauriApi', () => ({
+  tauriApi: {
+    loadTopics: vi.fn(),
+    saveTopics: vi.fn(),
+  },
+}))
+
+const loadTopics = vi.mocked(tauriApi.loadTopics)
+const saveTopics = vi.mocked(tauriApi.saveTopics)
 
 describe('topicStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    vi.clearAllMocks()
   })
 
   it("addDefaultTopic('dock_001') creates an enabled osd topic", () => {
@@ -78,5 +90,37 @@ describe('topicStore', () => {
 
     expect(store.selectedTopicForDevice('dock_001')?.topic).toBe('b')
     expect(store.selectedTopicForDevice('dock_001')?.enabled).toBe(false)
+  })
+
+  it('loads topics without replacing selected topics when they still exist', async () => {
+    loadTopics.mockResolvedValue([
+      { id: 'a', deviceSn: 'dock_001', topic: 'a', enabled: true, order: 0 },
+      { id: 'b', deviceSn: 'dock_001', topic: 'b', enabled: true, order: 1 },
+    ])
+    const store = useTopicStore()
+    store.selectedByDevice.dock_001 = 'b'
+
+    await store.load()
+
+    expect(store.topicsForDevice('dock_001').map((topic) => topic.topic)).toEqual(['a', 'b'])
+    expect(store.selectedTopicForDevice('dock_001')?.topic).toBe('b')
+  })
+
+  it('persists topic mutations but not plain selection changes', async () => {
+    saveTopics.mockResolvedValue()
+    const store = useTopicStore()
+
+    await store.addTopic('dock_001', 'a')
+    store.selectTopic('dock_001', 'a')
+    await store.toggleTopic('dock_001', 'a')
+
+    expect(saveTopics).toHaveBeenCalledTimes(2)
+    expect(saveTopics).toHaveBeenLastCalledWith([{
+      id: expect.any(String),
+      deviceSn: 'dock_001',
+      topic: 'a',
+      enabled: false,
+      order: 0,
+    }])
   })
 })
