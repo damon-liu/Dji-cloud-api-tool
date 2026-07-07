@@ -41,9 +41,16 @@ const selectedTopic = computed(() => {
     return undefined
   }
 
-  return topics.topicsForDevice(sn).find((topic) => topic.enabled)?.topic
+  return topics.selectedTopicForDevice(sn)
 })
-const messages = computed(() => monitor.history(selectedSn.value, selectedTopic.value))
+const messages = computed(() => {
+  const topic = selectedTopic.value
+  if (!topic?.enabled) {
+    return []
+  }
+
+  return monitor.history(selectedSn.value, topic.topic)
+})
 const orderedMessages = computed(() => [...messages.value].reverse())
 
 function togglePaused() {
@@ -69,7 +76,7 @@ async function copyAll() {
 }
 
 function clearMessages() {
-  monitor.clear(selectedSn.value, selectedTopic.value)
+  monitor.clear(selectedSn.value, selectedTopic.value?.topic)
 }
 
 async function copyText(text: string) {

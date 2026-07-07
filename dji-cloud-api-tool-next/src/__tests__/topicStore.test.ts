@@ -39,4 +39,44 @@ describe('topicStore', () => {
 
     expect(() => store.addTopic('dock_001', 'a')).toThrow('该 Topic 已存在。')
   })
+
+  it('shares selected topic per device', () => {
+    const store = useTopicStore()
+    store.addTopic('dock_001', 'a')
+    store.addTopic('dock_001', 'b')
+    store.addTopic('dock_002', 'c')
+
+    store.selectTopic('dock_001', 'b')
+    store.selectTopic('dock_002', 'c')
+
+    expect(store.selectedTopicForDevice('dock_001')?.topic).toBe('b')
+    expect(store.selectedTopicForDevice('dock_002')?.topic).toBe('c')
+  })
+
+  it('falls back when the selected topic is removed', () => {
+    const store = useTopicStore()
+    store.addTopic('dock_001', 'a')
+    store.addTopic('dock_001', 'b')
+    store.selectTopic('dock_001', 'b')
+
+    store.removeTopic('dock_001', 'b')
+
+    expect(store.selectedTopicForDevice('dock_001')?.topic).toBe('a')
+
+    store.removeTopic('dock_001', 'a')
+
+    expect(store.selectedTopicForDevice('dock_001')).toBeUndefined()
+  })
+
+  it('keeps disabled selected topics identifiable', () => {
+    const store = useTopicStore()
+    store.addTopic('dock_001', 'a')
+    store.addTopic('dock_001', 'b')
+    store.selectTopic('dock_001', 'b')
+
+    store.toggleTopic('dock_001', 'b')
+
+    expect(store.selectedTopicForDevice('dock_001')?.topic).toBe('b')
+    expect(store.selectedTopicForDevice('dock_001')?.enabled).toBe(false)
+  })
 })

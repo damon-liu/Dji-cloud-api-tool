@@ -61,9 +61,16 @@ const selectedTopic = computed(() => {
     return undefined
   }
 
-  return topics.topicsForDevice(selectedDevice.sn).find((topic) => topic.enabled)?.topic
+  return topics.selectedTopicForDevice(selectedDevice.sn)
 })
-const latestMessage = computed(() => monitor.history(device.value?.sn, selectedTopic.value).at(-1))
+const latestMessage = computed(() => {
+  const topic = selectedTopic.value
+  if (!topic?.enabled) {
+    return undefined
+  }
+
+  return monitor.history(device.value?.sn, topic.topic).at(-1)
+})
 const osdSource = computed(() => {
   const root = parseJsonObject(latestMessage.value?.payloadText)
   if (!root) {

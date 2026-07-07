@@ -3,6 +3,7 @@ import type { DeviceTopic } from '../types/domain'
 
 type TopicState = {
   topics: DeviceTopic[]
+  selectedByDevice: Record<string, string | undefined>
 }
 
 type MoveDirection = 'up' | 'down'
@@ -18,12 +19,22 @@ function ordered(topics: DeviceTopic[]): DeviceTopic[] {
 export const useTopicStore = defineStore('topics', {
   state: (): TopicState => ({
     topics: [],
+    selectedByDevice: {},
   }),
   getters: {
     topicsForDevice: (state): ((deviceSn: string) => DeviceTopic[]) => {
       return (deviceSn: string) => ordered(state.topics.filter((topic) => topic.deviceSn === deviceSn))
     },
     enabledTopics: (state): DeviceTopic[] => ordered(state.topics.filter((topic) => topic.enabled)),
+    selectedTopicForDevice: (state): ((deviceSn: string) => DeviceTopic | undefined) => {
+      return (deviceSn: string) => {
+        const deviceTopics = ordered(state.topics.filter((topic) => topic.deviceSn === deviceSn))
+        const selectedTopic = state.selectedByDevice[deviceSn]
+        const selected = deviceTopics.find((topic) => topic.topic === selectedTopic)
+
+        return selected ?? deviceTopics[0]
+      }
+    },
   },
   actions: {
     addDefaultTopic(deviceSn: string) {
@@ -42,6 +53,7 @@ export const useTopicStore = defineStore('topics', {
         order: this.topicsForDevice(deviceSn).length,
       })
       this.normalizeOrder(deviceSn)
+      this.ensureSelectedTopic(deviceSn)
     },
     removeTopic(deviceSn: string, topic: string) {
       const found = this.findTopic(deviceSn, topic)
@@ -51,6 +63,7 @@ export const useTopicStore = defineStore('topics', {
 
       this.topics = this.topics.filter((item) => item !== found)
       this.normalizeOrder(deviceSn)
+      this.ensureSelectedTopic(deviceSn)
     },
     toggleTopic(deviceSn: string, topic: string) {
       const found = this.findTopic(deviceSn, topic)
@@ -89,6 +102,20 @@ export const useTopicStore = defineStore('topics', {
     },
     findTopic(deviceSn: string, topic: string): DeviceTopic | undefined {
       return this.topics.find((item) => item.deviceSn === deviceSn && item.topic === topic)
+    },
+    selectTopic(deviceSn: string, topic: string) {
+      if (this.findTopic(deviceSn, topic)) {
+        this.selectedByDevice[deviceSn] = topic
+      }
+    },
+    ensureSelectedTopic(deviceSn: string) {
+      const deviceTopics = this.topicsForDevice(deviceSn)
+      const selectedTopic = this.selectedByDevice[deviceSn]
+      if (selectedTopic && deviceTopics.some((topic) => topic.topic === selectedTopic)) {
+        return
+      }
+
+      this.selectedByDevice[deviceSn] = deviceTopics[0]?.topic
     },
     normalizeOrder(deviceSn?: string) {
       const deviceSns = deviceSn

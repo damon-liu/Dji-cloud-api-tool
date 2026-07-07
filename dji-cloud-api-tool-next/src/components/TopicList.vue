@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, watch } from 'vue'
 import { useDeviceStore } from '../stores/deviceStore'
 import { useTopicStore } from '../stores/topicStore'
 
@@ -49,14 +49,18 @@ type MoveDirection = 'up' | 'down'
 
 const devices = useDeviceStore()
 const topics = useTopicStore()
-const selectedTopic = ref<string>()
 
 const selectedSn = computed(() => devices.selectedSn)
 const deviceTopics = computed(() => (selectedSn.value ? topics.topicsForDevice(selectedSn.value) : []))
+const selectedTopic = computed(() => {
+  const deviceSn = selectedSn.value
+  return deviceSn ? topics.selectedTopicForDevice(deviceSn)?.topic : undefined
+})
 
 watch([selectedSn, deviceTopics], () => {
-  if (!deviceTopics.value.some((topic) => topic.topic === selectedTopic.value)) {
-    selectedTopic.value = deviceTopics.value[0]?.topic
+  const deviceSn = selectedSn.value
+  if (deviceSn) {
+    topics.ensureSelectedTopic(deviceSn)
   }
 })
 
@@ -83,21 +87,24 @@ function addTopic() {
 
   try {
     topics.addTopic(deviceSn, topic)
-    selectedTopic.value = topic
+    topics.selectTopic(deviceSn, topic)
   } catch (error) {
     window.alert(error instanceof Error ? error.message : '添加 Topic 失败。')
   }
 }
 
 function selectTopic(topic: string) {
-  selectedTopic.value = topic
+  const deviceSn = selectedSn.value
+  if (deviceSn) {
+    topics.selectTopic(deviceSn, topic)
+  }
 }
 
 function toggleTopic(topic: string) {
   const deviceSn = selectedSn.value
   if (deviceSn) {
     topics.toggleTopic(deviceSn, topic)
-    selectedTopic.value = topic
+    topics.selectTopic(deviceSn, topic)
   }
 }
 
@@ -114,7 +121,7 @@ function moveTopic(topic: string, direction: MoveDirection) {
   const deviceSn = selectedSn.value
   if (deviceSn) {
     topics.moveTopic(deviceSn, topic, direction)
-    selectedTopic.value = topic
+    topics.selectTopic(deviceSn, topic)
   }
 }
 
@@ -129,7 +136,7 @@ function toggleAll() {
 }
 
 async function copyTopic(topic: string) {
-  selectedTopic.value = topic
+  selectTopic(topic)
 
   try {
     await navigator.clipboard.writeText(topic)
