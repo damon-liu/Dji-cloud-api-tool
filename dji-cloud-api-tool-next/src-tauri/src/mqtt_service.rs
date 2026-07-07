@@ -122,6 +122,10 @@ impl MqttService {
             loop {
                 match eventloop.poll().await {
                     Ok(Event::Incoming(Packet::Publish(publish))) => {
+                        if !service.is_current_session(&session_token).await {
+                            break;
+                        }
+
                         let topic = publish.topic.clone();
                         let payload_text = String::from_utf8_lossy(&publish.payload).to_string();
                         let message = MqttRuntimeMessage {
