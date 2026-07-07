@@ -9,18 +9,68 @@ export type ParsedFieldRow = {
   groupId: string
 }
 
+type PathToken = {
+  property: string
+  selector?: number | 'all'
+}
+
+function parsePathToken(part: string): PathToken | undefined {
+  const match = part.match(/^([^\[\]]+)(?:\[(\d*)\])?$/)
+  if (!match) return undefined
+
+  const [, property, selector] = match
+  if (selector === undefined) return { property }
+  if (selector === '') return { property, selector: 'all' }
+
+  return { property, selector: Number(selector) }
+}
+
+function isPathToken(token: PathToken | undefined): token is PathToken {
+  return token !== undefined
+}
+
+function readProperty(source: unknown, property: string): unknown {
+  if (source === null || typeof source !== 'object') {
+    return undefined
+  }
+
+  return Object.prototype.hasOwnProperty.call(source, property)
+    ? (source as Record<string, unknown>)[property]
+    : undefined
+}
+
+function resolvePath(source: unknown, tokens: PathToken[]): unknown {
+  if (tokens.length === 0) return source
+
+  const [token, ...remainingTokens] = tokens
+  const value = readProperty(source, token.property)
+
+  if (token.selector === undefined) {
+    return resolvePath(value, remainingTokens)
+  }
+
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  if (token.selector === 'all') {
+    const values = value
+      .map((item) => resolvePath(item, remainingTokens))
+      .filter((item) => item !== undefined)
+
+    return values.length > 0 ? values : undefined
+  }
+
+  return resolvePath(value[token.selector], remainingTokens)
+}
+
 export function getByPath(source: unknown, path: string): unknown {
   if (!path) return undefined
 
-  return path.split('.').reduce<unknown>((current, part) => {
-    if (current === null || typeof current !== 'object' || !part) {
-      return undefined
-    }
+  const tokens = path.split('.').map(parsePathToken)
+  if (!tokens.every(isPathToken)) return undefined
 
-    return Object.prototype.hasOwnProperty.call(current, part)
-      ? (current as Record<string, unknown>)[part]
-      : undefined
-  }, source)
+  return resolvePath(source, tokens)
 }
 
 function escapeRegexSegment(segment: string): string {
@@ -34,6 +84,12 @@ function templateToRegex(template: string): RegExp {
     .join('/')
 
   return new RegExp(`^${pattern}$`)
+}
+
+function formatValue(rawValue: unknown): string {
+  return Array.isArray(rawValue)
+    ? rawValue.map((item) => String(item)).join(', ')
+    : String(rawValue)
 }
 
 export function matchTopicTemplate(mapping: TopicMapping, topic: string): string | undefined {
@@ -63,7 +119,7 @@ export function parseMappedFields(
       return [{
         key,
         label: field.zh,
-        value: field.values?.[valueKey] ?? valueKey,
+        value: field.values?.[valueKey] ?? formatValue(rawValue),
         rawValue,
         unit: field.unit ?? '',
         groupId: group.id,
