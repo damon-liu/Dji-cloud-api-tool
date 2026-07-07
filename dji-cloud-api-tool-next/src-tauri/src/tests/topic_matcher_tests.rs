@@ -31,6 +31,15 @@ fn returns_none_when_no_device_matches() {
 }
 
 #[test]
+fn ignores_empty_device_sn() {
+    let devices = vec![device("")];
+
+    let matched = match_device_sn("thing/product/dock_001/osd", &devices);
+
+    assert_eq!(matched, None);
+}
+
+#[test]
 fn prefers_longest_matching_sn() {
     let devices = vec![device("dock"), device("dock_001")];
 
