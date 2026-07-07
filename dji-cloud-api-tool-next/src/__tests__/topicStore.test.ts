@@ -33,6 +33,27 @@ describe('topicStore', () => {
     })
   })
 
+  it('returns the default topic save promise', async () => {
+    let releaseSave: (() => void) | undefined
+    saveTopics.mockReturnValue(new Promise<void>((resolve) => {
+      releaseSave = resolve
+    }))
+
+    const store = useTopicStore()
+    let saved = false
+    const savePromise = store.addDefaultTopic('dock_001').then(() => {
+      saved = true
+    })
+
+    await Promise.resolve()
+    expect(saved).toBe(false)
+
+    releaseSave?.()
+    await savePromise
+
+    expect(saved).toBe(true)
+  })
+
   it("moving topic 'a' down under dock_001 reorders sibling topics", () => {
     const store = useTopicStore()
     store.addTopic('dock_001', 'a')
@@ -150,5 +171,20 @@ describe('topicStore', () => {
     await secondSave
 
     expect(calls).toEqual([['a'], []])
+  })
+
+  it('propagates save failures and continues later saves', async () => {
+    saveTopics
+      .mockRejectedValueOnce(new Error('disk full'))
+      .mockResolvedValueOnce()
+
+    const store = useTopicStore()
+
+    await expect(store.addTopic('dock_001', 'a')).rejects.toThrow('disk full')
+    expect(store.error).toBe('disk full')
+
+    await expect(store.removeTopic('dock_001', 'a')).resolves.toBeUndefined()
+    expect(saveTopics).toHaveBeenCalledTimes(2)
+    expect(saveTopics).toHaveBeenLastCalledWith([])
   })
 })

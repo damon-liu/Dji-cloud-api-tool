@@ -90,7 +90,7 @@ function promptDeviceType(): DeviceType | undefined {
   return value
 }
 
-function addDevice() {
+async function addDevice() {
   const selectedDevice = devices.selectedDevice
   const parentSn = selectedDevice?.type === 'dock' ? selectedDevice.sn : undefined
   const type = parentSn ? 'aircraft' : promptDeviceType()
@@ -106,8 +106,8 @@ function addDevice() {
   const name = promptText('请输入设备名称', sn) ?? sn
 
   try {
-    devices.addDevice(sn, name, type, parentSn)
-    topics.addDefaultTopic(sn)
+    await devices.addDevice(sn, name, type, parentSn)
+    await topics.addDefaultTopic(sn)
     devices.selectedSn = sn
   } catch (error) {
     window.alert(error instanceof Error ? error.message : '添加设备失败。')
@@ -131,15 +131,15 @@ function collectDeviceSns(sn: string): string[] {
   return Array.from(sns)
 }
 
-function removeTopicsForDevices(deviceSns: string[]) {
+async function removeTopicsForDevices(deviceSns: string[]) {
   for (const deviceSn of deviceSns) {
     for (const topic of topics.topicsForDevice(deviceSn)) {
-      topics.removeTopic(deviceSn, topic.topic)
+      await topics.removeTopic(deviceSn, topic.topic)
     }
   }
 }
 
-function removeSelectedDevice() {
+async function removeSelectedDevice() {
   const selectedSn = devices.selectedSn
   if (!selectedSn) {
     return
@@ -152,8 +152,12 @@ function removeSelectedDevice() {
   }
 
   const removedSns = collectDeviceSns(selectedSn)
-  removeTopicsForDevices(removedSns)
-  devices.removeDevice(selectedSn)
+  try {
+    await removeTopicsForDevices(removedSns)
+    await devices.removeDevice(selectedSn)
+  } catch (error) {
+    window.alert(error instanceof Error ? error.message : '删除设备失败。')
+  }
 }
 </script>
 

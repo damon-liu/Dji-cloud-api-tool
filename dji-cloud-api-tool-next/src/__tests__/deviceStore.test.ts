@@ -119,4 +119,19 @@ describe('deviceStore', () => {
 
     expect(calls).toEqual([['dock_001'], []])
   })
+
+  it('propagates save failures and continues later saves', async () => {
+    saveDevices
+      .mockRejectedValueOnce(new Error('disk full'))
+      .mockResolvedValueOnce()
+
+    const store = useDeviceStore()
+
+    await expect(store.addDevice('dock_001', 'Dock 1', 'dock')).rejects.toThrow('disk full')
+    expect(store.error).toBe('disk full')
+
+    await expect(store.removeDevice('dock_001')).resolves.toBeUndefined()
+    expect(saveDevices).toHaveBeenCalledTimes(2)
+    expect(saveDevices).toHaveBeenLastCalledWith([])
+  })
 })

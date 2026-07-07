@@ -96,7 +96,7 @@ export const useTopicStore = defineStore('topics', {
       return queued
     },
     addDefaultTopic(deviceSn: string) {
-      this.addTopic(deviceSn, `thing/product/${deviceSn}/osd`)
+      return this.addTopic(deviceSn, `thing/product/${deviceSn}/osd`)
     },
     addTopic(deviceSn: string, topic: string) {
       if (this.findTopic(deviceSn, topic)) {

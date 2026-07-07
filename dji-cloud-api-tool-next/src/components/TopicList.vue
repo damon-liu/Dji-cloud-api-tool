@@ -74,7 +74,7 @@ function promptText(message: string, defaultValue = ''): string | undefined {
   return trimmed || undefined
 }
 
-function addTopic() {
+async function addTopic() {
   const deviceSn = selectedSn.value
   if (!deviceSn) {
     return
@@ -86,7 +86,7 @@ function addTopic() {
   }
 
   try {
-    topics.addTopic(deviceSn, topic)
+    await topics.addTopic(deviceSn, topic)
     topics.selectTopic(deviceSn, topic)
   } catch (error) {
     window.alert(error instanceof Error ? error.message : '添加 Topic 失败。')
@@ -100,39 +100,55 @@ function selectTopic(topic: string) {
   }
 }
 
-function toggleTopic(topic: string) {
+async function toggleTopic(topic: string) {
   const deviceSn = selectedSn.value
   if (deviceSn) {
-    topics.toggleTopic(deviceSn, topic)
-    topics.selectTopic(deviceSn, topic)
+    try {
+      await topics.toggleTopic(deviceSn, topic)
+      topics.selectTopic(deviceSn, topic)
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '更新 Topic 失败。')
+    }
   }
 }
 
-function removeTopic(topic: string) {
+async function removeTopic(topic: string) {
   const deviceSn = selectedSn.value
   if (!deviceSn || !window.confirm(`确认删除 Topic ${topic}？`)) {
     return
   }
 
-  topics.removeTopic(deviceSn, topic)
-}
-
-function moveTopic(topic: string, direction: MoveDirection) {
-  const deviceSn = selectedSn.value
-  if (deviceSn) {
-    topics.moveTopic(deviceSn, topic, direction)
-    topics.selectTopic(deviceSn, topic)
+  try {
+    await topics.removeTopic(deviceSn, topic)
+  } catch (error) {
+    window.alert(error instanceof Error ? error.message : '删除 Topic 失败。')
   }
 }
 
-function toggleAll() {
+async function moveTopic(topic: string, direction: MoveDirection) {
+  const deviceSn = selectedSn.value
+  if (deviceSn) {
+    try {
+      await topics.moveTopic(deviceSn, topic, direction)
+      topics.selectTopic(deviceSn, topic)
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '移动 Topic 失败。')
+    }
+  }
+}
+
+async function toggleAll() {
   const deviceSn = selectedSn.value
   if (!deviceSn) {
     return
   }
 
   const shouldEnable = deviceTopics.value.some((topic) => !topic.enabled)
-  topics.setAllEnabled(deviceSn, shouldEnable)
+  try {
+    await topics.setAllEnabled(deviceSn, shouldEnable)
+  } catch (error) {
+    window.alert(error instanceof Error ? error.message : '更新 Topic 失败。')
+  }
 }
 
 async function copyTopic(topic: string) {
