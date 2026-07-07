@@ -15,7 +15,7 @@ function ordered(topics: DeviceTopic[]): DeviceTopic[] {
   return [...topics].sort((left, right) => left.order - right.order)
 }
 
-export const useTopicStore = defineStore('topic', {
+export const useTopicStore = defineStore('topics', {
   state: (): TopicState => ({
     topics: [],
   }),

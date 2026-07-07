@@ -8,7 +8,7 @@ type ConnectionState = {
   error?: string
 }
 
-export const useConnectionStore = defineStore('connection', {
+export const useConnectionStore = defineStore('connections', {
   state: (): ConnectionState => ({
     profiles: [],
     currentId: undefined,

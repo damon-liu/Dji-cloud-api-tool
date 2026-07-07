@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
-import type { Device } from '../types/domain'
+import type { Device, DeviceType } from '../types/domain'
 
 type DeviceState = {
   devices: Device[]
   selectedSn?: string
 }
 
-export const useDeviceStore = defineStore('device', {
+export const useDeviceStore = defineStore('devices', {
   state: (): DeviceState => ({
     devices: [],
     selectedSn: undefined,
@@ -22,14 +22,23 @@ export const useDeviceStore = defineStore('device', {
     },
   },
   actions: {
-    addDevice(device: Device) {
-      const index = this.devices.findIndex((item) => item.sn === device.sn)
-      if (index === -1) {
-        this.devices.push(device)
-        return
+    addDevice(sn: string, name: string, type: DeviceType, parentSn?: string) {
+      const trimmedSn = sn.trim()
+      if (!trimmedSn) {
+        throw new Error('设备 SN 不能为空。')
       }
 
-      this.devices[index] = device
+      if (this.devices.some((device) => device.sn === trimmedSn)) {
+        throw new Error('设备 SN 已存在。')
+      }
+
+      this.devices.push({
+        sn: trimmedSn,
+        name: name.trim() || trimmedSn,
+        type,
+        parentSn,
+        online: false,
+      })
     },
     removeDevice(sn: string) {
       const descendants = new Set<string>([sn])
