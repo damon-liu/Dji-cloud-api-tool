@@ -8,6 +8,7 @@ type TopicState = {
   loading: boolean
   saving: boolean
   error?: string
+  saveQueue: Promise<void>
 }
 
 type MoveDirection = 'up' | 'down'
@@ -27,6 +28,7 @@ export const useTopicStore = defineStore('topics', {
     loading: false,
     saving: false,
     error: undefined,
+    saveQueue: Promise.resolve(),
   }),
   getters: {
     topicsForDevice: (state): ((deviceSn: string) => DeviceTopic[]) => {
@@ -73,6 +75,26 @@ export const useTopicStore = defineStore('topics', {
         this.saving = false
       }
     },
+    queueSave() {
+      const snapshot = this.topics.map((topic) => ({ ...topic }))
+      const runSave = async () => {
+        this.saving = true
+        this.error = undefined
+
+        try {
+          await tauriApi.saveTopics(snapshot)
+        } catch (error) {
+          this.error = error instanceof Error ? error.message : '保存 Topic 失败。'
+          throw error
+        } finally {
+          this.saving = false
+        }
+      }
+
+      const queued = this.saveQueue.then(runSave, runSave)
+      this.saveQueue = queued.catch(() => undefined)
+      return queued
+    },
     addDefaultTopic(deviceSn: string) {
       this.addTopic(deviceSn, `thing/product/${deviceSn}/osd`)
     },
@@ -90,7 +112,7 @@ export const useTopicStore = defineStore('topics', {
       })
       this.normalizeOrder(deviceSn)
       this.ensureSelectedTopic(deviceSn)
-      void this.save().catch(() => undefined)
+      return this.queueSave()
     },
     removeTopic(deviceSn: string, topic: string) {
       const found = this.findTopic(deviceSn, topic)
@@ -101,14 +123,16 @@ export const useTopicStore = defineStore('topics', {
       this.topics = this.topics.filter((item) => item !== found)
       this.normalizeOrder(deviceSn)
       this.ensureSelectedTopic(deviceSn)
-      void this.save().catch(() => undefined)
+      return this.queueSave()
     },
     toggleTopic(deviceSn: string, topic: string) {
       const found = this.findTopic(deviceSn, topic)
       if (found) {
         found.enabled = !found.enabled
-        void this.save().catch(() => undefined)
+        return this.queueSave()
       }
+
+      return Promise.resolve()
     },
     setAllEnabled(deviceSn: string, enabled: boolean) {
       for (const topic of this.topics) {
@@ -116,7 +140,7 @@ export const useTopicStore = defineStore('topics', {
           topic.enabled = enabled
         }
       }
-      void this.save().catch(() => undefined)
+      return this.queueSave()
     },
     moveTopic(deviceSn: string, topic: string, direction: MoveDirection) {
       const topics = this.topicsForDevice(deviceSn)
@@ -139,7 +163,7 @@ export const useTopicStore = defineStore('topics', {
         }
       })
       this.normalizeOrder(deviceSn)
-      void this.save().catch(() => undefined)
+      return this.queueSave()
     },
     findTopic(deviceSn: string, topic: string): DeviceTopic | undefined {
       return this.topics.find((item) => item.deviceSn === deviceSn && item.topic === topic)

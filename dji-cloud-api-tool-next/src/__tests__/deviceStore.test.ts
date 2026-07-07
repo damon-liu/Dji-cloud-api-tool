@@ -91,4 +91,32 @@ describe('deviceStore', () => {
     expect(saveDevices).toHaveBeenCalledTimes(2)
     expect(saveDevices).toHaveBeenLastCalledWith([])
   })
+
+  it('serializes device saves in mutation order', async () => {
+    const calls: string[][] = []
+    let releaseFirstSave: (() => void) | undefined
+    saveDevices.mockImplementation((devices) => {
+      calls.push(devices.map((device) => device.sn))
+      if (calls.length === 1) {
+        return new Promise<void>((resolve) => {
+          releaseFirstSave = resolve
+        })
+      }
+
+      return Promise.resolve()
+    })
+
+    const store = useDeviceStore()
+    const firstSave = store.addDevice('dock_001', 'Dock 1', 'dock')
+    const secondSave = store.removeDevice('dock_001')
+
+    await Promise.resolve()
+    expect(calls).toEqual([['dock_001']])
+
+    releaseFirstSave?.()
+    await firstSave
+    await secondSave
+
+    expect(calls).toEqual([['dock_001'], []])
+  })
 })

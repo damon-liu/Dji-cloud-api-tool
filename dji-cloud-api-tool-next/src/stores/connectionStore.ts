@@ -28,6 +28,24 @@ function createDefaultProfile(): ConnectionProfile {
   }
 }
 
+function normalizeProfile(profile: ConnectionProfile): ConnectionProfile {
+  const port = Number(profile.port)
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error('端口必须是 1 到 65535 之间的整数。')
+  }
+
+  return {
+    ...profile,
+    name: profile.name.trim() || profile.host.trim() || '未命名配置',
+    host: profile.host.trim() || 'localhost',
+    port,
+    clientId: profile.clientId?.trim(),
+    username: profile.username?.trim(),
+    password: profile.password,
+    tls: { ...profile.tls, enabled: Boolean(profile.tls.enabled) },
+  }
+}
+
 export const useConnectionStore = defineStore('connections', {
   state: (): ConnectionState => ({
     profiles: [],
@@ -64,11 +82,22 @@ export const useConnectionStore = defineStore('connections', {
       }
     },
     async save() {
+      await this.saveProfiles(this.profiles, this.currentId)
+    },
+    async saveProfiles(profiles: ConnectionProfile[], currentId?: string) {
       this.saving = true
       this.error = undefined
 
       try {
-        await tauriApi.saveConnections(this.profiles)
+        const normalizedProfiles = profiles.map(normalizeProfile)
+        const nextCurrentId = normalizedProfiles.some((profile) => profile.id === currentId)
+          ? currentId
+          : normalizedProfiles[0]?.id
+
+        await tauriApi.saveConnections(normalizedProfiles)
+
+        this.profiles = normalizedProfiles
+        this.currentId = nextCurrentId
       } catch (error) {
         this.error = error instanceof Error ? error.message : '保存连接配置失败。'
         throw error

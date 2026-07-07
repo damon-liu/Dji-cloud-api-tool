@@ -139,31 +139,17 @@ function removeSelected() {
   selectedId.value = draftProfiles.value[Math.max(0, index - 1)]?.id
 }
 
-function normalizeProfile(profile: ConnectionProfile): ConnectionProfile {
-  return {
-    ...profile,
-    name: profile.name.trim() || profile.host.trim() || '未命名配置',
-    host: profile.host.trim() || 'localhost',
-    port: Number(profile.port) || 1883,
-    clientId: profile.clientId?.trim(),
-    username: profile.username?.trim(),
-    password: profile.password,
-    tls: { ...profile.tls, enabled: Boolean(profile.tls.enabled) },
-  }
-}
-
 function testConnection() {
   testStatus.value = '连接测试将在后续版本接入'
 }
 
 async function save() {
-  const normalized = draftProfiles.value.map(normalizeProfile)
-  connections.profiles = normalized
-  connections.currentId = normalized.some((profile) => profile.id === selectedId.value)
-    ? selectedId.value
-    : normalized[0]?.id
-  await connections.save()
-  emit('close')
+  try {
+    await connections.saveProfiles(draftProfiles.value, selectedId.value)
+    emit('close')
+  } catch {
+    // Store exposes the error text in the dialog status.
+  }
 }
 
 function cancel() {

@@ -8,6 +8,7 @@ type DeviceState = {
   loading: boolean
   saving: boolean
   error?: string
+  saveQueue: Promise<void>
 }
 
 export const useDeviceStore = defineStore('devices', {
@@ -17,6 +18,7 @@ export const useDeviceStore = defineStore('devices', {
     loading: false,
     saving: false,
     error: undefined,
+    saveQueue: Promise.resolve(),
   }),
   getters: {
     selectedDevice: (state): Device | undefined =>
@@ -60,6 +62,26 @@ export const useDeviceStore = defineStore('devices', {
         this.saving = false
       }
     },
+    queueSave() {
+      const snapshot = this.devices.map((device) => ({ ...device }))
+      const runSave = async () => {
+        this.saving = true
+        this.error = undefined
+
+        try {
+          await tauriApi.saveDevices(snapshot)
+        } catch (error) {
+          this.error = error instanceof Error ? error.message : '保存设备失败。'
+          throw error
+        } finally {
+          this.saving = false
+        }
+      }
+
+      const queued = this.saveQueue.then(runSave, runSave)
+      this.saveQueue = queued.catch(() => undefined)
+      return queued
+    },
     addDevice(sn: string, name: string, type: DeviceType, parentSn?: string) {
       const trimmedSn = sn.trim()
       if (!trimmedSn) {
@@ -77,7 +99,7 @@ export const useDeviceStore = defineStore('devices', {
         parentSn,
         online: false,
       })
-      void this.save().catch(() => undefined)
+      return this.queueSave()
     },
     removeDevice(sn: string) {
       const descendants = new Set<string>([sn])
@@ -97,7 +119,7 @@ export const useDeviceStore = defineStore('devices', {
       if (this.selectedSn && descendants.has(this.selectedSn)) {
         this.selectedSn = undefined
       }
-      void this.save().catch(() => undefined)
+      return this.queueSave()
     },
   },
 })

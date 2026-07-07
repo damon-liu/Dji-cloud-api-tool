@@ -123,4 +123,32 @@ describe('topicStore', () => {
       order: 0,
     }])
   })
+
+  it('serializes topic saves in mutation order', async () => {
+    const calls: string[][] = []
+    let releaseFirstSave: (() => void) | undefined
+    saveTopics.mockImplementation((topics) => {
+      calls.push(topics.map((topic) => topic.topic))
+      if (calls.length === 1) {
+        return new Promise<void>((resolve) => {
+          releaseFirstSave = resolve
+        })
+      }
+
+      return Promise.resolve()
+    })
+
+    const store = useTopicStore()
+    const firstSave = store.addTopic('dock_001', 'a')
+    const secondSave = store.removeTopic('dock_001', 'a')
+
+    await Promise.resolve()
+    expect(calls).toEqual([['a']])
+
+    releaseFirstSave?.()
+    await firstSave
+    await secondSave
+
+    expect(calls).toEqual([['a'], []])
+  })
 })

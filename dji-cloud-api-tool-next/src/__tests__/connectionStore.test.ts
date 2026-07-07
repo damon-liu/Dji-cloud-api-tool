@@ -74,4 +74,50 @@ describe('connectionStore persistence', () => {
     expect(saveConnections).toHaveBeenCalledWith(store.profiles)
     expect(store.saving).toBe(false)
   })
+
+  it('does not commit draft profiles when saving fails', async () => {
+    const originalProfile: ConnectionProfile = {
+      id: 'profile-1',
+      name: 'Broker 1',
+      host: 'localhost',
+      port: 1883,
+      tls: { enabled: false },
+    }
+    const draftProfile: ConnectionProfile = {
+      id: 'profile-2',
+      name: 'Broker 2',
+      host: 'mqtt.example.com',
+      port: 1884,
+      tls: { enabled: true },
+    }
+    saveConnections.mockRejectedValue(new Error('disk full'))
+
+    const store = useConnectionStore()
+    store.profiles = [originalProfile]
+    store.currentId = 'profile-1'
+
+    await expect(store.saveProfiles([draftProfile], 'profile-2')).rejects.toThrow('disk full')
+
+    expect(store.profiles).toEqual([originalProfile])
+    expect(store.currentId).toBe('profile-1')
+  })
+
+  it('rejects invalid ports before saving draft profiles', async () => {
+    const store = useConnectionStore()
+
+    await expect(
+      store.saveProfiles([
+        {
+          id: 'profile-1',
+          name: 'Bad Broker',
+          host: 'localhost',
+          port: 70000,
+          tls: { enabled: false },
+        },
+      ], 'profile-1'),
+    ).rejects.toThrow('端口必须是 1 到 65535 之间的整数。')
+
+    expect(saveConnections).not.toHaveBeenCalled()
+    expect(store.profiles).toEqual([])
+  })
 })
