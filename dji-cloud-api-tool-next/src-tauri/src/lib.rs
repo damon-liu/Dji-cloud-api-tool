@@ -1,4 +1,10 @@
+pub mod config_store;
 pub mod models;
+
+#[cfg(test)]
+mod tests {
+    mod config_store_tests;
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
