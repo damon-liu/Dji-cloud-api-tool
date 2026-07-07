@@ -1,0 +1,45 @@
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  background: #f5f7fa;
+  color: #20242a;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.app-root {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+.app-placeholder {
+  text-align: center;
+}
+
+.app-placeholder h1 {
+  margin: 0 0 12px;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.app-placeholder p {
+  margin: 0;
+  color: #5e6673;
+  font-size: 16px;
+  line-height: 1.6;
+}
