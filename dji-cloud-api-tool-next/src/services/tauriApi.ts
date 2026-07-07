@@ -40,3 +40,15 @@ export function disconnect(): Promise<void> {
 export function publishMessage(topic: string, payloadText: string): Promise<void> {
   return invoke('publish_message', { topic, payloadText })
 }
+
+export const tauriApi = {
+  loadConnections,
+  saveConnections,
+  loadDevices,
+  saveDevices,
+  loadTopics,
+  saveTopics,
+  connect,
+  disconnect,
+  publishMessage,
+}

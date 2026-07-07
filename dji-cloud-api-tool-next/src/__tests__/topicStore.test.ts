@@ -23,25 +23,20 @@ describe('topicStore', () => {
 
   it("moving topic 'a' down under dock_001 reorders sibling topics", () => {
     const store = useTopicStore()
-    store.addTopic({
-      id: 'a',
-      deviceSn: 'dock_001',
-      topic: 'thing/product/dock_001/osd',
-      enabled: true,
-      order: 0,
-    })
-    store.addTopic({
-      id: 'b',
-      deviceSn: 'dock_001',
-      topic: 'thing/product/dock_001/state',
-      enabled: true,
-      order: 1,
-    })
+    store.addTopic('dock_001', 'a')
+    store.addTopic('dock_001', 'b')
 
     store.moveTopic('dock_001', 'a', 'down')
 
     const topics = store.topicsForDevice('dock_001')
-    expect(topics.map((topic) => topic.id)).toEqual(['b', 'a'])
+    expect(topics.map((topic) => topic.topic)).toEqual(['b', 'a'])
     expect(topics.map((topic) => topic.order)).toEqual([0, 1])
+  })
+
+  it('rejects duplicate topics for the same device', () => {
+    const store = useTopicStore()
+    store.addTopic('dock_001', 'a')
+
+    expect(() => store.addTopic('dock_001', 'a')).toThrow('该 Topic 已存在。')
   })
 })

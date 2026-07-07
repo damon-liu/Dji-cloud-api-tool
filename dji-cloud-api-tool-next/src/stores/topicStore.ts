@@ -27,43 +27,47 @@ export const useTopicStore = defineStore('topic', {
   },
   actions: {
     addDefaultTopic(deviceSn: string) {
-      this.addTopic({
+      this.addTopic(deviceSn, `thing/product/${deviceSn}/osd`)
+    },
+    addTopic(deviceSn: string, topic: string) {
+      if (this.findTopic(deviceSn, topic)) {
+        throw new Error('该 Topic 已存在。')
+      }
+
+      this.topics.push({
         id: createId(),
         deviceSn,
-        topic: `thing/product/${deviceSn}/osd`,
+        topic,
         enabled: true,
         order: this.topicsForDevice(deviceSn).length,
       })
+      this.normalizeOrder(deviceSn)
     },
-    addTopic(topic: DeviceTopic) {
-      this.topics.push(topic)
-      this.normalizeOrder(topic.deviceSn)
-    },
-    removeTopic(id: string) {
-      const topic = this.topics.find((item) => item.id === id)
-      if (!topic) {
+    removeTopic(deviceSn: string, topic: string) {
+      const found = this.findTopic(deviceSn, topic)
+      if (!found) {
         return
       }
 
-      this.topics = this.topics.filter((item) => item.id !== id)
-      this.normalizeOrder(topic.deviceSn)
+      this.topics = this.topics.filter((item) => item !== found)
+      this.normalizeOrder(deviceSn)
     },
-    toggleTopic(id: string, enabled?: boolean) {
-      const topic = this.topics.find((item) => item.id === id)
-      if (topic) {
-        topic.enabled = enabled ?? !topic.enabled
+    toggleTopic(deviceSn: string, topic: string) {
+      const found = this.findTopic(deviceSn, topic)
+      if (found) {
+        found.enabled = !found.enabled
       }
     },
-    setAllEnabled(enabled: boolean, deviceSn?: string) {
+    setAllEnabled(deviceSn: string, enabled: boolean) {
       for (const topic of this.topics) {
-        if (deviceSn === undefined || topic.deviceSn === deviceSn) {
+        if (topic.deviceSn === deviceSn) {
           topic.enabled = enabled
         }
       }
     },
-    moveTopic(deviceSn: string, id: string, direction: MoveDirection) {
+    moveTopic(deviceSn: string, topic: string, direction: MoveDirection) {
       const topics = this.topicsForDevice(deviceSn)
-      const index = topics.findIndex((topic) => topic.id === id)
+      const index = topics.findIndex((item) => item.topic === topic)
       if (index === -1) {
         return
       }
@@ -73,8 +77,8 @@ export const useTopicStore = defineStore('topic', {
         return
       }
 
-      const [topic] = topics.splice(index, 1)
-      topics.splice(targetIndex, 0, topic)
+      const [movedTopic] = topics.splice(index, 1)
+      topics.splice(targetIndex, 0, movedTopic)
       topics.forEach((item, order) => {
         const source = this.topics.find((candidate) => candidate.id === item.id)
         if (source) {
@@ -82,6 +86,9 @@ export const useTopicStore = defineStore('topic', {
         }
       })
       this.normalizeOrder(deviceSn)
+    },
+    findTopic(deviceSn: string, topic: string): DeviceTopic | undefined {
+      return this.topics.find((item) => item.deviceSn === deviceSn && item.topic === topic)
     },
     normalizeOrder(deviceSn?: string) {
       const deviceSns = deviceSn
