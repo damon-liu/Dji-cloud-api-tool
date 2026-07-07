@@ -1,7 +1,7 @@
 use crate::models::{ConnectionProfile, Device, DeviceTopic, MqttRuntimeMessage};
 use crate::topic_matcher::match_device_sn;
 use chrono::Utc;
-use rumqttc::{AsyncClient, Event, MqttOptions, Packet, QoS, Transport};
+use rumqttc::{AsyncClient, Event, MqttOptions, Outgoing, Packet, QoS, Transport};
 use serde::Serialize;
 use std::sync::Arc;
 use std::time::Duration;
@@ -131,6 +131,7 @@ impl MqttService {
 
                         emit(&app, "mqtt:message", message);
                     }
+                    Ok(Event::Outgoing(Outgoing::Disconnect)) => break,
                     Ok(_) => {}
                     Err(error) => {
                         emit(
