@@ -37,6 +37,7 @@ pub fn validate_connection_profile(profile: &ConnectionProfile) -> Result<()> {
 struct MqttServiceState {
     client: Option<AsyncClient>,
     connection_id: Option<String>,
+    session_token: Option<String>,
 }
 
 #[derive(Clone, Default)]
@@ -70,6 +71,7 @@ impl MqttService {
         self.disconnect().await?;
 
         let connection_id = profile.id.clone();
+        let session_token = uuid::Uuid::new_v4().to_string();
         let client_id = profile
             .client_id
             .clone()
@@ -104,6 +106,7 @@ impl MqttService {
             let mut state = self.state.lock().await;
             state.client = Some(client);
             state.connection_id = Some(connection_id.clone());
+            state.session_token = Some(session_token.clone());
         }
 
         emit(
@@ -134,7 +137,7 @@ impl MqttService {
                     Ok(Event::Outgoing(Outgoing::Disconnect)) => break,
                     Ok(_) => {}
                     Err(error) => {
-                        if !service.is_current_connection(&connection_id).await {
+                        if !service.is_current_session(&session_token).await {
                             break;
                         }
 
@@ -160,24 +163,26 @@ impl MqttService {
             );
 
             let mut state = service.state.lock().await;
-            if state.connection_id.as_deref() == Some(connection_id.as_str()) {
+            if state.session_token.as_deref() == Some(session_token.as_str()) {
                 state.client = None;
                 state.connection_id = None;
+                state.session_token = None;
             }
         });
 
         Ok(())
     }
 
-    async fn is_current_connection(&self, connection_id: &str) -> bool {
+    async fn is_current_session(&self, session_token: &str) -> bool {
         let state = self.state.lock().await;
-        state.connection_id.as_deref() == Some(connection_id)
+        state.session_token.as_deref() == Some(session_token)
     }
 
     pub async fn disconnect(&self) -> Result<()> {
         let client = {
             let mut state = self.state.lock().await;
             state.connection_id = None;
+            state.session_token = None;
             state.client.take()
         };
 
