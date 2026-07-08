@@ -1,0 +1,62 @@
+name: Build Windows App
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-windows:
+    name: Build Windows installer
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        working-directory: dji-cloud-api-tool-next
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: dji-cloud-api-tool-next/pnpm-lock.yaml
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run frontend tests
+        run: pnpm vitest run
+
+      - name: Build frontend
+        run: pnpm build
+
+      - name: Run Rust tests
+        run: cargo test
+        working-directory: dji-cloud-api-tool-next/src-tauri
+
+      - name: Build Tauri Windows bundle
+        uses: tauri-apps/tauri-action@v1
+        with:
+          projectPath: dji-cloud-api-tool-next
+
+      - name: Upload Windows bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: dji-cloud-api-tool-next-windows
+          if-no-files-found: error
+          path: |
+            dji-cloud-api-tool-next/src-tauri/target/release/bundle/**/*.msi
+            dji-cloud-api-tool-next/src-tauri/target/release/bundle/**/*.exe
