@@ -30,7 +30,7 @@
 
 ## 📥 下载
 
-👉 **[DjiCloudApiTool-v1.0.zip](https://github.com/damon-liu/Dji-cloud-api-tool/releases/tag/v1.0)** （约 29 MB）
+👉 **[DjiCloudApiTool-v1.0.zip](https://github.com/damon-liu/Dji-cloud-api-tool/releases/download/v1.0/DjiCloudApiTool-v1.0.zip)** （约 29 MB）
 
 下载后解压到任意目录，双击 `DjiCloudApi.exe` 即可运行，**无需安装**。
 
