@@ -1,4 +1,4 @@
-# DJI Cloud API 监控客户端 — 小白也能看懂的使用指南
+# DJI Cloud API 监控客户端 — 用户使用指南
 
 ## 一、这是什么？
 
@@ -47,15 +47,13 @@
 
 ## 三、下载与安装
 
-![image-20260710142956129](C:\Users\lhx\AppData\Roaming\Typora\typora-user-images\image-20260710142956129.png)
+![image-20260710155056204](C:\Users\lhx\AppData\Roaming\Typora\typora-user-images\image-20260710155056204.png)
 
 去 GitHub 下载最新版本：
 
-👉 https://github.com/damon-liu/Dji-cloud-api-tool/releases
+👉 https://github.com/damon-liu/Dji-cloud-api-tool/releases/tag/
 
 下载 `DjiCloudApiTool-v1.0.zip`，解压后双击运行 `DjiCloudApiTool-v1.0.exe`，**不需要安装**。
-
-> ⚠️ 首次启动会自动生成 `config.json` 配置文件，保存在软件同目录下。
 
 ---
 
@@ -329,30 +327,57 @@ MQTT 意外断开时：
 
 ## 九、常见问题
 
-**Q：数据不显示？**
+### 🖥 运行相关
 
-A：请检查三项：
-1. MQTT 是否已连接（看底部状态栏）
-2. 设备 SN 是否正确（与实际设备一致）
-3. Topic 是否已启用（显示为 ● 实心）
+**Q：下载 zip 包后双击 exe 没有运行按钮？**
+
+![image-20260710155248613](C:\Users\lhx\AppData\Roaming\Typora\typora-user-images\image-20260710155248613.png)
+
+> A：这是 Windows Defender 对陌生文件的正常拦截。点击「更多信息」→「仍要运行」即可。如果希望一劳永逸，将 exe 所在文件夹加入 Defender 排除列表。
+
+---
+
+### 📡 连接相关
 
 **Q：连接测试失败？**
 
-A：提示"连接失败请检查配置参数是否有误"。确认 IP、端口、用户名、密码无误，且电脑能 ping 通 MQTT 服务器。
+> A：提示"连接失败请检查配置参数是否有误"。请依次确认：
+> 1. Broker IP 和端口号是否正确
+> 2. 用户名和密码是否与 MQTT 服务器一致
+> 3. 电脑是否能 ping 通 MQTT 服务器（`ping 服务器IP`）
+
+**Q：数据不显示？**
+
+> A：请检查三项：
+> 1. MQTT 是否已连接（看底部状态栏是否为「🟢 已连接」）
+> 2. 设备 SN 是否正确（必须与实际设备序列号完全一致）
+> 3. Topic 是否已启用（列表中显示为 ● 实心，而非 ○ 空心）
+
+---
+
+### 📁 文件相关
 
 **Q：抓包文件在哪？**
 
-A：保存在软件同目录下的 `captures/` 文件夹中。抓包停止后弹窗中有「打开文件夹」按钮可以直接跳转。
+> A：保存在软件同目录下的 `captures/` 文件夹中。抓包停止后弹窗中有「打开文件夹」按钮可直接跳转。文件命名规则：`设备SN-topic类型-时间.json`。
 
 **Q：配置文件保存在哪？**
 
-A：`config.json`，在软件同目录下。首次运行自动生成。
+> A：`config.json`，在软件同目录下，首次运行自动生成。
 
-> ⚠️ 这个文件包含 MQTT 连接密码，请勿分享给他人或提交到公开仓库。
+> ⚠️ 此文件包含 MQTT 连接密码，请勿分享给他人或提交到公开仓库。
+
+---
+
+### 🔧 使用相关
 
 **Q：怎么同时监控多个设备？**
 
-A：点「＋」重复添加即可。Dock 类型的设备下还可以添加多架手飞飞机。
+> A：点「＋」重复添加即可。Dock（机场）设备下还可以添加多架子飞机。
+
+**Q：软件需要联网吗？**
+
+> A：软件通过 MQTT 协议连接 DJI Cloud API Broker 获取实时数据，请确保电脑与 Broker 之间的网络畅通。
 
 
 
