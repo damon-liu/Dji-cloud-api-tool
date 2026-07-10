@@ -2,6 +2,19 @@
 
 基于 Qt 6 C++ 的桌面应用，连接 DJI Cloud API MQTT Broker，订阅无人机/机场的遥测主题，实时展示 OSD（机载系统数据）并自动翻译 JSON 字段为中文。
 
+[![GitHub Release](https://img.shields.io/github/v/release/damon-liu/Dji-cloud-api-tool?style=flat-square&color=blue)](https://github.com/damon-liu/Dji-cloud-api-tool/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-Windows%20x64-lightgrey?style=flat-square)](https://github.com/damon-liu/Dji-cloud-api-tool/releases/latest)
+[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+
+## 📥 下载
+
+前往 [Releases](https://github.com/damon-liu/Dji-cloud-api-tool/releases) 页面下载最新版本：
+
+- **`DjiCloudApi-v1.0.zip`** — 完整包（含 exe + 配置文件），解压即用
+- **`DjiCloudApi-v1.0.exe`** — 仅可执行文件
+
+> 无需安装 Qt 或其他依赖，Windows 10/11 x64 下直接运行。
+
 ## 功能
 
 - **MQTT 连接管理** — 支持 SSL/TLS，可配置 Broker 地址/端口/账号密码，连接状态实时显示
@@ -17,7 +30,7 @@
 
 ### Windows
 
-直接运行 `deploy/DjiCloudApi.exe`，无需安装任何依赖。
+从 [Releases](https://github.com/damon-liu/Dji-cloud-api-tool/releases/latest) 下载 `DjiCloudApi-v1.0.zip`，解压后运行 `DjiCloudApi-v1.0.exe`，无需安装任何依赖。
 
 首次启动会自动生成默认配置文件 `config.json`，修改 Broker 连接信息后点击「连接」即可。
 
