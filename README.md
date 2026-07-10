@@ -10,8 +10,8 @@
 
 前往 [Releases](https://github.com/damon-liu/Dji-cloud-api-tool/releases) 页面下载最新版本：
 
-- **`DjiCloudApi-v1.0.zip`** — 完整包（含 exe + 配置文件），解压即用
-- **`DjiCloudApi-v1.0.exe`** — 仅可执行文件
+- **`DjiCloudApiTool-v1.0.zip`** — 完整包（含 exe + 配置文件），解压即用
+- **`DjiCloudApiTool-v1.0.exe`** — 仅可执行文件
 
 > 无需安装 Qt 或其他依赖，Windows 10/11 x64 下直接运行。
 
@@ -30,7 +30,7 @@
 
 ### Windows
 
-从 [Releases](https://github.com/damon-liu/Dji-cloud-api-tool/releases/latest) 下载 `DjiCloudApi-v1.0.zip`，解压后运行 `DjiCloudApi-v1.0.exe`，无需安装任何依赖。
+从 [Releases](https://github.com/damon-liu/Dji-cloud-api-tool/releases/latest) 下载 `DjiCloudApiTool-v1.0.zip`，解压后运行 `DjiCloudApiTool-v1.0.exe`，无需安装任何依赖。
 
 首次启动会自动生成默认配置文件 `config.json`，修改 Broker 连接信息后点击「连接」即可。
 
