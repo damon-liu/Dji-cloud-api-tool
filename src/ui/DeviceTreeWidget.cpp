@@ -44,6 +44,7 @@ void DeviceTreeWidget::rebuild(const QVector<DeviceInfo*>& topLevelDevices,
         item->setText(0, status + dev->name + "-" + dev->sn);
         item->setData(0, Qt::UserRole, dev->sn);
         item->setData(0, Qt::UserRole + 1, static_cast<int>(dev->type));
+        item->setData(0, Qt::UserRole + 2, dev->name);
         item->setToolTip(0, dev->sn);
 
         if (!dev->online)
@@ -59,6 +60,7 @@ void DeviceTreeWidget::rebuild(const QVector<DeviceInfo*>& topLevelDevices,
                 childItem->setText(0, childStatus + child->name + "-" + child->sn);
                 childItem->setData(0, Qt::UserRole, child->sn);
                 childItem->setData(0, Qt::UserRole + 1, static_cast<int>(child->type));
+                childItem->setData(0, Qt::UserRole + 2, child->name);
                 childItem->setToolTip(0, child->sn);
 
                 if (!child->online)
@@ -105,7 +107,7 @@ void DeviceTreeWidget::contextMenuEvent(QContextMenuEvent* event) {
 
     QAction* chosen = menu.exec(event->globalPos());
     if (chosen == renameAct) {
-        QString oldName = item->text(0).mid(3).section("-", 0, 0);  // 去掉状态前缀，取名称部分
+        QString oldName = item->data(0, Qt::UserRole + 2).toString();
         bool ok;
         QString newName = QInputDialog::getText(this,
             QString::fromUtf8("\xe9\x87\x8d\xe5\x91\xbd\xe5\x90\x8d\xe8\xae\xbe\xe5\xa4\x87"),

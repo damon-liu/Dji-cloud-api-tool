@@ -106,6 +106,10 @@ if(WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_SOURCE_DIR}/config/topic_mappings.json"
             "${CMAKE_BINARY_DIR}/topic_mappings.json"
+        # 强制清除 deploy/ 目录中的真实凭证，防止打包泄露
+        COMMAND ${CMAKE_COMMAND} -E copy
+            "${CMAKE_SOURCE_DIR}/deploy/config.example.json"
+            "${CMAKE_SOURCE_DIR}/deploy/config.json"
         DEPENDS DjiCloudApi
         COMMENT "Deploying Qt DLLs and config for Windows distribution"
     )

@@ -101,4 +101,4 @@ UI 层 (src/ui/)          — MainWindow、DeviceTreeWidget、OsdPanel、RawJson
 - `PublishPanel` 的发送功能明确推迟到 v1.1——不要在未更新版本计划的情况下去实现它
 - 交叉编译工具链（`cmake/toolchains/linux-x64.cmake`）使用 Zig 作为 C/C++ 编译器，目标平台 `x86_64-linux-gnu.2.39`
 - Git 提交信息使用中文
-- 每次推送前需编译项目，并将 `build_mingw/DjiCloudApi.exe` 复制到 `deploy/DjiCloudApi.exe` 一并推送
+- 每次推送前需编译项目，并运行 `bash package.sh v1.0` 自动完成：编译 → 部署 Qt DLL → **清除 deploy/config.json 凭证** → 打包 zip → 同步 exe 到 deploy/。严禁跳过凭证清除步骤

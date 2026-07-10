@@ -17,6 +17,16 @@ deploy/main.exe
 config.json
 deploy/config.json
 
+# deploy 目录中的 Qt 运行时（本地通过 windeployqt 生成，不提交）
+deploy/*.dll
+deploy/generic/
+deploy/iconengines/
+deploy/imageformats/
+deploy/networkinformation/
+deploy/platforms/
+deploy/styles/
+deploy/tls/
+
 # 抓包输出目录
 captures/
 
