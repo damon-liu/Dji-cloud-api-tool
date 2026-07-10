@@ -1,6 +1,8 @@
 #include "DeviceManager.h"
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonArray>
+#include <QDateTime>
 #include <QDebug>
 
 static const QStringList DEFAULT_DOCK_TOPICS = {
@@ -23,7 +25,7 @@ DeviceManager::DeviceManager(QObject* parent)
     connect(mMqttManager, &MqttClientManager::connected,
             this, &DeviceManager::onMqttConnected);
     connect(mMqttManager, &MqttClientManager::disconnected,
-            this, &DeviceManager::brokerDisconnected);
+            this, &DeviceManager::onMqttDisconnected);
     connect(mMqttManager, &MqttClientManager::connectionError,
             this, &DeviceManager::brokerError);
     connect(mMqttManager, &MqttClientManager::messageReceived,
@@ -36,6 +38,12 @@ DeviceManager::DeviceManager(QObject* parent)
     // Profile 切换信号转发
     connect(mConfigStore, &ConfigStore::profileSwitched,
             this, &DeviceManager::profileSwitched);
+
+    // 设备离线检测：每 10 秒检查一次
+    mOfflineTimer = new QTimer(this);
+    mOfflineTimer->setInterval(10000);
+    connect(mOfflineTimer, &QTimer::timeout, this, &DeviceManager::checkDeviceOffline);
+    mOfflineTimer->start();
 }
 
 bool DeviceManager::initialize(const QString& configPath) {
@@ -119,6 +127,7 @@ void DeviceManager::removeDevice(const QString& sn) {
     mAircraftOsdCache.remove(sn);
     mDockOsdCache.remove(sn);
     mRawJsonCache.remove(sn);
+    mMergedOsdData.remove(sn);
 
     // 如果该设备是机场，同时删除子飞机
     QList<QString> childSns;
@@ -132,6 +141,7 @@ void DeviceManager::removeDevice(const QString& sn) {
         mAircraftOsdCache.remove(child);
         mDockOsdCache.remove(child);
         mRawJsonCache.remove(child);
+        mMergedOsdData.remove(child);
     }
 
     // 持久化
@@ -224,6 +234,26 @@ QString DeviceManager::latestRawJson(const QString& sn, const QString& topic) co
         return {};
     }
     return topicMap.value(topic);
+}
+
+QString DeviceManager::mergedOsdJson(const QString& sn, const QString& topic) const {
+    if (!mMergedOsdData.contains(sn))
+        return {};
+    const auto& topicMap = mMergedOsdData[sn];
+    if (!topicMap.contains(topic))
+        return {};
+    const QJsonObject& merged = topicMap[topic];
+    if (merged.isEmpty())
+        return {};
+    QJsonDocument doc(merged);
+    return QString::fromUtf8(doc.toJson(QJsonDocument::Indented));
+}
+
+void DeviceManager::clearMergedOsdData(const QString& sn, const QString& topic) {
+    if (topic.isEmpty())
+        mMergedOsdData.remove(sn);
+    else if (mMergedOsdData.contains(sn))
+        mMergedOsdData[sn].remove(topic);
 }
 
 QString DeviceManager::jsonHistory(const QString& sn, const QString& topic) const {
@@ -385,6 +415,17 @@ void DeviceManager::onMqttConnected() {
     emit brokerConnected();
 }
 
+void DeviceManager::onMqttDisconnected() {
+    // MQTT 断连 → 所有设备标为离线
+    for (auto it = mDevices.begin(); it != mDevices.end(); ++it) {
+        if (it->online) {
+            it->online = false;
+            emit deviceOnlineChanged(it.key(), false);
+        }
+    }
+    emit brokerDisconnected();
+}
+
 void DeviceManager::onMqttMessage(const QString& topic, const QByteArray& payload) {
     parseAndRoute(topic, payload);
 }
@@ -411,6 +452,9 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
         return;
     }
 
+    // 记录最后消息时间（用于离线检测）
+    mLastMessageTime[sn] = QDateTime::currentMSecsSinceEpoch();
+
     // 保存原始 JSON（最新一条）
     QString formatted = QString::fromUtf8(doc.toJson(QJsonDocument::Indented));
     mRawJsonCache[sn][topic] = formatted;
@@ -419,6 +463,15 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
     mJsonHistory[sn][topic].append(formatted);
     while (mJsonHistory[sn][topic].size() > MAX_JSON_HISTORY)
         mJsonHistory[sn][topic].removeFirst();
+
+    // 字段级合并：DJI 机场 OSD 数据按字段子集分消息推送，
+    // 将每条消息的 data 字段增量合并到累积对象中，确保面板始终显示所有已知字段
+    if (!data.isEmpty()) {
+        QJsonObject& merged = mMergedOsdData[sn][topic];
+        for (auto it = data.begin(); it != data.end(); ++it) {
+            merged[it.key()] = it.value();
+        }
+    }
 
     // 解析 OSD 数据
     DeviceInfo& info = mDevices[sn];
@@ -429,6 +482,85 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
         } else if (info.type == DeviceType::Dock) {
             DockOsd osd = DockOsd::fromJson(data);
             mDockOsdCache[sn] = osd;
+
+            // 自动检测库内飞机：从 OSD 的 sub_device.device_sn 提取飞机 SN，
+            // 若尚未加入设备列表则自动创建并持久化到 config.json
+            if (data.contains("sub_device")) {
+                QJsonObject subDevice = data["sub_device"].toObject();
+                QString detectedSn = subDevice["device_sn"].toString();
+                if (!detectedSn.isEmpty() && !mDevices.contains(detectedSn)) {
+                    DeviceInfo child;
+                    child.sn       = detectedSn;
+                    child.name     = info.name + QString::fromUtf8("-\xe9\xa3\x9e\xe6\x9c\xba");
+                    child.type     = DeviceType::Aircraft;
+                    child.parentSn = sn;
+
+                    QStringList childTopics;
+                    childTopics << QString("thing/product/%1/osd").arg(detectedSn);
+                    mDevices[detectedSn] = child;
+                    mTopicManager->setDeviceTopics(detectedSn, childTopics);
+
+                    saveConfig(mConfigPath);
+                    emit deviceAdded(detectedSn);
+
+                    qDebug() << "DeviceManager: auto-detected child aircraft"
+                             << detectedSn << "for dock" << sn;
+                }
+            }
+
+            // 将机场 OSD 中的飞行器相关字段映射到子飞机缓存，
+            // 使选中子飞机时 OSD 面板有数据可显示
+            QString childSn;
+            for (auto it = mDevices.begin(); it != mDevices.end(); ++it) {
+                if (it->parentSn == sn && it->type == DeviceType::Aircraft) {
+                    childSn = it->sn;
+                    break;
+                }
+            }
+            if (!childSn.isEmpty()) {
+                const QJsonObject& merged = mMergedOsdData[sn][topic];
+                AircraftOsd airOsd;
+                airOsd.parseCommon(merged);
+                airOsd.mode_code    = merged.value("mode_code").toInt(-1);
+                airOsd.height       = merged.value("height").toDouble();
+                airOsd.heading      = merged.value("heading").toDouble();
+                airOsd.wind_speed   = merged.value("wind_speed").toDouble();
+
+                QJsonObject ps = merged.value("position_state").toObject();
+                airOsd.gps_number = ps.value("gps_number").toInt();
+
+                QJsonObject dcs = merged.value("drone_charge_state").toObject();
+                airOsd.battery_percent = dcs.value("capacity_percent").toInt(-1);
+
+                QJsonObject dbmi = merged.value("drone_battery_maintenance_info").toObject();
+                QJsonArray batteries = dbmi.value("batteries").toArray();
+                if (!batteries.isEmpty()) {
+                    QJsonObject batt = batteries[0].toObject();
+                    airOsd.battery_voltage     = batt.value("voltage").toDouble();
+                    airOsd.battery_temperature = batt.value("temperature").toDouble();
+                }
+
+                mAircraftOsdCache[childSn] = airOsd;
+                mLastMessageTime[childSn] = QDateTime::currentMSecsSinceEpoch();
+
+                qDebug() << "DeviceManager: mapped child aircraft OSD for" << childSn
+                         << "| lat:" << airOsd.latitude << "lon:" << airOsd.longitude
+                         << "| battery:" << airOsd.battery_percent << "%"
+                         << "| battTemp:" << airOsd.battery_temperature
+                         << "| merged keys:" << merged.keys();
+
+                // 生成子飞机的合成 JSON（用于原始 JSON 面板展示）
+                QJsonObject synthRoot;
+                synthRoot["gateway"] = sn;
+                synthRoot["timestamp"] = root.value("timestamp");
+                synthRoot["data"] = merged;
+                QJsonDocument synthDoc(synthRoot);
+                QString synthJson = QString::fromUtf8(synthDoc.toJson(QJsonDocument::Indented));
+                QString childTopic = QString("thing/product/%1/osd").arg(childSn);
+                mRawJsonCache[childSn][childTopic] = synthJson;
+
+                emit deviceOsdUpdated(childSn, childTopic, synthJson);
+            }
         }
     }
 
@@ -439,4 +571,19 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
     }
 
     emit deviceOsdUpdated(sn, topic, formatted);
+}
+
+void DeviceManager::checkDeviceOffline() {
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    for (auto it = mDevices.begin(); it != mDevices.end(); ++it) {
+        if (!it->online)
+            continue;
+        qint64 last = mLastMessageTime.value(it.key(), 0);
+        if (last > 0 && (now - last) > OFFLINE_TIMEOUT_MS) {
+            it->online = false;
+            emit deviceOnlineChanged(it.key(), false);
+            qDebug() << "DeviceManager: device offline" << it.key()
+                     << "(no message for" << (now - last) / 1000 << "s)";
+        }
+    }
 }

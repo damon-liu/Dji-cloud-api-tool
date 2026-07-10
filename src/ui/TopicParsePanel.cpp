@@ -166,12 +166,14 @@ void TopicParsePanel::refresh() {
     if (!mDevMgr || mDeviceSn.isEmpty() || mTopic.isEmpty())
         return;
 
-    QString rawJson = mDevMgr->latestRawJson(mDeviceSn, mTopic);
-    if (rawJson.isEmpty())
+    // 使用字段级合并数据，解决 DJI 机场 OSD 分消息推送问题：
+    // 同一条 topic 的字段可能分散在多个消息中，合并后确保面板显示所有已知字段
+    QString mergedJson = mDevMgr->mergedOsdJson(mDeviceSn, mTopic);
+    if (mergedJson.isEmpty())
         return;
 
     QJsonParseError parseErr;
-    QJsonDocument doc = QJsonDocument::fromJson(rawJson.toUtf8(), &parseErr);
+    QJsonDocument doc = QJsonDocument::fromJson(mergedJson.toUtf8(), &parseErr);
     if (parseErr.error != QJsonParseError::NoError) {
         qWarning() << "TopicParsePanel: JSON parse error:" << parseErr.errorString();
         return;
@@ -179,15 +181,14 @@ void TopicParsePanel::refresh() {
     if (!doc.isObject())
         return;
 
-    QJsonObject root = doc.object();
-    QJsonObject data = root.value("data").toObject();
+    QJsonObject data = doc.object();
     if (data.isEmpty())
         return;
 
     // 数据无变化则跳过，避免重复清空重建闪烁
-    if (rawJson == mLastJson)
+    if (mergedJson == mLastJson)
         return;
-    mLastJson = rawJson;
+    mLastJson = mergedJson;
 
     renderGroups(data);
 }
@@ -264,21 +265,23 @@ void TopicParsePanel::renderGroups(const QJsonObject& data) {
         bool groupHasContent = false;
 
         for (const auto& key : group.keys) {
+            // 跳过 JSON 中不存在的字段，只显示有数据的
+            if (!flatData.contains(key))
+                continue;
+
             FieldMapping fm = cfg.fields.value(key);
             QString zhName = fm.zh.isEmpty() ? key : fm.zh;
 
             QString rawValue = flatData.value(key);
             QString displayValue;
 
-            if (!flatData.contains(key)) {
-                displayValue = "-";
-            } else if (!fm.values.isEmpty() && fm.values.contains(rawValue)) {
+            if (!fm.values.isEmpty() && fm.values.contains(rawValue)) {
                 displayValue = fm.values[rawValue];
             } else {
                 displayValue = rawValue;
             }
 
-            if (!fm.unit.isEmpty() && displayValue != "-")
+            if (!fm.unit.isEmpty())
                 displayValue += " " + fm.unit;
 
             auto* nameLabel = new QLabel(zhName);

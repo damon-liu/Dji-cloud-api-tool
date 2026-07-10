@@ -34,7 +34,10 @@ cp "$DEPLOY_DIR/DjiCloudApi.exe" "$DEPLOY_DIR"/*.dll "$DEPLOY_DIR/config.json" \
 cp -r "$DEPLOY_DIR"/generic "$DEPLOY_DIR"/iconengines "$DEPLOY_DIR"/imageformats \
       "$DEPLOY_DIR"/networkinformation "$DEPLOY_DIR"/platforms "$DEPLOY_DIR"/styles "$DEPLOY_DIR"/tls \
       "$TMPDIR/"
-powershell -Command "Compress-Archive -Path '$TMPDIR\*' -DestinationPath '$OUTPUT' -Force"
+# 转换为 Windows 路径供 PowerShell 使用
+WIN_TMPDIR=$(cygpath -w "$TMPDIR")
+WIN_OUTPUT=$(cygpath -w "$OUTPUT")
+powershell -Command "Compress-Archive -Path '${WIN_TMPDIR}\*' -DestinationPath '${WIN_OUTPUT}' -Force"
 rm -rf "$TMPDIR"
 
 echo ""

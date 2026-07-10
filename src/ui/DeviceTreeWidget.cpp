@@ -71,7 +71,11 @@ void DeviceTreeWidget::rebuild(const QVector<DeviceInfo*>& topLevelDevices,
         }
     }
 
+    // 禁用动画确保 expandAll 立即生效（启动时连续 rebuild 会打断动画导致节点折叠）
+    bool wasAnimated = isAnimated();
+    setAnimated(false);
     expandAll();
+    setAnimated(wasAnimated);
 }
 
 QString DeviceTreeWidget::selectedDeviceSn() const {

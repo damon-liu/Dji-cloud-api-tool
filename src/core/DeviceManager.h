@@ -3,6 +3,8 @@
 
 #include <QObject>
 #include <QMap>
+#include <QJsonObject>
+#include <QTimer>
 #include "DeviceInfo.h"
 #include "OsdData.h"
 #include "ConfigStore.h"
@@ -50,6 +52,10 @@ public:
     const DockOsd* latestDockOsd(const QString& sn) const;
     QString latestRawJson(const QString& sn, const QString& topic = QString()) const;
 
+    // OSD 合并数据（字段级合并，解决 DJI 分消息推送问题）
+    QString mergedOsdJson(const QString& sn, const QString& topic) const;
+    void clearMergedOsdData(const QString& sn, const QString& topic = QString());
+
     // JSON 历史数据
     QString jsonHistory(const QString& sn, const QString& topic = {}) const;
     void clearJsonHistory(const QString& sn, const QString& topic = {});
@@ -84,8 +90,10 @@ signals:
 
 private slots:
     void onMqttConnected();
+    void onMqttDisconnected();
     void onMqttMessage(const QString& topic, const QByteArray& payload);
     void onTopicsChanged(const QStringList& add, const QStringList& remove);
+    void checkDeviceOffline();
 
 private:
     void parseAndRoute(const QString& topic, const QByteArray& payload);
@@ -97,9 +105,13 @@ private:
     QMap<QString, AircraftOsd> mAircraftOsdCache;
     QMap<QString, DockOsd>     mDockOsdCache;
     QMap<QString, QMap<QString, QString>> mRawJsonCache;  // sn → topic → json
+    QMap<QString, QMap<QString, QJsonObject>> mMergedOsdData;  // sn → topic → merged data fields
     QMap<QString, QMap<QString, QStringList>> mJsonHistory;  // SN → topic → history[]
-    QString                    mConfigPath;
+    QMap<QString, qint64>       mLastMessageTime;  // SN → 最后收到消息的时间戳
+    QTimer*                     mOfflineTimer = nullptr;
+    QString                     mConfigPath;
     static constexpr int MAX_JSON_HISTORY = 500;
+    static constexpr qint64 OFFLINE_TIMEOUT_MS = 60000;  // 60s 无消息判定离线
 };
 
 #endif // DEVICEMANAGER_H
