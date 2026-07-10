@@ -10,29 +10,39 @@
 
 前往 [Releases](https://github.com/damon-liu/Dji-cloud-api-tool/releases) 页面下载最新版本：
 
-- **`DjiCloudApiTool-v1.0.zip`** — 完整包（含 exe + 配置文件），解压即用
-- **`DjiCloudApiTool-v1.0.exe`** — 仅可执行文件
+- **`DjiCloudApiTool-v1.0.zip`** — 完整包（exe + Qt 运行库 + 配置模板），解压即用
 
-> 无需安装 Qt 或其他依赖，Windows 10/11 x64 下直接运行。
+> 无需安装 Qt 或其他依赖，Windows 10/11 x64 下直接运行。首次启动自动生成 `config.json`。
 
-## 功能
+## ✨ 功能
 
 - **MQTT 连接管理** — 支持 SSL/TLS，可配置 Broker 地址/端口/账号密码，连接状态实时显示
-- **设备列表** — 树形展示机场 + 手飞无人机，支持新增/删除设备，在线状态指示
-- **Topic 订阅管理** — 启用/禁用/新增/删除 Topic，点击即可切换原始 JSON 过滤
-- **OSD 遥测面板** — 设备基本信息 + 机场数据（舱盖、风速、温度、搜星等）实时刷新
-- **JSON 字段翻译** — 自动将 `thing/product/{sn}/osd` 主题的 JSON key 翻译为中文，分组表格展示，点击字段名可复制 key
-- **原始 JSON 面板** — 按 Topic 过滤、暂停滚动、一键复制
-- **Topic 下发** — 支持向设备下发自定义 MQTT 消息（v1.1）
-- **可配置刷新间隔** — 适合不同网络环境和数据量
+- **多环境配置切换** — 支持多个 Connection 配置，一键切换生产/测试环境，互不干扰
+- **设备树形管理** — 机场 + 无人机层级展示，支持新增/删除/重命名，在线状态实时指示
+- **OSD 遥测面板** — 机场信息与飞机信息并排显示，刷新间隔可调（1s/2s/5s/10s）
+- **JSON 字段自动翻译** — 英文字段自动翻译为中文，按分组展示，点击字段名即可复制原始 key
+- **原始 JSON 面板** — 按 Topic 过滤 MQTT 报文，支持暂停滚动、一键复制、清除历史记录
+- **Topic 订阅管理** — 每个设备独立管理 Topic，支持新增/删除/启用/禁用/拖拽排序；添加机场自动创建 7 个常用 Topic
+- **📦 抓包导出** — 一键抓包，数据实时写入 `captures/` 文件夹，停止后弹窗显示路径和记录条数
+- **自动重连** — 指数退避（1s → 2s → 4s → … → 最长 30s），恢复后自动刷新
+- **断线保护** — 断线自动暂停面板刷新，手动暂停优先级更高，不打断数据查看
+- **免安装绿色运行** — 单 zip 包，解压即用，零依赖
 
-## 快速开始
+> 🔜 v1.1 预告：JSON 解析优化、Topic 下发功能、暗色模式支持。详见 [用户指南](docs/user-guide.md)。
+
+## 🚶 快速开始
 
 ### Windows
 
-从 [Releases](https://github.com/damon-liu/Dji-cloud-api-tool/releases/latest) 下载 `DjiCloudApiTool-v1.0.zip`，解压后运行 `DjiCloudApiTool-v1.0.exe`，无需安装任何依赖。
+从 [Releases](https://github.com/damon-liu/Dji-cloud-api-tool/releases/latest) 下载 `DjiCloudApiTool-v1.0.zip`，解压后双击 `DjiCloudApi.exe` 即可运行。
 
-首次启动会自动生成默认配置文件 `config.json`，修改 Broker 连接信息后点击「连接」即可。
+**三步上手：**
+
+1. **配置 MQTT** — 点击「⚙ 配置」→ 填写 Broker 地址/端口/用户名/密码 → 「Test」测试 → 「OK」保存
+2. **添加设备** — 点击「＋」→ 选择 Dock（机场）或 Pilot（无人机）→ 输入设备 SN 和名称
+3. **连接监控** — 点击「● 连接」，OSD 面板和 JSON 面板开始实时刷新
+
+详细教程见 [📖 用户使用指南](docs/user-guide.md)。
 
 ### Linux
 
@@ -49,40 +59,48 @@ docker build -t dji-cloud-api:latest -f deploy/Dockerfile .
 docker run --rm dji-cloud-api:latest
 ```
 
-## 配置文件
+## ⚙️ 配置文件
 
 应用启动后自动在可执行文件同目录生成 `config.json`：
 
 ```json
 {
-    "mqtt": {
-        "host": "your-broker.example.com",
-        "port": 8883,
-        "username": "admin",
-        "password": ""
-    },
-    "devices": [
+    "current_profile": "默认",
+    "profiles": [
         {
-            "type": "dock",
-            "sn": "dock_001",
-            "name": "机场1号",
-            "aircraft_sn": "drone_001",
-            "topics": [
-                "thing/product/dock_001/osd",
-                "thing/product/drone_001/osd"
+            "name": "默认",
+            "mqtt": {
+                "host": "your-broker.example.com",
+                "port": 8883,
+                "username": "admin",
+                "password": "YOUR_PASSWORD"
+            },
+            "devices": [
+                {
+                    "type": "dock",
+                    "sn": "YOUR_DOCK_SN",
+                    "name": "示例机场",
+                    "aircraft_sn": "",
+                    "topics": [
+                        "thing/product/{sn}/osd",
+                        "thing/product/{sn}/state"
+                    ]
+                }
             ]
         }
     ]
 }
 ```
 
-主题字符串支持 `{sn}` 占位符，运行时会自动替换为设备 SN。
+- 支持多个 Profile（Connection），每个 Profile 有独立的 MQTT 参数和设备列表
+- 主题字符串支持 `{sn}` 占位符，运行时会自动替换为设备 SN
+- ⚠️ 此文件包含 MQTT 密码，请勿分享或提交到公开仓库
 
-## 界面截图
+## 📸 界面截图
 
 ![image-20260612144649206](https://damon-siyuan.oss-cn-wuhan-lr.aliyuncs.com/markdown/image-20260612144649206.png)
 
-## 架构
+## 🏗 架构
 
 三层设计，单线程运行，通过 Qt 信号/槽实现异步 I/O：
 
@@ -110,13 +128,13 @@ MQTT 消息 → MqttClientManager::messageReceived
 | 类 | 职责 |
 |---|---|
 | `DeviceManager` | 中心调度器——持有 ConfigStore、TopicManager、MqttClientManager；设备增删改查；消息路由；OSD 缓存 |
-| `ConfigStore` | JSON 配置持久化。处理设备列表中机场→子飞机的拆分/合并逻辑 |
+| `ConfigStore` | JSON 配置持久化（多 Profile）。处理设备列表中机场→子飞机的拆分/合并逻辑 |
 | `TopicManager` | 主题到设备 SN 的映射及反向索引；发出 `topicsChanged` 信号触发 MQTT 重新订阅 |
 | `MqttClientManager` | `QMqttClient` 封装；指数退避自动重连（基数 1s，上限 30s）；去重订阅管理 |
 | `DeviceInfo` / `OsdData` | 纯头文件数据结构。`AircraftOsd` 和 `DockOsd` 继承 `OsdBase` |
-| `MainWindow` | 顶层窗口（1280×760），水平分割器：左侧设备树 + Topic 列表，右侧 OSD 详情 + 原始 JSON |
+| `MainWindow` | 顶层窗口（1280×760），水平分割器：左侧设备树 + Topic 列表，右侧 OSD 详情 + JSON 解析 + 原始 JSON |
 
-## 项目结构
+## 📁 项目结构
 
 ```
 .
@@ -124,7 +142,7 @@ MQTT 消息 → MqttClientManager::messageReceived
 │   ├── main.cpp                  # 入口点
 │   ├── core/                     # 核心层 — 业务逻辑与数据结构
 │   │   ├── DeviceManager.h/cpp   #   中心调度器：设备增删、消息路由、OSD 缓存
-│   │   ├── ConfigStore.h/cpp     #   配置文件读写、设备列表拆分/合并
+│   │   ├── ConfigStore.h/cpp     #   配置文件读写（多 Profile）、设备列表管理
 │   │   ├── TopicManager.h/cpp    #   Topic ↔ 设备 SN 映射、订阅管理
 │   │   ├── DeviceInfo.h          #   设备信息数据结构（纯头文件）
 │   │   ├── OsdData.h             #   OSD 数据结构：AircraftOsd / DockOsd
@@ -133,32 +151,36 @@ MQTT 消息 → MqttClientManager::messageReceived
 │   │   └── MqttClientManager.h/cpp  QMqttClient 封装、自动重连、去重订阅
 │   ├── ui/                       # UI 层 — 面板与对话框
 │   │   ├── MainWindow.h/cpp      #   主窗口：工具栏、布局、信号连接
-│   │   ├── DeviceTreeWidget.h/cpp #  设备树（机场/飞机）
-│   │   ├── TopicListWidget.h/cpp  #  Topic 列表：启用/禁用/新增/删除
+│   │   ├── DeviceTreeWidget.h/cpp #  设备树（机场/飞机层级）
+│   │   ├── TopicListWidget.h/cpp  #  Topic 列表：启用/禁用/新增/删除/排序
 │   │   ├── TopicEditDialog.h/cpp  #  Topic 编辑对话框
-│   │   ├── OsdPanel.h/cpp         #  OSD 设备信息面板（GroupBox）
-│   │   ├── OsdParsePanel.h/cpp    #  JSON 字段 → 中文翻译面板
-│   │   ├── RawJsonPanel.h/cpp     #  原始 JSON 显示（暂停/复制）
-│   │   ├── PublishPanel.h/cpp     #  Topic 下发面板
-│   │   └── ConfigDialog.h/cpp     #  MQTT 连接配置对话框
+│   │   ├── OsdPanel.h/cpp         #  OSD 设备信息面板
+│   │   ├── TopicParsePanel.h/cpp  #  JSON 字段 → 中文翻译面板
+│   │   ├── RawJsonPanel.h/cpp     #  原始 JSON 显示（暂停/复制/抓包）
+│   │   ├── PublishPanel.h/cpp     #  Topic 下发面板（v1.1 开放）
+│   │   └── ConfigDialog.h/cpp     #  MQTT 连接配置对话框（多 Profile）
 │   └── resources/
-│       └── config.json           # 默认配置文件模板
+│       └── config.json           # 默认配置文件模板（不含真实凭证）
 ├── config/
-│   └── topic_mappings.json       # JSON key → 中文 翻译映射表
+│   └── topic_mappings.json       # JSON key → 中文翻译映射表
 ├── cmake/
 │   └── toolchains/
 │       └── linux-x64.cmake       # 交叉编译工具链（Zig）
 ├── deploy/
-│   ├── DjiCloudApi.exe           # Windows 预编译包
-│   ├── config.json               #   + 默认配置
-│   ├── topic_mappings.json       #   + 翻译映射
+│   ├── DjiCloudApi.exe           # Windows 预编译可执行文件
+│   ├── config.example.json       # 配置模板（含示例值）
+│   ├── topic_mappings.json       # 翻译映射表
 │   └── Dockerfile                # Docker 镜像构建
-├── tests/                        # 测试（待补充）
+├── docs/
+│   ├── user-guide.md             # 小白使用指南
+│   ├── prd.md                    # 产品需求文档
+│   └── RELEASE-v1.0.md           # Release 发布说明
+├── package.sh                    # 一键打包脚本（编译 → 部署 → 清除凭证 → 打包）
 ├── CMakeLists.txt                # CMake 构建配置
 └── CLAUDE.md                     # AI 辅助开发指引
 ```
 
-## 开发
+## 🛠 开发
 
 ### 环境准备
 
@@ -196,8 +218,11 @@ cd Dji-cloud-api-tool
 cmake -B build_mingw -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug
 cmake --build build_mingw
 
-# 部署 Qt DLL 到构建目录（可选，便于分发）
+# 部署 Qt DLL（用于分发）
 cmake --build build_mingw --target deploy
+
+# === 一键打包（编译 + 部署 DLL + 清除凭证 + 打包 zip） ===
+bash package.sh v1.0
 
 # === 原生 Linux ===
 cmake -B build -DCMAKE_BUILD_TYPE=Release
@@ -213,18 +238,6 @@ cmake --build build_linux
 # 产物：build_linux/main
 ```
 
-### 运行（开发调试）
-
-```bash
-# Windows — 直接运行
-./build_mingw/DjiCloudApi.exe
-
-# Linux — 直接运行
-./build/main
-```
-
-构建目录下会自动复制 `config.json` 和 `topic_mappings.json`，可直接修改后运行。
-
 ### 环境要求
 
 | 依赖 | 版本 | 说明 |
@@ -234,6 +247,6 @@ cmake --build build_linux
 | CMake | ≥ 3.10 | 构建系统 |
 | 编译器 | MSVC 2022 / MinGW-w64 / GCC / Clang | Zig 交叉编译使用 Clang |
 
-## License
+## 📄 License
 
 MIT
