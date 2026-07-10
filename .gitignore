@@ -13,8 +13,9 @@ deploy/main.exe
 *.swp
 *.swo
 
-# 配置文件（含MQTT密码等敏感信息）
+# 配置文件（含MQTT密码等敏感信息 — 绝不允许提交）
 config.json
+deploy/config.json
 
 # 抓包输出目录
 captures/

@@ -1,9 +1,0 @@
-{
-    "mqtt": {
-        "host": "172.16.63.166",
-        "port": 31927,
-        "username": "admin",
-        "password": ""
-    },
-    "devices": []
-}
