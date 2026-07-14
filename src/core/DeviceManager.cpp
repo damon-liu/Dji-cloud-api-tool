@@ -543,6 +543,13 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
                 mAircraftOsdCache[childSn] = airOsd;
                 mLastMessageTime[childSn] = QDateTime::currentMSecsSinceEpoch();
 
+                // 子飞机数据来自机场 OSD，机场在线则子飞机也应在线
+                DeviceInfo& childInfo = mDevices[childSn];
+                if (!childInfo.online) {
+                    childInfo.online = true;
+                    emit deviceOnlineChanged(childSn, true);
+                }
+
                 qDebug() << "DeviceManager: mapped child aircraft OSD for" << childSn
                          << "| lat:" << airOsd.latitude << "lon:" << airOsd.longitude
                          << "| battery:" << airOsd.battery_percent << "%"
@@ -568,6 +575,14 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
     if (!info.online) {
         info.online = true;
         emit deviceOnlineChanged(sn, true);
+
+        // 父设备上线时，子飞机也一并上线
+        for (auto it = mDevices.begin(); it != mDevices.end(); ++it) {
+            if (it->parentSn == sn && it->type == DeviceType::Aircraft && !it->online) {
+                it->online = true;
+                emit deviceOnlineChanged(it.key(), true);
+            }
+        }
     }
 
     emit deviceOsdUpdated(sn, topic, formatted);
@@ -584,6 +599,14 @@ void DeviceManager::checkDeviceOffline() {
             emit deviceOnlineChanged(it.key(), false);
             qDebug() << "DeviceManager: device offline" << it.key()
                      << "(no message for" << (now - last) / 1000 << "s)";
+
+            // 父设备离线时，子飞机也一并离线
+            for (auto child = mDevices.begin(); child != mDevices.end(); ++child) {
+                if (child->parentSn == it.key() && child->online) {
+                    child->online = false;
+                    emit deviceOnlineChanged(child.key(), false);
+                }
+            }
         }
     }
 }
