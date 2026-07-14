@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QMqttClient>
 #include <QTimer>
+#include <QHash>
 #include "ConfigStore.h"
 
 // MqttClientManager: 封装 QMqttClient，管理连接和断线重连
@@ -25,11 +26,15 @@ public:
     // 全量替换所有订阅
     void replaceSubscriptions(const QStringList& addTopics, const QStringList& removeTopics);
 
+    // 发布消息到指定 topic（QoS 1）
+    void publish(const QString& topic, const QByteArray& payload);
+
 signals:
     void connected();
     void disconnected();
     void connectionError(const QString& errorMsg);
     void messageReceived(const QString& topic, const QByteArray& payload);
+    void publishCompleted(const QString& topic, bool success, const QString& errorMsg);
 
 private slots:
     void onConnected();
@@ -37,6 +42,7 @@ private slots:
     void onError(QMqttClient::ClientError error);
     void onMessageReceived(const QByteArray& message, const QMqttTopicName& topic);
     void onReconnectTimer();
+    void onMessageSent(qint32 id);
 
 private:
     void startReconnect();
@@ -46,6 +52,7 @@ private:
     QTimer*       mReconnectTimer;
     MqttConfig    mConfig;
     QStringList   mSubscribedTopics;
+    QHash<qint32, QString> mPendingPublishes;  // messageId → topic 映射
     int           mReconnectDelayMs;   // 当前重连延迟
     bool          mIntentionalDisconnect = false;
     static constexpr int MAX_RECONNECT_MS = 30000;  // 最大重连间隔 30s

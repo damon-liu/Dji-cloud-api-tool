@@ -18,6 +18,8 @@ MqttClientManager::MqttClientManager(QObject* parent)
             this, &MqttClientManager::onError);
     connect(mClient, &QMqttClient::messageReceived,
             this, &MqttClientManager::onMessageReceived);
+    connect(mClient, &QMqttClient::messageSent,
+            this, &MqttClientManager::onMessageSent);
     connect(mReconnectTimer, &QTimer::timeout,
             this, &MqttClientManager::onReconnectTimer);
 }
@@ -79,6 +81,28 @@ void MqttClientManager::replaceSubscriptions(const QStringList& addTopics,
                                                const QStringList& removeTopics) {
     unsubscribeTopics(removeTopics);
     subscribeTopics(addTopics);
+}
+
+void MqttClientManager::publish(const QString& topic, const QByteArray& payload) {
+    if (!isConnected()) {
+        emit publishCompleted(topic, false, QStringLiteral("MQTT not connected"));
+        return;
+    }
+
+    qint32 msgId = mClient->publish(QMqttTopicName(topic), payload, 1);  // QoS 1
+    if (msgId < 0) {
+        emit publishCompleted(topic, false, QStringLiteral("publish() returned error"));
+        return;
+    }
+
+    mPendingPublishes[msgId] = topic;
+}
+
+void MqttClientManager::onMessageSent(qint32 id) {
+    if (mPendingPublishes.contains(id)) {
+        QString topic = mPendingPublishes.take(id);
+        emit publishCompleted(topic, true, QString());
+    }
 }
 
 void MqttClientManager::onConnected() {
