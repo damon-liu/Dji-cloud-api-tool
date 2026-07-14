@@ -375,6 +375,10 @@ void MainWindow::setupLayout() {
     mainSplitter->setStretchFactor(1, 1);
 
     setCentralWidget(mainSplitter);
+
+    // 加载 publish 模板 + 初始连接状态
+    mPublishPanel->loadTemplates(QApplication::applicationDirPath() + "/publish_templates.json");
+    mPublishPanel->setConnected(mDevMgr->isConnected());
 }
 
 // ——— 状态栏 ———
@@ -465,6 +469,7 @@ void MainWindow::connectSignals() {
         mDisconnectAct->setEnabled(true);
         mOsdPanel->resume();
         mTopicParsePanel->resume();
+        mPublishPanel->setConnected(true);
         updateStatusBar();
     });
     connect(mDevMgr, &DeviceManager::brokerDisconnected, this, [this]() {
@@ -475,6 +480,7 @@ void MainWindow::connectSignals() {
         mDisconnectAct->setEnabled(false);
         mOsdPanel->pause();
         mTopicParsePanel->pause();
+        mPublishPanel->setConnected(false);
     });
     connect(mDevMgr, &DeviceManager::brokerError, this, [this](const QString& err) {
         statusBar()->showMessage("MQTT 错误: " + err, 5000);
@@ -549,6 +555,13 @@ void MainWindow::connectSignals() {
     });
 
     mOsdPanel->setDeviceManager(mDevMgr);
+
+    // PublishPanel → DeviceManager
+    connect(mPublishPanel, &PublishPanel::publishRequested,
+            mDevMgr, &DeviceManager::publishMessage);
+    // DeviceManager → PublishPanel
+    connect(mDevMgr, &DeviceManager::publishResult,
+            mPublishPanel, &PublishPanel::onPublishResult);
 
     mDeviceTree->rebuild(mDevMgr->topLevelDevices(), mDevMgr->allDevices());
     mDisconnectAct->setEnabled(false);
