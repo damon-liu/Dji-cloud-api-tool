@@ -39,6 +39,10 @@ DeviceManager::DeviceManager(QObject* parent)
     connect(mConfigStore, &ConfigStore::profileSwitched,
             this, &DeviceManager::profileSwitched);
 
+    // Publish 结果转发
+    connect(mMqttManager, &MqttClientManager::publishCompleted,
+            this, &DeviceManager::publishResult);
+
     // 设备离线检测：每 10 秒检查一次
     mOfflineTimer = new QTimer(this);
     mOfflineTimer->setInterval(10000);
@@ -609,4 +613,9 @@ void DeviceManager::checkDeviceOffline() {
             }
         }
     }
+}
+
+void DeviceManager::publishMessage(const QString& topic, const QString& json) {
+    QByteArray payload = json.toUtf8();
+    mMqttManager->publish(topic, payload);
 }

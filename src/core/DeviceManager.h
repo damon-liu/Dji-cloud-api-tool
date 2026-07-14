@@ -77,6 +77,9 @@ public:
     bool removeProfile(const QString& name);
     bool renameProfile(const QString& oldName, const QString& newName);
 
+public slots:
+    void publishMessage(const QString& topic, const QString& json);
+
 signals:
     void brokerConnected();
     void brokerDisconnected();
@@ -87,6 +90,7 @@ signals:
     void deviceOnlineChanged(const QString& sn, bool online);
     void profileSwitched(const QString& name);
     void profileListChanged();
+    void publishResult(const QString& topic, bool success, const QString& message);
 
 private slots:
     void onMqttConnected();
