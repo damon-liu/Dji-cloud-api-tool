@@ -574,6 +574,7 @@ void MainWindow::onDeviceSelected(const QString& sn) {
         // 取消选中：清空所有面板
         mOsdPanel->clear();
         mRawJsonPanel->clear();
+        mPublishPanel->setGatewaySn({});
         mPublishPanel->setTopics({});
         mTopicListWidget->clearTopics();
         mTopicParsePanel->clear();
@@ -592,6 +593,11 @@ void MainWindow::onDeviceSelected(const QString& sn) {
 
     mRawJsonPanel->setJson(mDevMgr->jsonHistory(sn));
     mPublishPanel->setDeviceSn(sn);
+    // gateway_sn: 机场设备 = 自身 SN，飞机设备 = 父机场 SN
+    if (dev->type == DeviceType::Dock)
+        mPublishPanel->setGatewaySn(sn);
+    else if (!dev->parentSn.isEmpty())
+        mPublishPanel->setGatewaySn(dev->parentSn);
     mPublishPanel->setTopics(mDevMgr->topicsForDevice(sn));
 
     // 刷新 topic 列表

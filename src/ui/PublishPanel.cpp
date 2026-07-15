@@ -16,16 +16,18 @@ const QStringList PublishPanel::PUBLISH_PRESETS = {
     "thing/product/{sn}/services",
     "thing/product/{sn}/events_reply",
     "thing/product/{sn}/requests_reply",
+    "thing/product/{gateway_sn}/drc/down",
     "sys/product/{sn}/status_reply",
 };
 
 QMap<QString, QString> PublishPanel::builtinTemplates() {
     return {
-        {"thing/product/{sn}/property/set",  "{\n  \n}"},
-        {"thing/product/{sn}/services",       "{\n  \"services\": []\n}"},
-        {"thing/product/{sn}/events_reply",   "{\n  \"events_reply\": []\n}"},
-        {"thing/product/{sn}/requests_reply", "{\n  \"requests_reply\": []\n}"},
-        {"sys/product/{sn}/status_reply",     "{\n  \"status_reply\": {}\n}"},
+        {"thing/product/{sn}/property/set",        "{\n  \n}"},
+        {"thing/product/{sn}/services",             "{\n  \"services\": []\n}"},
+        {"thing/product/{sn}/events_reply",         "{\n  \"events_reply\": []\n}"},
+        {"thing/product/{sn}/requests_reply",       "{\n  \"requests_reply\": []\n}"},
+        {"thing/product/{gateway_sn}/drc/down",     "{\n  \n}"},
+        {"sys/product/{sn}/status_reply",           "{\n  \"status_reply\": {}\n}"},
     };
 }
 
@@ -126,9 +128,17 @@ void PublishPanel::setDeviceSn(const QString& sn) {
 void PublishPanel::setTopics(const QStringList& /*subscribed*/) {
     mTopicCombo->clear();
     if (!mDeviceSn.isEmpty()) {
-        for (const auto& tpl : PUBLISH_PRESETS)
-            mTopicCombo->addItem(QString(tpl).replace("{sn}", mDeviceSn));
+        for (const auto& tpl : PUBLISH_PRESETS) {
+            QString topic = QString(tpl).replace("{sn}", mDeviceSn);
+            if (!mGatewaySn.isEmpty())
+                topic.replace("{gateway_sn}", mGatewaySn);
+            mTopicCombo->addItem(topic);
+        }
     }
+}
+
+void PublishPanel::setGatewaySn(const QString& sn) {
+    mGatewaySn = sn;
 }
 
 void PublishPanel::setConnected(bool connected) {

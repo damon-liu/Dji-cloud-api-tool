@@ -20,6 +20,7 @@ public:
     explicit PublishPanel(QWidget* parent = nullptr);
 
     void setDeviceSn(const QString& sn);
+    void setGatewaySn(const QString& sn);
     void setTopics(const QStringList& subscribed);
     void setConnected(bool connected);
     void loadTemplates(const QString& path);
@@ -43,6 +44,7 @@ private:
     QPushButton*    mSendBtn       = nullptr;
     QTextEdit*      mHistoryLog    = nullptr;
     QString         mDeviceSn;
+    QString         mGatewaySn;
     bool            mConnected     = false;
     QStringList     mHistoryLines;
     QMap<QString, QString> mTemplates;              // topic → template JSON
