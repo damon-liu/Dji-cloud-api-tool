@@ -350,16 +350,24 @@ void MainWindow::setupLayout() {
 
     leftLayout->addLayout(titleRow);
 
-    // 设备树（占满宽度）
+    // 设备树 + Topic 列表 垂直分割器（可拖拽调整高度）
+    auto* leftSplitter = new QSplitter(Qt::Vertical, this);
+
+    // 设备树
     mDeviceTree = new DeviceTreeWidget(this);
     mDeviceTree->setMinimumWidth(380);
     mDeviceTree->setMaximumWidth(520);
-    leftLayout->addWidget(mDeviceTree, 1);
+    leftSplitter->addWidget(mDeviceTree);
 
-    // === Topic 列表面板（设备树下方） ===
+    // Topic 列表面板（设备树下方）
     mTopicListWidget = new TopicListWidget(this);
-    mTopicListWidget->setMaximumHeight(800);
-    leftLayout->addWidget(mTopicListWidget, 1);
+    leftSplitter->addWidget(mTopicListWidget);
+
+    leftSplitter->setStretchFactor(0, 3);   // 设备树占 3/4
+    leftSplitter->setStretchFactor(1, 1);   // Topic 列表占 1/4
+    leftSplitter->setChildrenCollapsible(false);
+
+    leftLayout->addWidget(leftSplitter, 1);
 
     // === 右侧：OSD + JSON 水平分割 ===
     auto* rightPanel = new QWidget(this);
@@ -436,7 +444,7 @@ void MainWindow::setupLayout() {
     setCentralWidget(mainSplitter);
 
     // 加载 publish 模板 + 初始连接状态
-    mPublishPanel->loadTemplates(QApplication::applicationDirPath() + "/config/publish_templates.json");
+    mPublishPanel->loadTemplates(QApplication::applicationDirPath() + "/config/topic-send-construct/topic-send-construct.md");
     mPublishPanel->setConnected(mDevMgr->isConnected());
 }
 
