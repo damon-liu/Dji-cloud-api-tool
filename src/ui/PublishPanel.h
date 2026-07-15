@@ -9,8 +9,19 @@
 #include <QComboBox>
 #include <QPushButton>
 #include <QLabel>
+#include <QTimer>
 #include <QMap>
+#include <QList>
 #include <QEvent>
+
+// 发送历史条目
+struct HistoryEntry {
+    QString timeStr;
+    QString topic;
+    QString json;       // 发送的 JSON 参数
+    bool    success;
+    QString message;
+};
 
 class PublishPanel : public QWidget {
     Q_OBJECT
@@ -37,17 +48,21 @@ protected:
 private:
     void setupUi();
     void updateSendButtonState();
-    void appendHistory(const QString& topic, bool success, const QString& message);
+    void appendHistory(const QString& topic, const QString& json, bool success, const QString& message);
 
-    QComboBox*      mTopicCombo    = nullptr;
-    QPlainTextEdit* mEditor        = nullptr;
-    QPushButton*    mSendBtn       = nullptr;
-    QTextEdit*      mHistoryLog    = nullptr;
+    QComboBox*      mTopicCombo       = nullptr;
+    QPlainTextEdit* mEditor           = nullptr;
+    QPushButton*    mSendBtn          = nullptr;
+    QPushButton*    mHistoryToggleBtn = nullptr;
+    QTextEdit*      mHistoryLog       = nullptr;
+    QTimer*         mHistoryTimer     = nullptr;   // 成功发送后 3s 自动隐藏
     QString         mDeviceSn;
     QString         mGatewaySn;
-    bool            mConnected     = false;
-    QStringList     mHistoryLines;
-    QMap<QString, QString> mTemplates;              // topic → template JSON
+    QString         mLastSentJson;                 // 发送时暂存 JSON，供结果回调使用
+    bool            mConnected        = false;
+    QList<HistoryEntry> mHistoryEntries;           // 发送历史（含 JSON 参数）
+    QMap<QString, QString> mTemplates;             // topic pattern → template JSON
+    QMap<QString, QString> mTopicToPattern;        // 替换后 topic → pattern（用于模板查找）
     static QMap<QString, QString> builtinTemplates();  // 内置默认模板
     static constexpr int MAX_HISTORY = 20;
 };

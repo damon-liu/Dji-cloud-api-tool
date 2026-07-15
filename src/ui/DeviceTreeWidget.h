@@ -16,6 +16,7 @@ public:
     void rebuild(const QVector<DeviceInfo*>& topLevelDevices,
                  const QVector<DeviceInfo*>& allDevices);
     QString selectedDeviceSn() const;
+    void selectDevice(const QString& sn);
 
 signals:
     void deviceSelected(const QString& sn);

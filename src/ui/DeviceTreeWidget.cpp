@@ -84,6 +84,16 @@ QString DeviceTreeWidget::selectedDeviceSn() const {
     return item->data(0, Qt::UserRole).toString();
 }
 
+void DeviceTreeWidget::selectDevice(const QString& sn) {
+    if (!mItemMap.contains(sn)) return;
+    auto* item = mItemMap[sn];
+    // 展开父节点（如飞机在机场下）
+    if (auto* parent = item->parent())
+        parent->setExpanded(true);
+    setCurrentItem(item);
+    emit deviceSelected(sn);
+}
+
 void DeviceTreeWidget::mousePressEvent(QMouseEvent* event) {
     QTreeWidgetItem* item = itemAt(event->pos());
     if (!item) {

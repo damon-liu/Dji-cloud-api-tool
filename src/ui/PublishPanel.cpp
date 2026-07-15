@@ -22,12 +22,12 @@ const QStringList PublishPanel::PUBLISH_PRESETS = {
 
 QMap<QString, QString> PublishPanel::builtinTemplates() {
     return {
-        {"thing/product/{sn}/property/set",        "{\n  \n}"},
-        {"thing/product/{sn}/services",             "{\n  \"services\": []\n}"},
-        {"thing/product/{sn}/events_reply",         "{\n  \"events_reply\": []\n}"},
-        {"thing/product/{sn}/requests_reply",       "{\n  \"requests_reply\": []\n}"},
-        {"thing/product/{gateway_sn}/drc/down",     "{\n  \n}"},
-        {"sys/product/{sn}/status_reply",           "{\n  \"status_reply\": {}\n}"},
+        {"thing/product/{sn}/property/set",        "{\n    \"tid\": \"6a7bfe89-c386-4043-b600-b518e10096cc\",\n    \"bid\": \"42a19f36-5117-4520-bd13-fd61d818d52e\",\n    \"timestamp\": 1598411295123,\n    \"data\": {\n        \"some_property\": 0\n    }\n}"},
+        {"thing/product/{sn}/services",             "{\n    \"tid\": \"6a7bfe89-c386-4043-b600-b518e10096cc\",\n    \"bid\": \"42a19f36-5117-4520-bd13-fd61d818d52e\",\n    \"timestamp\": 1598411295123,\n    \"gateway\": \"{gateway_sn}\",\n    \"method\": \"some_method\",\n    \"data\": {}\n}"},
+        {"thing/product/{sn}/events_reply",         "{\n    \"tid\": \"6a7bfe89-c386-4043-b600-b518e10096cc\",\n    \"bid\": \"42a19f36-5117-4520-bd13-fd61d818d52e\",\n    \"timestamp\": 1598411295123,\n    \"gateway\": \"{gateway_sn}\",\n    \"method\": \"some_method\",\n    \"data\": {\n        \"result\": 0\n    }\n}"},
+        {"thing/product/{sn}/requests_reply",       "{\n    \"tid\": \"6a7bfe89-c386-4043-b600-b518e10096cc\",\n    \"bid\": \"42a19f36-5117-4520-bd13-fd61d818d52e\",\n    \"timestamp\": 1598411295123,\n    \"gateway\": \"{gateway_sn}\",\n    \"method\": \"some_method\",\n    \"data\": {\n        \"result\": 0,\n        \"output\": {}\n    }\n}"},
+        {"thing/product/{gateway_sn}/drc/down",     "{\n    \"method\": \"drone_control\",\n    \"data\": {}\n}"},
+        {"sys/product/{sn}/status_reply",           "{\n    \"tid\": \"6a7bfe89-c386-4043-b600-b518e10096cc\",\n    \"bid\": \"42a19f36-5117-4520-bd13-fd61d818d52e\",\n    \"timestamp\": 1598411295123,\n    \"method\": \"update_topo\",\n    \"data\": {\n        \"result\": 0\n    }\n}"},
     };
 }
 
@@ -40,9 +40,16 @@ PublishPanel::PublishPanel(QWidget* parent)
     connect(mTopicCombo, &QComboBox::currentTextChanged, this, [this](const QString& text) {
         if (!mEditor->toPlainText().trimmed().isEmpty())
             return;
-        QString tpl = mTemplates.value(text);
-        if (!tpl.isEmpty())
+        // 先通过反向映射找到 pattern，再用 pattern 查模板
+        QString pattern = mTopicToPattern.value(text);
+        QString tpl = mTemplates.value(pattern.isEmpty() ? text : pattern);
+        if (!tpl.isEmpty()) {
+            // 从 topic 中提取 gateway SN（格式: thing/product/{gateway_sn}/... 或 sys/product/{gateway_sn}/...）
+            QStringList parts = text.split('/');
+            if (parts.size() >= 3)
+                tpl.replace("{gateway_sn}", parts[2]);
             mEditor->setPlainText(tpl);
+        }
     });
 
     // 编辑区内容变化时更新按钮状态
@@ -79,14 +86,31 @@ void PublishPanel::setupUi() {
     mEditor = new QPlainTextEdit(this);
     mEditor->setFont(QFont("Consolas", 10));
     mEditor->setLineWrapMode(QPlainTextEdit::NoWrap);
-    mEditor->setPlaceholderText(QString::fromUtf8("输入要发送的 JSON..."));
+    mEditor->setPlaceholderText("");
     mEditor->setStyleSheet(
         "QPlainTextEdit { background: #fff; border: 1px solid #dadce0; "
-        "border-radius: 4px; font-family: 'Consolas', monospace; font-size: 12px; padding: 6px; }");
+        "border-radius: 4px; font-family: 'Consolas', monospace; font-size: 12px; "
+        "padding: 6px; color: #333; }");
     layout->addWidget(mEditor, 1);
 
-    // 发送按钮
+    // 发送按钮 + 历史展开按钮
     auto* btnLayout = new QHBoxLayout;
+
+    mHistoryToggleBtn = new QPushButton(QString::fromUtf8("📋 历史"), this);
+    mHistoryToggleBtn->setCheckable(true);
+    mHistoryToggleBtn->setCursor(Qt::PointingHandCursor);
+    mHistoryToggleBtn->setStyleSheet(
+        "QPushButton { border: 1px solid #dadce0; border-radius: 4px; "
+        "padding: 4px 12px; font-size: 12px; background: #fff; color: #5f6368; }"
+        "QPushButton:hover { background: #f1f3f4; }"
+        "QPushButton:checked { background: #e8f0fe; color: #1a73e8; border-color: #1a73e8; }");
+    connect(mHistoryToggleBtn, &QPushButton::toggled, this, [this](bool checked) {
+        mHistoryLog->setVisible(checked);
+        if (checked)
+            mHistoryTimer->stop();
+    });
+    btnLayout->addWidget(mHistoryToggleBtn);
+
     btnLayout->addStretch();
     mSendBtn = new QPushButton(QString::fromUtf8("发送"), this);
     mSendBtn->setEnabled(false);
@@ -104,21 +128,31 @@ void PublishPanel::setupUi() {
         QString json  = mEditor->toPlainText().trimmed();
         if (topic.isEmpty() || json.isEmpty())
             return;
+        mLastSentJson = json;  // 暂存 JSON，供结果回调使用
         emit publishRequested(topic, json);
     });
 
-    // 发送历史（只读）
+    // 发送历史（只读），默认隐藏
     mHistoryLog = new QTextEdit(this);
     mHistoryLog->setReadOnly(true);
-    mHistoryLog->setMaximumHeight(80);
+    mHistoryLog->setMaximumHeight(100);
     mHistoryLog->setFont(QFont("Consolas", 9));
     mHistoryLog->setStyleSheet(
         "QTextEdit { background: #fafafa; border: 1px solid #e0e0e0; "
         "border-radius: 4px; font-family: 'Consolas', monospace; font-size: 11px; "
         "padding: 4px; color: #333; }");
-    mHistoryLog->setPlaceholderText(QString::fromUtf8("发送历史（双击恢复）"));
+    mHistoryLog->setPlaceholderText(QString::fromUtf8("发送历史（双击恢复 topic 和参数）"));
     mHistoryLog->viewport()->installEventFilter(this);
+    mHistoryLog->setVisible(false);
     layout->addWidget(mHistoryLog);
+
+    // 成功发送后 3s 自动隐藏历史
+    mHistoryTimer = new QTimer(this);
+    mHistoryTimer->setSingleShot(true);
+    connect(mHistoryTimer, &QTimer::timeout, this, [this]() {
+        mHistoryLog->setVisible(false);
+        mHistoryToggleBtn->setChecked(false);
+    });
 }
 
 void PublishPanel::setDeviceSn(const QString& sn) {
@@ -127,11 +161,13 @@ void PublishPanel::setDeviceSn(const QString& sn) {
 
 void PublishPanel::setTopics(const QStringList& /*subscribed*/) {
     mTopicCombo->clear();
+    mTopicToPattern.clear();
     if (!mDeviceSn.isEmpty()) {
         for (const auto& tpl : PUBLISH_PRESETS) {
             QString topic = QString(tpl).replace("{sn}", mDeviceSn);
             if (!mGatewaySn.isEmpty())
                 topic.replace("{gateway_sn}", mGatewaySn);
+            mTopicToPattern[topic] = tpl;  // 反向映射必须先于 addItem（addItem 触发 currentTextChanged）
             mTopicCombo->addItem(topic);
         }
     }
@@ -155,26 +191,43 @@ void PublishPanel::updateSendButtonState() {
 void PublishPanel::onPublishResult(const QString& topic, bool success, const QString& message) {
     QString msg = success ? QString::fromUtf8("发送成功")
                           : QString::fromUtf8("发送失败: ") + message;
-    appendHistory(topic, success, msg);
+    appendHistory(topic, mLastSentJson, success, msg);
+    mLastSentJson.clear();
+
+    // 成功发送后显示历史并 3s 自动隐藏
+    if (success) {
+        mHistoryLog->setVisible(true);
+        mHistoryToggleBtn->setChecked(true);
+        mHistoryTimer->start(3000);
+    }
 }
 
-void PublishPanel::appendHistory(const QString& topic, bool success, const QString& message) {
+void PublishPanel::appendHistory(const QString& topic, const QString& json, bool success, const QString& message) {
     QString timeStr = QTime::currentTime().toString("HH:mm:ss");
-    QString icon    = success ? QString::fromUtf8("✅") : QString::fromUtf8("❌");
-    QString line    = QString("[%1] %2 %3  %4")
-                          .arg(timeStr, icon, topic, message);
 
-    mHistoryLines.prepend(line);
-    if (mHistoryLines.size() > MAX_HISTORY)
-        mHistoryLines.removeLast();
+    HistoryEntry entry;
+    entry.timeStr = timeStr;
+    entry.topic   = topic;
+    entry.json    = json;
+    entry.success = success;
+    entry.message = message;
 
-    // 用富文本展示
+    mHistoryEntries.prepend(entry);
+    if (mHistoryEntries.size() > MAX_HISTORY)
+        mHistoryEntries.removeLast();
+
+    // 用富文本展示（含 JSON 摘要）
     QString html;
-    for (const auto& l : mHistoryLines) {
-        if (l.contains(QString::fromUtf8("✅")))
-            html += QString("<span style='color:#1e8e3e'>%1</span><br>").arg(l.toHtmlEscaped());
-        else
-            html += QString("<span style='color:#d93025'>%1</span><br>").arg(l.toHtmlEscaped());
+    for (const auto& e : mHistoryEntries) {
+        QString icon = e.success ? QString::fromUtf8("✅") : QString::fromUtf8("❌");
+        QString color = e.success ? "#1e8e3e" : "#d93025";
+        // JSON 截短显示（最多 80 字符）
+        QString jsonPreview = e.json.left(80);
+        if (e.json.length() > 80)
+            jsonPreview += "...";
+        html += QString("<span style='color:%1'>[%2] %3 %4  %5</span>"
+                        "<span style='color:#80868b; font-size:10px;'>  %6</span><br>")
+                    .arg(color, e.timeStr, icon, e.topic, e.message, jsonPreview.toHtmlEscaped());
     }
     mHistoryLog->setHtml(html);
 }
@@ -184,16 +237,12 @@ bool PublishPanel::eventFilter(QObject* obj, QEvent* event) {
         QTextCursor cursor = mHistoryLog->cursorForPosition(
             static_cast<QMouseEvent*>(event)->pos());
         int blockNum = cursor.block().blockNumber();
-        if (blockNum >= 0 && blockNum < mHistoryLines.size()) {
-            const QString& line = mHistoryLines[blockNum];
-            // 格式: "[HH:mm:ss] ✅ topic message"
-            // 跳过 "[HH:mm:ss] " (11 chars) + emoji(1 char) + " "
-            int topicStart = 13;
-            int topicEnd   = line.indexOf(' ', topicStart);
-            QString topic  = (topicEnd > 0) ? line.mid(topicStart, topicEnd - topicStart)
-                                            : line.mid(topicStart);
-            if (!topic.isEmpty())
-                mTopicCombo->setCurrentText(topic);
+        if (blockNum >= 0 && blockNum < mHistoryEntries.size()) {
+            const HistoryEntry& entry = mHistoryEntries[blockNum];
+            if (!entry.topic.isEmpty())
+                mTopicCombo->setCurrentText(entry.topic);
+            if (!entry.json.isEmpty())
+                mEditor->setPlainText(entry.json);
         }
         return true;
     }

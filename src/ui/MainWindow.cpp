@@ -10,6 +10,9 @@
 #include <QFrame>
 #include <QInputDialog>
 #include <QToolButton>
+#include <QMenu>
+#include <QDesktopServices>
+#include <QUrl>
 #include <QFile>
 #include "TopicMapping.h"
 
@@ -116,6 +119,36 @@ void MainWindow::applyStyle() {
         }
         QToolBar QToolButton#configBtn:hover {
             background: #f1f3f4;
+        }
+        QToolBar QToolButton#helpBtn {
+            border: 1px solid #dadce0;
+            background: #fff;
+        }
+        QToolBar QToolButton#helpBtn:hover {
+            background: #f1f3f4;
+        }
+        QToolBar QToolButton#helpBtn::menu-indicator {
+            image: none;
+        }
+        QMenu {
+            background: #ffffff;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            padding: 4px 0;
+        }
+        QMenu::item {
+            padding: 8px 32px 8px 16px;
+            font-size: 13px;
+            color: #333;
+        }
+        QMenu::item:selected {
+            background: #e8f0fe;
+            color: #1a73e8;
+        }
+        QMenu::separator {
+            height: 1px;
+            background: #e0e0e0;
+            margin: 4px 8px;
         }
         QSplitter::handle {
             background: #e0e0e0;
@@ -234,6 +267,25 @@ void MainWindow::setupToolBar() {
         }
     });
 
+    // 帮助按钮（配置按钮右侧）
+    auto* helpBtn = new QToolButton(this);
+    helpBtn->setText("💡 帮助");
+    helpBtn->setObjectName("helpBtn");
+    helpBtn->setPopupMode(QToolButton::InstantPopup);
+    helpBtn->setCursor(Qt::PointingHandCursor);
+    {
+        auto* menu = new QMenu(helpBtn);
+        menu->addAction("🛠️ DJI-CLOUD-API-TOOL地址", this, []() {
+            QDesktopServices::openUrl(QUrl("https://github.com/damon-liu/Dji-cloud-api-tool"));
+        });
+        menu->addSeparator();
+        menu->addAction("📖 大疆上云 API 文档", this, []() {
+            QDesktopServices::openUrl(QUrl("https://developer.dji.com/doc/cloud-api-tutorial/cn/api-reference/dock-to-cloud/mqtt/dock/dock3/properties.html"));
+        });
+        helpBtn->setMenu(menu);
+    }
+    toolbar->addWidget(helpBtn);
+
     // Spacer: pushes everything after it to the right
     auto* spacer = new QWidget(this);
     spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
@@ -348,12 +400,20 @@ void MainWindow::setupLayout() {
     mRightSplitter->setStretchFactor(1, 1);
     mRightSplitter->setSizes({600, 440});
 
-    rightLayout->addWidget(mRightSplitter, 1);
+    // 垂直分割器：上方 OSD/JSON 区域 | 下方 Topic 下发面板（支持拖拽调整高度）
+    auto* verticalSplitter = new QSplitter(Qt::Vertical, this);
+    verticalSplitter->addWidget(mRightSplitter);
+    verticalSplitter->setStretchFactor(0, 1);
 
     // Topic 下发（折叠）
     mPublishPanel = new PublishPanel(this);
     mPublishPanel->setVisible(false);
-    mPublishPanel->setMaximumHeight(200);
+    mPublishPanel->setMinimumHeight(120);  // 保证基本可操作区域
+
+    verticalSplitter->addWidget(mPublishPanel);
+    verticalSplitter->setStretchFactor(1, 0);
+
+    rightLayout->addWidget(verticalSplitter, 1);
 
     mTogglePublishBtn = new QPushButton("▶ Topic 下发", this);
     mTogglePublishBtn->setObjectName("publishToggle");
@@ -365,7 +425,6 @@ void MainWindow::setupLayout() {
     });
 
     rightLayout->addWidget(mTogglePublishBtn);
-    rightLayout->addWidget(mPublishPanel);
 
     // === 主分割器 ===
     auto* mainSplitter = new QSplitter(Qt::Horizontal, this);
@@ -495,10 +554,12 @@ void MainWindow::connectSignals() {
     });
 
     connect(mDevMgr, &DeviceManager::deviceAdded, this, [this]() {
+        QString prevSelected = mDeviceTree->selectedDeviceSn();
         mDeviceTree->rebuild(mDevMgr->topLevelDevices(), mDevMgr->allDevices());
-        // Refresh topic list for currently selected device
-        QString currentSn = mDeviceTree->selectedDeviceSn();
-        refreshTopicList(currentSn);
+        // 恢复之前的选中状态
+        if (!prevSelected.isEmpty())
+            mDeviceTree->selectDevice(prevSelected);
+        refreshTopicList(prevSelected);
         updateStatusBar();
     });
     connect(mDevMgr, &DeviceManager::deviceRemoved, this, [this]() {
@@ -512,7 +573,11 @@ void MainWindow::connectSignals() {
     connect(mDevMgr, &DeviceManager::deviceOnlineChanged,
             this, [this](const QString& sn, bool online) {
         Q_UNUSED(sn) Q_UNUSED(online)
+        QString prevSelected = mDeviceTree->selectedDeviceSn();
         mDeviceTree->rebuild(mDevMgr->topLevelDevices(), mDevMgr->allDevices());
+        // rebuild 会清空选中，恢复之前自动选中的设备
+        if (!prevSelected.isEmpty())
+            mDeviceTree->selectDevice(prevSelected);
     });
 
     // TopicParsePanel: topic 选中变化 → 更新解析面板（仅显示已启用/订阅的 topic）
@@ -588,6 +653,18 @@ void MainWindow::onDeviceSelected(const QString& sn) {
 
     const AircraftOsd* airOsd = mDevMgr->latestAircraftOsd(sn);
     const DockOsd* dockOsd   = mDevMgr->latestDockOsd(sn);
+
+    // 机场设备：同时查找子飞机的 OSD 一起展示
+    if (dev->type == DeviceType::Dock && !airOsd) {
+        const auto& allDevs = mDevMgr->allDevices();
+        for (auto* d : allDevs) {
+            if (d->parentSn == sn && d->type == DeviceType::Aircraft) {
+                airOsd = mDevMgr->latestAircraftOsd(d->sn);
+                break;
+            }
+        }
+    }
+
     mOsdPanel->showOsd(dev, airOsd, dockOsd, mDevMgr->latestRawJson(sn));
     mOsdPanel->setCurrentSn(sn);
 
@@ -619,6 +696,10 @@ void MainWindow::onDeviceSelected(const QString& sn) {
 }
 
 void MainWindow::onOsdUpdated(const QString& sn, const QString& topic, const QString& rawJson) {
+    // 首次收到数据时自动选中该设备，无需手动点击
+    if (mDeviceTree->selectedDeviceSn().isEmpty())
+        mDeviceTree->selectDevice(sn);
+
     if (mDeviceTree->selectedDeviceSn() != sn)
         return;
 
