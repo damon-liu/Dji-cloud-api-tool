@@ -16,6 +16,7 @@ deploy/main.exe
 # 配置文件（含MQTT密码等敏感信息 — 绝不允许提交）
 config.json
 deploy/config.json
+docs/wechat_config.json
 
 # deploy 目录中的 Qt 运行时（本地通过 windeployqt 生成，不提交）
 deploy/*.dll

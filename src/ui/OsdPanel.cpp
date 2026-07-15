@@ -138,8 +138,10 @@ void OsdPanel::showOsd(const DeviceInfo* device,
         if (dockOsd && dockOsd->valid)
             showDockOsd(*dockOsd);
 
-        if (aircraftOsd && aircraftOsd->valid) {
-            if (typeChanged) {
+        // 子飞机面板：数据到达时自动显示，不仅依赖 typeChanged
+        bool hasAircraft = (aircraftOsd && aircraftOsd->valid);
+        if (hasAircraft) {
+            if (typeChanged || mAircraftPanel->isHidden()) {
                 mAircraftPanel->show();
                 mAircraftPanel->setTitle(QString::fromUtf8("\xe2\x9c\x88 \xe9\xa3\x9e\xe6\x9c\xba\xe4\xbf\xa1\xe6\x81\xaf"));
             }

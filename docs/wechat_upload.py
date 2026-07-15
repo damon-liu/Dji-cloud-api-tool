@@ -31,9 +31,9 @@ from PIL import Image
 
 # ── 路径配置 ──────────────────────────────────────────────
 SCRIPT_DIR = Path(__file__).resolve().parent
-MD_FILE = SCRIPT_DIR / "user-guide.md"
-HTML_OUTPUT = SCRIPT_DIR / "user-guide-wechat.html"
+HTML_OUTPUT = SCRIPT_DIR / "wechat-output.html"
 IMAGE_DIR = Path(r"C:\Users\lhx\AppData\Roaming\Typora\typora-user-images")
+CONFIG_FILE = SCRIPT_DIR / "wechat_config.json"
 
 # ── 微信 API ──────────────────────────────────────────────
 WECHAT_TOKEN_URL = "https://api.weixin.qq.com/cgi-bin/token"
@@ -422,18 +422,48 @@ def create_draft(token: str, title: str, content_html: str, thumb_media_id: str 
 
 
 def main():
-    parser = argparse.ArgumentParser(description="上传用户指南到微信公众号草稿箱")
-    parser.add_argument("--appid", required=True, help="微信公众号 AppID")
-    parser.add_argument("--secret", required=True, help="微信公众号 AppSecret")
+    parser = argparse.ArgumentParser(description="上传 Markdown 文章到微信公众号草稿箱")
+    parser.add_argument("--appid", default=None, help="微信公众号 AppID（可省略，从 wechat_config.json 读取）")
+    parser.add_argument("--secret", default=None, help="微信公众号 AppSecret（可省略，从 wechat_config.json 读取）")
+    parser.add_argument("--file", default=None, help="Markdown 文件路径（默认: user-guide.md）")
+    parser.add_argument("--title", default=None, help="文章标题（默认: 从 Markdown 第一个 H1 提取）")
     args = parser.parse_args()
+
+    # 优先命令行，其次配置文件
+    appid = args.appid
+    secret = args.secret
+
+    if (not appid or not secret) and CONFIG_FILE.exists():
+        cfg = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        if not appid:
+            appid = cfg.get("appid", "")
+        if not secret:
+            secret = cfg.get("appsecret", "")
+        if appid and secret:
+            print(f"📋 从 {CONFIG_FILE} 读取凭证")
+
+    if not appid or not secret:
+        sys.exit("❌ 请提供 --appid 和 --secret，或在 wechat_config.json 中配置。")
+
+    # 确定输入文件
+    if args.file:
+        md_file = Path(args.file)
+    else:
+        md_file = SCRIPT_DIR / "user-guide.md"
 
     # 1. 获取 access_token
     print("🔑 获取 access_token...")
-    token = get_access_token(args.appid, args.secret)
+    token = get_access_token(appid, secret)
 
     # 2. 读取 Markdown
-    print(f"\n📄 读取 Markdown: {MD_FILE}")
-    md_text = MD_FILE.read_text(encoding="utf-8")
+    print(f"\n📄 读取 Markdown: {md_file}")
+    md_text = md_file.read_text(encoding="utf-8")
+
+    # 2b. 提取标题（第一个 H1）
+    title = args.title
+    if not title:
+        m = re.search(r'^#\s+(.+)', md_text, re.MULTILINE)
+        title = m.group(1).strip() if m else "未命名文章"
 
     # 3. 找出所有本地图片
     local_images = set()
@@ -470,7 +500,6 @@ def main():
 
     # 7. 创建草稿
     print(f"\n📝 创建草稿...")
-    title = "DJI上云API监控客户端指南"
     draft_id = create_draft(token, title, html, thumb_media_id)
 
     print(f"\n🎉 全部完成！")

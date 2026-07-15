@@ -36,10 +36,8 @@ PublishPanel::PublishPanel(QWidget* parent)
 {
     setupUi();
 
-    // topic 切换时自动填入模板（仅编辑区为空时）
+    // topic 切换时自动填入对应模板
     connect(mTopicCombo, &QComboBox::currentTextChanged, this, [this](const QString& text) {
-        if (!mEditor->toPlainText().trimmed().isEmpty())
-            return;
         // 先通过反向映射找到 pattern，再用 pattern 查模板
         QString pattern = mTopicToPattern.value(text);
         QString tpl = mTemplates.value(pattern.isEmpty() ? text : pattern);
@@ -250,51 +248,84 @@ bool PublishPanel::eventFilter(QObject* obj, QEvent* event) {
 }
 
 void PublishPanel::loadTemplates(const QString& path) {
-    mTemplates = builtinTemplates();  // 默认值兜底
+    mTemplates = builtinTemplates();  // 兜底（含 drc/down 等 MD 中没有的模板）
 
     QFile file(path);
     if (!file.exists()) {
-        // 自动创建默认模板文件
-        QJsonObject root;
-        QJsonArray arr;
-        auto builtins = builtinTemplates();
-        for (auto it = builtins.begin(); it != builtins.end(); ++it) {
-            QJsonObject item;
-            item["topic"]    = it.key();
-            item["template"] = it.value();
-            arr.append(item);
-        }
-        root["templates"] = arr;
-        QJsonDocument doc(root);
-        if (file.open(QIODevice::WriteOnly)) {
-            file.write(doc.toJson(QJsonDocument::Indented));
-            file.close();
-            qDebug() << "PublishPanel: created default" << path;
-        }
+        qWarning() << "PublishPanel: template file not found:" << path << ", using builtins";
+        return;
+    }
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << "PublishPanel: cannot open" << path << ", using builtins";
         return;
     }
 
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "PublishPanel: cannot open" << path;
-        return;
-    }
+    // ——— 解析 topic-send-construct.md ———
+    // 格式: *topic*: <pattern> 后跟 ```json ... ``` 代码块
+    QString currentTopic;
+    QString currentJson;
+    bool    inCodeBlock = false;
+    QMap<QString, QString> parsed;  // MD pattern → template JSON
 
-    QJsonParseError err;
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &err);
+    while (!file.atEnd()) {
+        QString line = QString::fromUtf8(file.readLine()).trimmed();
+
+        // 匹配 *topic*: <pattern>
+        if (!inCodeBlock && line.startsWith("*topic*:")) {
+            if (!currentTopic.isEmpty() && !currentJson.isEmpty())
+                parsed[currentTopic] = currentJson;
+            currentTopic = line.mid(8).trimmed();   // 去掉 "*topic*:" 前缀
+            currentJson.clear();
+        }
+        // 代码块开始
+        else if (!inCodeBlock && !currentTopic.isEmpty() &&
+                 (line == "```json" || line == "```")) {
+            inCodeBlock = true;
+            currentJson.clear();
+        }
+        // 代码块结束
+        else if (inCodeBlock && line == "```") {
+            inCodeBlock = false;
+        }
+        // 代码块内容
+        else if (inCodeBlock) {
+            if (!currentJson.isEmpty())
+                currentJson += "\n";
+            currentJson += line;
+        }
+    }
+    // 保存最后一个
+    if (!currentTopic.isEmpty() && !currentJson.isEmpty())
+        parsed[currentTopic] = currentJson;
     file.close();
 
-    if (err.error != QJsonParseError::NoError) {
-        qWarning() << "PublishPanel: JSON parse error in" << path << ":" << err.errorString();
+    if (parsed.isEmpty()) {
+        qWarning() << "PublishPanel: no templates parsed from MD, using builtins";
         return;
     }
 
-    QJsonArray arr = doc.object().value("templates").toArray();
-    for (const auto& v : arr) {
-        QJsonObject item = v.toObject();
-        QString topic    = item.value("topic").toString();
-        QString tpl      = item.value("template").toString();
-        if (!topic.isEmpty())
-            mTemplates[topic] = tpl;
+    // 将 MD 模板合并到 mTemplates（key 映射为 PUBLISH_PRESETS 的 {sn} 格式）
+    for (auto it = parsed.begin(); it != parsed.end(); ++it) {
+        QString mdPattern = it.key();
+
+        // 跳过 drc/up（上行 topic，下发用的是 drc/down，保留 builtin 兜底）
+        if (mdPattern.contains("drc/up"))
+            continue;
+
+        // key 映射: {gateway_sn} → {sn}，匹配 PUBLISH_PRESETS
+        QString key = mdPattern;
+        key.replace("{gateway_sn}", "{sn}");
+
+        QString tpl = it.value();
+        // "gateway":"sn" → "gateway":"{gateway_sn}" 占位符（运行时由构造函数提取实际 SN）
+        tpl.replace("\"gateway\": \"sn\"", "\"gateway\": \"{gateway_sn}\"");
+        tpl.replace("\"gateway\":\"sn\"",  "\"gateway\":\"{gateway_sn}\"");
+        tpl.replace("\"gateway\": \"SN\"", "\"gateway\": \"{gateway_sn}\"");
+        tpl.replace("\"gateway\":\"SN\"",  "\"gateway\":\"{gateway_sn}\"");
+
+        mTemplates[key] = tpl;
     }
-    qDebug() << "PublishPanel: loaded" << mTemplates.size() << "publish templates";
+
+    qDebug() << "PublishPanel: loaded" << parsed.size() << "templates from MD,"
+             << mTemplates.size() << "total (with builtins)";
 }
