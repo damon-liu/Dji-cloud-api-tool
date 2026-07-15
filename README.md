@@ -1,7 +1,6 @@
 # DJI Cloud API 监控客户端
 
 
-<img width="430" height="430" alt="img_v3_0213k_6b03e120-c73b-43f4-812a-c9fc2a9ca33g" src="https://github.com/user-attachments/assets/626fc73a-3a74-4514-b5c4-1829dd6f04c6" />关注我，后期版本更新均在公众号上通知！！！
 
 基于 Qt 6 C++ 的桌面应用，连接 DJI Cloud API MQTT Broker，订阅无人机/机场的遥测主题，实时展示 OSD（机载系统数据）并自动翻译 JSON 字段为中文。
 
@@ -255,6 +254,9 @@ cmake --build build_linux
 | CMake | ≥ 3.10 | 构建系统 |
 | 编译器 | MSVC 2022 / MinGW-w64 / GCC / Clang | Zig 交叉编译使用 Clang |
 
+关注我，后期版本更新均在公众号上通知！！
+
+<img width="430" height="430" alt="img_v3_0213k_6b03e120-c73b-43f4-812a-c9fc2a9ca33g" src="https://github.com/user-attachments/assets/626fc73a-3a74-4514-b5c4-1829dd6f04c6" />
 ## 📄 License
 
 MIT
