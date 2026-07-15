@@ -530,6 +530,27 @@ void MainWindow::connectSignals() {
         mTopicParsePanel->resume();
         mPublishPanel->setConnected(true);
         updateStatusBar();
+
+        // 连接成功后自动选中首个设备（优先子飞机，方便查看详细数据）
+        if (!mUserDeselected && mDeviceTree->selectedDeviceSn().isEmpty()) {
+            const auto& allDevs = mDevMgr->allDevices();
+            const DeviceInfo* target = nullptr;
+            // 优先选子飞机
+            for (auto* d : allDevs) {
+                if (d->type == DeviceType::Aircraft && !d->parentSn.isEmpty()) {
+                    target = d;
+                    break;
+                }
+            }
+            // 无子飞机则选首个顶级设备
+            if (!target) {
+                const auto& topLevel = mDevMgr->topLevelDevices();
+                if (!topLevel.isEmpty())
+                    target = topLevel.first();
+            }
+            if (target)
+                mDeviceTree->selectDevice(target->sn);
+        }
     });
     connect(mDevMgr, &DeviceManager::brokerDisconnected, this, [this]() {
         mStatusLabel->setText("🔴 未连接");
@@ -540,6 +561,7 @@ void MainWindow::connectSignals() {
         mOsdPanel->pause();
         mTopicParsePanel->pause();
         mPublishPanel->setConnected(false);
+        mUserDeselected = false;
     });
     connect(mDevMgr, &DeviceManager::brokerError, this, [this](const QString& err) {
         statusBar()->showMessage("MQTT 错误: " + err, 5000);
@@ -550,6 +572,7 @@ void MainWindow::connectSignals() {
         mRawJsonPanel->clear();
         mTopicListWidget->clearTopics();
         mTopicParsePanel->clear();
+        mUserDeselected = false;
         updateStatusBar();
     });
 
@@ -636,7 +659,8 @@ void MainWindow::connectSignals() {
 // ——— 设备选择 ———
 void MainWindow::onDeviceSelected(const QString& sn) {
     if (sn.isEmpty()) {
-        // 取消选中：清空所有面板
+        // 用户手动取消选中，清空所有面板
+        mUserDeselected = true;
         mOsdPanel->clear();
         mRawJsonPanel->clear();
         mPublishPanel->setGatewaySn({});
@@ -683,12 +707,8 @@ void MainWindow::onDeviceSelected(const QString& sn) {
     // 启用操作按钮
     mDeleteDeviceBtn->setEnabled(true);
 
-    // 根据设备类型控制添加按钮
-    if (dev->type == DeviceType::Aircraft) {
-        mAddDeviceBtn->setEnabled(false);
-    } else {
-        mAddDeviceBtn->setEnabled(true);
-    }
+    // 添加按钮始终可用
+    mAddDeviceBtn->setEnabled(true);
 
     // 更新 TopicParsePanel
     QString selectedTopic = mTopicListWidget->selectedTopic();
@@ -696,10 +716,6 @@ void MainWindow::onDeviceSelected(const QString& sn) {
 }
 
 void MainWindow::onOsdUpdated(const QString& sn, const QString& topic, const QString& rawJson) {
-    // 首次收到数据时自动选中该设备，无需手动点击
-    if (mDeviceTree->selectedDeviceSn().isEmpty())
-        mDeviceTree->selectDevice(sn);
-
     if (mDeviceTree->selectedDeviceSn() != sn)
         return;
 
@@ -708,6 +724,18 @@ void MainWindow::onOsdUpdated(const QString& sn, const QString& topic, const QSt
     if (dev) {
         const AircraftOsd* airOsd = mDevMgr->latestAircraftOsd(sn);
         const DockOsd* dockOsd   = mDevMgr->latestDockOsd(sn);
+
+        // 机场设备：同时查找子飞机的 OSD 一起展示
+        if (dev->type == DeviceType::Dock && !airOsd) {
+            const auto& allDevs = mDevMgr->allDevices();
+            for (auto* d : allDevs) {
+                if (d->parentSn == sn && d->type == DeviceType::Aircraft) {
+                    airOsd = mDevMgr->latestAircraftOsd(d->sn);
+                    break;
+                }
+            }
+        }
+
         mOsdPanel->showOsd(dev, airOsd, dockOsd, mDevMgr->latestRawJson(sn, topic));
     }
 
@@ -736,7 +764,7 @@ void MainWindow::onAddDevice() {
     if (!selectedSn.isEmpty())
         selectedDev = mDevMgr->device(selectedSn);
 
-    // Determine if we're adding a child device to a Dock
+    // 选中机场时添加子飞机，选中飞机或无选中时添加顶级设备
     bool addingChild = (selectedDev && selectedDev->type == DeviceType::Dock);
 
     QString sn;
@@ -744,7 +772,6 @@ void MainWindow::onAddDevice() {
     DeviceType type;
 
     if (addingChild) {
-        // Adding a child Aircraft to the selected Dock
         sn = QInputDialog::getText(this, "添加手飞无人机",
             QString("为机场「%1」添加手飞无人机\n设备序列号 (SN):").arg(selectedDev->name));
         if (sn.trimmed().isEmpty()) return;
@@ -755,7 +782,6 @@ void MainWindow::onAddDevice() {
             name = sn.trimmed();
         type = DeviceType::Aircraft;
     } else {
-        // Adding a top-level device
         QString typeStr = QInputDialog::getItem(this, "添加设备", "选择设备类型:",
             {"Dock (机场)", "Pilot (手飞飞机)"}, 0, false);
         if (typeStr.isEmpty()) return;

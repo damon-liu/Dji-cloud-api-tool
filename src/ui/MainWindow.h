@@ -60,6 +60,9 @@ private:
     TopicParsePanel*  mTopicParsePanel;
     TopicMapping*     mTopicMapping;
 
+    // 用户手动取消选中后不再自动选中
+    bool              mUserDeselected = false;
+
     // Stylesheet helper
     void applyStyle();
 };
