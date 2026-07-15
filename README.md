@@ -10,7 +10,7 @@
 
 前往 [Releases](https://github.com/damon-liu/Dji-cloud-api-tool/releases) 页面下载最新版本：
 
-- **`DjiCloudApiTool-v1.0.zip`** — 完整包（exe + Qt 运行库 + 配置模板），解压即用
+- **`DjiCloudApiTool-v1.0.1.zip`** — 完整包（exe + Qt 运行库 + 配置模板），解压即用
 
 > 无需安装 Qt 或其他依赖，Windows 10/11 x64 下直接运行。首次启动自动生成 `config.json`。
 
@@ -19,22 +19,24 @@
 - **MQTT 连接管理** — 支持 SSL/TLS，可配置 Broker 地址/端口/账号密码，连接状态实时显示
 - **多环境配置切换** — 支持多个 Connection 配置，一键切换生产/测试环境，互不干扰
 - **设备树形管理** — 机场 + 无人机层级展示，支持新增/删除/重命名，在线状态实时指示
+- **机场飞机自动发现** — 连接机场后自动识别并添加关联的无人机（从机场 OSD 中提取）
 - **OSD 遥测面板** — 机场信息与飞机信息并排显示，刷新间隔可调（1s/2s/5s/10s）
 - **JSON 字段自动翻译** — 英文字段自动翻译为中文，按分组展示，点击字段名即可复制原始 key
 - **原始 JSON 面板** — 按 Topic 过滤 MQTT 报文，支持暂停滚动、一键复制、清除历史记录
 - **Topic 订阅管理** — 每个设备独立管理 Topic，支持新增/删除/启用/禁用/拖拽排序；添加机场自动创建 7 个常用 Topic
+- **Topic 下发** — 预设常用下发 Topic，自动匹配参数模板（从 `topic-send-construct.md` 解析），支持 JSON 编辑、发送历史、双击恢复
 - **📦 抓包导出** — 一键抓包，数据实时写入 `captures/` 文件夹，停止后弹窗显示路径和记录条数
 - **自动重连** — 指数退避（1s → 2s → 4s → … → 最长 30s），恢复后自动刷新
 - **断线保护** — 断线自动暂停面板刷新，手动暂停优先级更高，不打断数据查看
 - **免安装绿色运行** — 单 zip 包，解压即用，零依赖
 
-> 🔜 v1.1 预告：JSON 解析优化、Topic 下发功能、暗色模式支持。详见 [用户指南](docs/user-guide.md)。
+> 🔜 v1.1 预告：JSON 解析优化、暗色模式支持、批量设备管理。详见 [用户指南](docs/user-guide.md)。
 
 ## 🚶 快速开始
 
 ### Windows
 
-从 [Releases](https://github.com/damon-liu/Dji-cloud-api-tool/releases/latest) 下载 `DjiCloudApiTool-v1.0.zip`，解压后双击 `DjiCloudApi.exe` 即可运行。
+从 [Releases](https://github.com/damon-liu/Dji-cloud-api-tool/releases/latest) 下载 `DjiCloudApiTool-v1.0.1.zip`，解压后双击 `DjiCloudApi.exe` 即可运行。
 
 **三步上手：**
 
@@ -132,7 +134,8 @@ MQTT 消息 → MqttClientManager::messageReceived
 | `TopicManager` | 主题到设备 SN 的映射及反向索引；发出 `topicsChanged` 信号触发 MQTT 重新订阅 |
 | `MqttClientManager` | `QMqttClient` 封装；指数退避自动重连（基数 1s，上限 30s）；去重订阅管理 |
 | `DeviceInfo` / `OsdData` | 纯头文件数据结构。`AircraftOsd` 和 `DockOsd` 继承 `OsdBase` |
-| `MainWindow` | 顶层窗口（1280×760），水平分割器：左侧设备树 + Topic 列表，右侧 OSD 详情 + JSON 解析 + 原始 JSON |
+| `MainWindow` | 顶层窗口（1280×760），水平分割器：左侧设备树 + Topic 列表（可拖拽），右侧 OSD + JSON 解析 + 原始 JSON |
+| `PublishPanel` | Topic 下发面板：预设常用 Topic、MD 模板自动匹配、JSON 编辑、发送历史 |
 
 ## 📁 项目结构
 
@@ -157,12 +160,14 @@ MQTT 消息 → MqttClientManager::messageReceived
 │   │   ├── OsdPanel.h/cpp         #  OSD 设备信息面板
 │   │   ├── TopicParsePanel.h/cpp  #  JSON 字段 → 中文翻译面板
 │   │   ├── RawJsonPanel.h/cpp     #  原始 JSON 显示（暂停/复制/抓包）
-│   │   ├── PublishPanel.h/cpp     #  Topic 下发面板（v1.1 开放）
+│   │   ├── PublishPanel.h/cpp     #  Topic 下发面板（预设模板、JSON 编辑、发送历史）
 │   │   └── ConfigDialog.h/cpp     #  MQTT 连接配置对话框（多 Profile）
 │   └── resources/
 │       └── config.json           # 默认配置文件模板（不含真实凭证）
 ├── config/
-│   └── topic_mappings.json       # JSON key → 中文翻译映射表
+│   ├── topic_mappings.json       # JSON key → 中文翻译映射表
+│   └── topic-send-construct/
+│       └── topic-send-construct.md  # Topic 下发参数模板定义
 ├── cmake/
 │   └── toolchains/
 │       └── linux-x64.cmake       # 交叉编译工具链（Zig）
@@ -222,7 +227,7 @@ cmake --build build_mingw
 cmake --build build_mingw --target deploy
 
 # === 一键打包（编译 + 部署 DLL + 清除凭证 + 打包 zip） ===
-bash package.sh v1.0
+bash package.sh v1.0.1
 
 # === 原生 Linux ===
 cmake -B build -DCMAKE_BUILD_TYPE=Release
