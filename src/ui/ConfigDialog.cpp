@@ -81,13 +81,10 @@ ConfigDialog::ConfigDialog(DeviceManager* devMgr, QWidget* parent)
     auto* buttons = new QDialogButtonBox(
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     connect(buttons, &QDialogButtonBox::accepted, this, [this]() {
-        // 保存当前编辑到选中 profile
+        // 保存当前编辑到当前活跃 profile
         mDevMgr->setMqttConfigForProfile(mSelectedProfile, getConfig());
-        // 如果选中的不是当前活跃 profile，切换过去
-        if (mSelectedProfile != mDevMgr->currentProfileName())
-            mDevMgr->switchToProfile(mSelectedProfile);
-        else
-            mDevMgr->setMqttConfig(getConfig());  // 更新当前 profile 的 MQTT
+        if (mSelectedProfile == mDevMgr->currentProfileName())
+            mDevMgr->setMqttConfig(getConfig());
         accept();
     });
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -139,6 +136,10 @@ void ConfigDialog::onProfileSelected(const QString& name) {
 
     mSelectedProfile = name;
     loadProfile(name);
+
+    // 立即切换到选中的 profile
+    if (name != mDevMgr->currentProfileName())
+        mDevMgr->switchToProfile(name);
 }
 
 void ConfigDialog::onAddProfile() {
