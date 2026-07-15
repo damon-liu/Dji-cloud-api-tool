@@ -461,7 +461,7 @@ void MainWindow::setupStatusBar() {
     auto* versionLayout = new QHBoxLayout(versionContainer);
     versionLayout->setContentsMargins(0, 0, 0, 0);
     versionLayout->setAlignment(Qt::AlignCenter);
-    mVersionLabel = new QLabel("v1.0 · github.com/damon-liu/Dji-cloud-api-tool");
+    mVersionLabel = new QLabel("v1.0.1 · github.com/damon-liu/Dji-cloud-api-tool");
     mVersionLabel->setStyleSheet(
         "color: #80868b; font-size: 11px; letter-spacing: 0.5px;");
     versionLayout->addWidget(mVersionLabel);
