@@ -10,9 +10,13 @@ int main(int argc, char* argv[]) {
     app.setApplicationName("DjiCloudApi");
     app.setApplicationVersion("1.0.0");
 
-    // 配置文件路径（与可执行文件同目录）
-    QString configPath = QApplication::applicationDirPath() + "/config.json";
-    // 如果运行目录有 config.json 优先使用
+    // 确保 config 目录存在
+    QString configDir = QApplication::applicationDirPath() + "/config";
+    QDir().mkpath(configDir);
+
+    // 配置文件路径
+    QString configPath = configDir + "/config.json";
+    // 如果运行目录有 config.json 优先使用（兼容旧版）
     if (QFile::exists("config.json"))
         configPath = "config.json";
 

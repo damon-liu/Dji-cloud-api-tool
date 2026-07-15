@@ -223,7 +223,7 @@ void MainWindow::setupToolBar() {
         ConfigDialog dlg(mDevMgr, this);
         if (dlg.exec() == QDialog::Accepted) {
             // Profile 切换在对话框内已完成，这里只需保存配置并重连
-            mDevMgr->saveConfig(QApplication::applicationDirPath() + "/config.json");
+            mDevMgr->saveConfig(QApplication::applicationDirPath() + "/config/config.json");
             if (!mDevMgr->isConnected()) {
                 mDevMgr->connectBroker();
             } else {
@@ -377,7 +377,7 @@ void MainWindow::setupLayout() {
     setCentralWidget(mainSplitter);
 
     // 加载 publish 模板 + 初始连接状态
-    mPublishPanel->loadTemplates(QApplication::applicationDirPath() + "/publish_templates.json");
+    mPublishPanel->loadTemplates(QApplication::applicationDirPath() + "/config/publish_templates.json");
     mPublishPanel->setConnected(mDevMgr->isConnected());
 }
 
@@ -529,7 +529,7 @@ void MainWindow::connectSignals() {
     // 加载 topic 映射配置
     {
         mTopicMapping = new TopicMapping();
-        QString mappingPath = QApplication::applicationDirPath() + "/topic_mappings.json";
+        QString mappingPath = QApplication::applicationDirPath() + "/config/topic_mappings.json";
         if (!mTopicMapping->load(mappingPath)) {
             qWarning() << "MainWindow: failed to load topic_mappings.json, using built-in fallback";
             mTopicMapping->loadFromString(TOPIC_MAPPINGS_BUILTIN);
