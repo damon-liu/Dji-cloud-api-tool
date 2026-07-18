@@ -792,17 +792,23 @@ void MainWindow::onDeviceSelected(const QString& sn) {
     mPublishPanel->setTopics(mDevMgr->topicsForDevice(sn));
 
     // 机场控制面板：机场 → 自身；飞机 → 父机场；其他 → 清空
-    if (dev->type == DeviceType::Dock) {
-        mDockControlPanel->setDevice(dev->name, dev->sn, dev->online);
-    } else if (!dev->parentSn.isEmpty()) {
-        DeviceInfo* parentDev = mDevMgr->device(dev->parentSn);
-        if (parentDev)
-            mDockControlPanel->setDevice(parentDev->name, parentDev->sn, parentDev->online);
+    QString dockSn;
+    if (dev->type == DeviceType::Dock)
+        dockSn = sn;
+    else if (!dev->parentSn.isEmpty())
+        dockSn = dev->parentSn;
+
+    if (!dockSn.isEmpty()) {
+        DeviceInfo* dockDev = mDevMgr->device(dockSn);
+        if (dockDev)
+            mDockControlPanel->setDevice(dockDev->name, dockDev->sn, dockDev->online);
         else
             mDockControlPanel->clearDevice();
     } else {
         mDockControlPanel->clearDevice();
     }
+
+    refreshDockControlList(dockSn);
 
     // 刷新 topic 列表
     refreshTopicList(sn);

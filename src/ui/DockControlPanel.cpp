@@ -250,9 +250,14 @@ void DockControlPanel::setAvailableDocks(const QVector<DeviceInfo>& docks,
 
     mUpdatingCombo = false;
 
-    if (!docks.isEmpty() && selectIdx < 0) {
-        const auto& d = docks[0];
-        setDevice(d.name, d.sn, true);
+    if (docks.isEmpty()) {
+        clearDevice();
+    } else {
+        int idx = mDockCombo->currentIndex();
+        if (idx >= 0 && idx < docks.size()) {
+            const auto& d = docks[idx];
+            setDevice(d.name, d.sn, true);
+        }
     }
 }
 
