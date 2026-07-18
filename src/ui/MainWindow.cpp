@@ -267,6 +267,24 @@ void MainWindow::setupToolBar() {
         }
     });
 
+    // 功能中心按钮（配置与帮助之间）
+    auto* featureBtn = new QToolButton(this);
+    featureBtn->setText("🧰 功能中心");
+    featureBtn->setObjectName("helpBtn");   // 复用帮助按钮样式
+    featureBtn->setPopupMode(QToolButton::InstantPopup);
+    featureBtn->setCursor(Qt::PointingHandCursor);
+    {
+        auto* menu = new QMenu(featureBtn);
+        menu->addAction("🎮 机场控制", this, [this]() {
+            if (!mDockCtrlDialog) return;
+            mDockCtrlDialog->show();
+            mDockCtrlDialog->raise();
+            mDockCtrlDialog->activateWindow();
+        });
+        featureBtn->setMenu(menu);
+    }
+    toolbar->addWidget(featureBtn);
+
     // 帮助按钮（配置按钮右侧）
     auto* helpBtn = new QToolButton(this);
     helpBtn->setText("💡 帮助");
@@ -421,13 +439,6 @@ void MainWindow::setupLayout() {
     verticalSplitter->addWidget(mPublishPanel);
     verticalSplitter->setStretchFactor(1, 0);
 
-    // 机场控制（折叠）
-    mDockControlPanel = new DockControlPanel(this);
-    mDockControlPanel->setVisible(false);
-    mDockControlPanel->setMinimumHeight(120);
-    verticalSplitter->addWidget(mDockControlPanel);
-    verticalSplitter->setStretchFactor(2, 0);
-
     rightLayout->addWidget(verticalSplitter, 1);
 
     mTogglePublishBtn = new QPushButton("▶ Topic 下发", this);
@@ -439,20 +450,7 @@ void MainWindow::setupLayout() {
         mTogglePublishBtn->setText(checked ? "◢ Topic 下发" : "▶ Topic 下发");
     });
 
-    mToggleDockCtrlBtn = new QPushButton("▶ 机场控制", this);
-    mToggleDockCtrlBtn->setObjectName("publishToggle");
-    mToggleDockCtrlBtn->setCheckable(true);
-    mToggleDockCtrlBtn->setCursor(Qt::PointingHandCursor);
-    connect(mToggleDockCtrlBtn, &QPushButton::toggled, this, [this](bool checked) {
-        mDockControlPanel->setVisible(checked);
-        mToggleDockCtrlBtn->setText(checked ? "◢ 机场控制" : "▶ 机场控制");
-    });
-
-    auto* toggleRow = new QHBoxLayout;
-    toggleRow->setSpacing(4);
-    toggleRow->addWidget(mTogglePublishBtn);
-    toggleRow->addWidget(mToggleDockCtrlBtn);
-    rightLayout->addLayout(toggleRow);
+    rightLayout->addWidget(mTogglePublishBtn);
 
     // === 主分割器 ===
     auto* mainSplitter = new QSplitter(Qt::Horizontal, this);
@@ -466,6 +464,10 @@ void MainWindow::setupLayout() {
     // 加载 publish 模板 + 初始连接状态
     mPublishPanel->loadTemplates(QApplication::applicationDirPath() + "/config/topic-send-construct/topic-send-construct.md");
     mPublishPanel->setConnected(mDevMgr->isConnected());
+
+    // 机场控制独立窗口（功能中心菜单打开）
+    mDockCtrlDialog = new DockControlDialog(this);
+    mDockControlPanel = mDockCtrlDialog->panel();
     mDockControlPanel->setConnected(mDevMgr->isConnected());
 }
 

@@ -14,7 +14,7 @@
 #include "PublishPanel.h"
 #include "TopicListWidget.h"
 #include "TopicParsePanel.h"
-#include "DockControlPanel.h"
+#include "DockControlDialog.h"
 #include "DeviceManager.h"
 
 class MainWindow : public QMainWindow {
@@ -45,8 +45,8 @@ private:
     PublishPanel*      mPublishPanel;
     QSplitter*         mRightSplitter;   // OSD | JSON (horizontal)
     QPushButton*       mTogglePublishBtn;
-    DockControlPanel*  mDockControlPanel;
-    QPushButton*       mToggleDockCtrlBtn;
+    DockControlPanel*  mDockControlPanel = nullptr;   // 指向对话框内的面板
+    DockControlDialog* mDockCtrlDialog = nullptr;
     QLabel*            mStatusLabel;
     QLabel*            mDeviceCountLabel;
     QLabel*            mVersionLabel;
