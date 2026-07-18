@@ -43,6 +43,11 @@ DeviceManager::DeviceManager(QObject* parent)
     connect(mMqttManager, &MqttClientManager::publishCompleted,
             this, &DeviceManager::publishResult);
 
+    // 机场控制指令执行器
+    mDockCmdExecutor = new DockCommandExecutor(mMqttManager, this);
+    connect(mDockCmdExecutor, &DockCommandExecutor::commandStateChanged,
+            this, &DeviceManager::dockCommandStateChanged);
+
     // 设备离线检测：每 10 秒检查一次
     mOfflineTimer = new QTimer(this);
     mOfflineTimer->setInterval(10000);
@@ -431,6 +436,7 @@ void DeviceManager::onMqttDisconnected() {
 }
 
 void DeviceManager::onMqttMessage(const QString& topic, const QByteArray& payload) {
+    mDockCmdExecutor->onMqttMessage(topic, payload);
     parseAndRoute(topic, payload);
 }
 
@@ -618,4 +624,8 @@ void DeviceManager::checkDeviceOffline() {
 void DeviceManager::publishMessage(const QString& topic, const QString& json) {
     QByteArray payload = json.toUtf8();
     mMqttManager->publish(topic, payload);
+}
+
+void DeviceManager::executeDockCommand(const QString& gatewaySn, DockCommandType type) {
+    mDockCmdExecutor->execute(gatewaySn, type);
 }

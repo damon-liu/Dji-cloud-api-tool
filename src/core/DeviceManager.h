@@ -10,6 +10,7 @@
 #include "ConfigStore.h"
 #include "TopicManager.h"
 #include "MqttClientManager.h"
+#include "DockCommandExecutor.h"
 
 // DeviceManager: 系统核心，协调所有模块
 class DeviceManager : public QObject {
@@ -79,6 +80,7 @@ public:
 
 public slots:
     void publishMessage(const QString& topic, const QString& json);
+    void executeDockCommand(const QString& gatewaySn, DockCommandType type);
 
 signals:
     void brokerConnected();
@@ -91,6 +93,7 @@ signals:
     void profileSwitched(const QString& name);
     void profileListChanged();
     void publishResult(const QString& topic, bool success, const QString& message);
+    void dockCommandStateChanged(const DockCommandResult& result);
 
 private slots:
     void onMqttConnected();
@@ -105,6 +108,7 @@ private:
     ConfigStore*               mConfigStore;
     TopicManager*              mTopicManager;
     MqttClientManager*         mMqttManager;
+    DockCommandExecutor*       mDockCmdExecutor;
     QMap<QString, DeviceInfo>  mDevices;
     QMap<QString, AircraftOsd> mAircraftOsdCache;
     QMap<QString, DockOsd>     mDockOsdCache;
