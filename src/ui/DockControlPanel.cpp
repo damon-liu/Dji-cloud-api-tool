@@ -1,6 +1,5 @@
 #include "DockControlPanel.h"
 
-#include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -17,55 +16,62 @@ DockControlPanel::DockControlPanel(QWidget* parent)
 void DockControlPanel::setupUi() {
     auto* mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(8, 8, 8, 8);
-    mainLayout->setSpacing(8);
+    mainLayout->setSpacing(6);
 
+    // ——— 顶行：设备信息（左） + 执行状态（右） ———
+    auto* topRow = new QHBoxLayout;
     mDeviceLabel = new QLabel(QString::fromUtf8("请选择机场设备"), this);
     mDeviceLabel->setStyleSheet(QStringLiteral("font-weight: bold; color: #333;"));
-    mainLayout->addWidget(mDeviceLabel);
+    topRow->addWidget(mDeviceLabel);
+    topRow->addStretch();
+    mStatusLabel = new QLabel(this);
+    mStatusLabel->setWordWrap(false);
+    setStatus(QString::fromUtf8("连接机场后可使用快捷控制"));
+    topRow->addWidget(mStatusLabel);
+    mainLayout->addLayout(topRow);
 
-    auto* debugGroup = new QGroupBox(QString::fromUtf8("远程调试模式"), this);
-    auto* debugLayout = new QHBoxLayout(debugGroup);
+    // ——— 卡片行：远程调试 | 飞机电源 | 机场舱盖 | 飞机充电 ———
+    auto* cardRow = new QHBoxLayout;
+    cardRow->setSpacing(10);
+
+    // 远程调试卡片（含状态标签）
+    auto* debugGroup = new QGroupBox(QString::fromUtf8("远程调试"), this);
+    auto* debugLayout = new QVBoxLayout(debugGroup);
     mDebugModeLabel = new QLabel(QString::fromUtf8("状态：未知"), debugGroup);
     debugLayout->addWidget(mDebugModeLabel);
     debugLayout->addStretch();
+    auto* debugBtnRow = new QHBoxLayout;
+    mDebugOpenBtn  = new QPushButton(QString::fromUtf8("进入"), debugGroup);
+    mDebugCloseBtn = new QPushButton(QString::fromUtf8("退出"), debugGroup);
+    debugBtnRow->addWidget(mDebugOpenBtn);
+    debugBtnRow->addWidget(mDebugCloseBtn);
+    debugLayout->addLayout(debugBtnRow);
+    cardRow->addWidget(debugGroup, 3);
 
-    mDebugOpenBtn = new QPushButton(QString::fromUtf8("进入远程调试"), debugGroup);
-    mDebugCloseBtn = new QPushButton(QString::fromUtf8("退出远程调试"), debugGroup);
-    debugLayout->addWidget(mDebugOpenBtn);
-    debugLayout->addWidget(mDebugCloseBtn);
-    mainLayout->addWidget(debugGroup);
+    // 功能卡片：标题 + 底部按钮行
+    auto makeCard = [this](const QString& title, const QString& openText,
+                           const QString& closeText,
+                           QPushButton*& openBtn, QPushButton*& closeBtn) {
+        auto* group = new QGroupBox(title, this);
+        auto* v = new QVBoxLayout(group);
+        v->addStretch();
+        auto* row = new QHBoxLayout;
+        openBtn  = new QPushButton(openText, group);
+        closeBtn = new QPushButton(closeText, group);
+        row->addWidget(openBtn);
+        row->addWidget(closeBtn);
+        v->addLayout(row);
+        return group;
+    };
 
-    auto* controlGroup = new QGroupBox(QString::fromUtf8("常用控制"), this);
-    auto* grid = new QGridLayout(controlGroup);
-    grid->setHorizontalSpacing(8);
-    grid->setVerticalSpacing(8);
+    cardRow->addWidget(makeCard(QString::fromUtf8("飞机电源"), QString::fromUtf8("开机"),
+                                QString::fromUtf8("关机"), mDroneOpenBtn, mDroneCloseBtn), 2);
+    cardRow->addWidget(makeCard(QString::fromUtf8("机场舱盖"), QString::fromUtf8("打开"),
+                                QString::fromUtf8("关闭"), mCoverOpenBtn, mCoverCloseBtn), 2);
+    cardRow->addWidget(makeCard(QString::fromUtf8("飞机充电"), QString::fromUtf8("开启"),
+                                QString::fromUtf8("关闭"), mChargeOpenBtn, mChargeCloseBtn), 2);
 
-    grid->addWidget(new QLabel(QString::fromUtf8("飞机电源"), controlGroup), 0, 0);
-    mDroneOpenBtn = new QPushButton(QString::fromUtf8("开机"), controlGroup);
-    mDroneCloseBtn = new QPushButton(QString::fromUtf8("关机"), controlGroup);
-    grid->addWidget(mDroneOpenBtn, 0, 1);
-    grid->addWidget(mDroneCloseBtn, 0, 2);
-
-    grid->addWidget(new QLabel(QString::fromUtf8("机场舱盖"), controlGroup), 1, 0);
-    mCoverOpenBtn = new QPushButton(QString::fromUtf8("打开"), controlGroup);
-    mCoverCloseBtn = new QPushButton(QString::fromUtf8("关闭"), controlGroup);
-    grid->addWidget(mCoverOpenBtn, 1, 1);
-    grid->addWidget(mCoverCloseBtn, 1, 2);
-
-    grid->addWidget(new QLabel(QString::fromUtf8("飞机充电"), controlGroup), 2, 0);
-    mChargeOpenBtn = new QPushButton(QString::fromUtf8("开启"), controlGroup);
-    mChargeCloseBtn = new QPushButton(QString::fromUtf8("关闭"), controlGroup);
-    grid->addWidget(mChargeOpenBtn, 2, 1);
-    grid->addWidget(mChargeCloseBtn, 2, 2);
-    grid->setColumnStretch(1, 1);
-    grid->setColumnStretch(2, 1);
-    mainLayout->addWidget(controlGroup);
-
-    mStatusLabel = new QLabel(QString::fromUtf8("连接机场后可使用快捷控制"), this);
-    mStatusLabel->setWordWrap(true);
-    setStatus(mStatusLabel->text());
-    mainLayout->addWidget(mStatusLabel);
-    mainLayout->addStretch();
+    mainLayout->addLayout(cardRow, 1);
 
     const QList<QPushButton*> buttons = {
         mDebugOpenBtn, mDebugCloseBtn, mDroneOpenBtn, mDroneCloseBtn,
