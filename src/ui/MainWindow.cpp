@@ -421,6 +421,13 @@ void MainWindow::setupLayout() {
     verticalSplitter->addWidget(mPublishPanel);
     verticalSplitter->setStretchFactor(1, 0);
 
+    // 机场控制（折叠）
+    mDockControlPanel = new DockControlPanel(this);
+    mDockControlPanel->setVisible(false);
+    mDockControlPanel->setMinimumHeight(120);
+    verticalSplitter->addWidget(mDockControlPanel);
+    verticalSplitter->setStretchFactor(2, 0);
+
     rightLayout->addWidget(verticalSplitter, 1);
 
     mTogglePublishBtn = new QPushButton("▶ Topic 下发", this);
@@ -432,7 +439,20 @@ void MainWindow::setupLayout() {
         mTogglePublishBtn->setText(checked ? "◢ Topic 下发" : "▶ Topic 下发");
     });
 
-    rightLayout->addWidget(mTogglePublishBtn);
+    mToggleDockCtrlBtn = new QPushButton("▶ 机场控制", this);
+    mToggleDockCtrlBtn->setObjectName("publishToggle");
+    mToggleDockCtrlBtn->setCheckable(true);
+    mToggleDockCtrlBtn->setCursor(Qt::PointingHandCursor);
+    connect(mToggleDockCtrlBtn, &QPushButton::toggled, this, [this](bool checked) {
+        mDockControlPanel->setVisible(checked);
+        mToggleDockCtrlBtn->setText(checked ? "◢ 机场控制" : "▶ 机场控制");
+    });
+
+    auto* toggleRow = new QHBoxLayout;
+    toggleRow->setSpacing(4);
+    toggleRow->addWidget(mTogglePublishBtn);
+    toggleRow->addWidget(mToggleDockCtrlBtn);
+    rightLayout->addLayout(toggleRow);
 
     // === 主分割器 ===
     auto* mainSplitter = new QSplitter(Qt::Horizontal, this);
@@ -446,6 +466,7 @@ void MainWindow::setupLayout() {
     // 加载 publish 模板 + 初始连接状态
     mPublishPanel->loadTemplates(QApplication::applicationDirPath() + "/config/topic-send-construct/topic-send-construct.md");
     mPublishPanel->setConnected(mDevMgr->isConnected());
+    mDockControlPanel->setConnected(mDevMgr->isConnected());
 }
 
 // ——— 状态栏 ———
@@ -537,6 +558,7 @@ void MainWindow::connectSignals() {
         mOsdPanel->resume();
         mTopicParsePanel->resume();
         mPublishPanel->setConnected(true);
+        mDockControlPanel->setConnected(true);
         updateStatusBar();
 
         // 连接成功后自动选中首个设备（优先子飞机，方便查看详细数据）
@@ -569,6 +591,7 @@ void MainWindow::connectSignals() {
         mOsdPanel->pause();
         mTopicParsePanel->pause();
         mPublishPanel->setConnected(false);
+        mDockControlPanel->setConnected(false);
         mUserDeselected = false;
     });
     connect(mDevMgr, &DeviceManager::brokerError, this, [this](const QString& err) {
@@ -659,6 +682,12 @@ void MainWindow::connectSignals() {
     connect(mDevMgr, &DeviceManager::publishResult,
             mPublishPanel, &PublishPanel::onPublishResult);
 
+    // DockControlPanel ↔ DeviceManager
+    connect(mDockControlPanel, &DockControlPanel::commandRequested,
+            mDevMgr, &DeviceManager::executeDockCommand);
+    connect(mDevMgr, &DeviceManager::dockCommandStateChanged,
+            mDockControlPanel, &DockControlPanel::onCommandStateChanged);
+
     mDeviceTree->rebuild(mDevMgr->topLevelDevices(), mDevMgr->allDevices());
     mDisconnectAct->setEnabled(false);
     updateStatusBar();
@@ -673,6 +702,7 @@ void MainWindow::onDeviceSelected(const QString& sn) {
         mRawJsonPanel->clear();
         mPublishPanel->setGatewaySn({});
         mPublishPanel->setTopics({});
+        mDockControlPanel->clearDevice();
         mTopicListWidget->clearTopics();
         mTopicParsePanel->clear();
         mDeleteDeviceBtn->setEnabled(false);
@@ -708,6 +738,19 @@ void MainWindow::onDeviceSelected(const QString& sn) {
     else if (!dev->parentSn.isEmpty())
         mPublishPanel->setGatewaySn(dev->parentSn);
     mPublishPanel->setTopics(mDevMgr->topicsForDevice(sn));
+
+    // 机场控制面板：机场 → 自身；飞机 → 父机场；其他 → 清空
+    if (dev->type == DeviceType::Dock) {
+        mDockControlPanel->setDevice(dev->name, dev->sn, dev->online);
+    } else if (!dev->parentSn.isEmpty()) {
+        DeviceInfo* parentDev = mDevMgr->device(dev->parentSn);
+        if (parentDev)
+            mDockControlPanel->setDevice(parentDev->name, parentDev->sn, parentDev->online);
+        else
+            mDockControlPanel->clearDevice();
+    } else {
+        mDockControlPanel->clearDevice();
+    }
 
     // 刷新 topic 列表
     refreshTopicList(sn);
