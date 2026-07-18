@@ -4,7 +4,10 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMessageBox>
+#include <QPlainTextEdit>
 #include <QPushButton>
+#include <QTextCursor>
+#include <QTime>
 #include <QVBoxLayout>
 
 DockControlPanel::DockControlPanel(QWidget* parent)
@@ -71,7 +74,16 @@ void DockControlPanel::setupUi() {
     cardRow->addWidget(makeCard(QString::fromUtf8("飞机充电"), QString::fromUtf8("开启"),
                                 QString::fromUtf8("关闭"), mChargeOpenBtn, mChargeCloseBtn), 2);
 
-    mainLayout->addLayout(cardRow, 1);
+    mainLayout->addLayout(cardRow);
+
+    // ——— 下发记录：日志流文本块，最新在最上 ———
+    auto* historyGroup = new QGroupBox(QString::fromUtf8("下发记录"), this);
+    auto* historyLayout = new QVBoxLayout(historyGroup);
+    mHistoryEdit = new QPlainTextEdit(historyGroup);
+    mHistoryEdit->setReadOnly(true);
+    mHistoryEdit->setPlaceholderText(QString::fromUtf8("暂无下发记录"));
+    historyLayout->addWidget(mHistoryEdit);
+    mainLayout->addWidget(historyGroup, 1);
 
     const QList<QPushButton*> buttons = {
         mDebugOpenBtn, mDebugCloseBtn, mDroneOpenBtn, mDroneCloseBtn,
@@ -188,7 +200,16 @@ void DockControlPanel::onCommandStateChanged(const DockCommandResult& result) {
     } else {
         setStatus(QString::fromUtf8("%1失败：%2").arg(action, result.message), true);
     }
+    appendHistory(result);
     updateButtonStates();
+
+    // 终态弹窗提醒（放在最后，模态弹窗不阻塞状态刷新）
+    if (result.state == DockCommandState::Succeeded)
+        QMessageBox::information(this, QString::fromUtf8("控制成功"),
+            QString::fromUtf8("“%1”执行成功（%2）").arg(action, result.message));
+    else
+        QMessageBox::warning(this, QString::fromUtf8("控制失败"),
+            QString::fromUtf8("“%1”执行失败：%2").arg(action, result.message));
 }
 
 void DockControlPanel::updateButtonStates() {
@@ -225,4 +246,34 @@ void DockControlPanel::setStatus(const QString& text, bool error) {
     mStatusLabel->setStyleSheet(error
         ? QStringLiteral("color: #d93025; padding: 4px;")
         : QStringLiteral("color: #5f6368; padding: 4px;"));
+}
+
+void DockControlPanel::appendHistory(const DockCommandResult& result) {
+    const QString action = DockCommandBuilder::displayName(result.type);
+    QString verdict;
+    switch (result.state) {
+    case DockCommandState::Succeeded:
+        verdict = QString::fromUtf8("✅ 成功 (result=0)");
+        break;
+    case DockCommandState::TimedOut:
+        verdict = QString::fromUtf8("❌ 超时");
+        break;
+    default:
+        verdict = QString::fromUtf8("❌ 失败（%1）").arg(result.message);
+        break;
+    }
+
+    QString block;
+    block += QStringLiteral("[%1] %2  %3\n")
+        .arg(QTime::currentTime().toString(QStringLiteral("HH:mm:ss")), action, verdict);
+    block += QString::fromUtf8("Topic: thing/product/%1/services\n").arg(result.gatewaySn);
+    block += QString::fromUtf8("下发:\n%1\n").arg(result.requestJson.trimmed());
+    block += QString::fromUtf8("响应:\n%1\n").arg(result.replyJson.isEmpty()
+        ? QString::fromUtf8("（无响应）") : result.replyJson.trimmed());
+    block += QString::fromUtf8("────────────────────────────\n");
+
+    // 最新记录插入顶部
+    mHistoryEdit->moveCursor(QTextCursor::Start);
+    mHistoryEdit->insertPlainText(block);
+    mHistoryEdit->moveCursor(QTextCursor::Start);
 }

@@ -6,6 +6,7 @@
 
 class QLabel;
 class QPushButton;
+class QPlainTextEdit;
 
 class DockControlPanel : public QWidget {
     Q_OBJECT
@@ -29,6 +30,7 @@ private:
     void requestCommand(DockCommandType type);
     void updateButtonStates();
     void setStatus(const QString& text, bool error = false);
+    void appendHistory(const DockCommandResult& result);
 
     QLabel* mDeviceLabel = nullptr;
     QLabel* mDebugModeLabel = nullptr;
@@ -41,6 +43,7 @@ private:
     QPushButton* mCoverCloseBtn = nullptr;
     QPushButton* mChargeOpenBtn = nullptr;
     QPushButton* mChargeCloseBtn = nullptr;
+    QPlainTextEdit* mHistoryEdit = nullptr;
 
     QString mDisplayName;
     QString mGatewaySn;
