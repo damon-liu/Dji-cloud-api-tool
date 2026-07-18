@@ -2,7 +2,10 @@
 #define DOCKCONTROLPANEL_H
 
 #include <QWidget>
+#include <QComboBox>
 #include "DockCommand.h"
+#include "DeviceInfo.h"
+#include "TakeoffDialog.h"
 
 class QLabel;
 class QPushButton;
@@ -16,41 +19,64 @@ public:
     void setDevice(const QString& displayName, const QString& gatewaySn, bool online);
     void clearDevice();
     void setConnected(bool connected);
+    void setAvailableDocks(const QVector<DeviceInfo>& docks, const QString& currentSn,
+                           double dockLat, double dockLon);
+    QString currentGatewaySn() const { return mGatewaySn; }
 
 public slots:
     void onCommandStateChanged(const DockCommandResult& result);
 
 signals:
-    void commandRequested(const QString& gatewaySn, DockCommandType type);
+    void commandRequested(const QString& gatewaySn, DockCommandType type,
+                          const QJsonObject& data = {});
 
 private:
     enum class DebugModeState { Unknown, Disabled, Enabled };
 
     void setupUi();
-    void requestCommand(DockCommandType type);
+    void requestCommand(DockCommandType type, const QJsonObject& data = {});
     void updateButtonStates();
     void setStatus(const QString& text, bool error = false);
     void appendHistory(const DockCommandResult& result);
+    void onTakeoffClicked();
 
-    QLabel* mDeviceLabel = nullptr;
-    QLabel* mDebugModeLabel = nullptr;
-    QLabel* mStatusLabel = nullptr;
-    QPushButton* mDebugOpenBtn = nullptr;
-    QPushButton* mDebugCloseBtn = nullptr;
-    QPushButton* mDroneOpenBtn = nullptr;
-    QPushButton* mDroneCloseBtn = nullptr;
-    QPushButton* mCoverOpenBtn = nullptr;
-    QPushButton* mCoverCloseBtn = nullptr;
-    QPushButton* mChargeOpenBtn = nullptr;
-    QPushButton* mChargeCloseBtn = nullptr;
+    // --- top row ---
+    QComboBox*    mDockCombo = nullptr;
+    QLabel*       mOnlineLabel = nullptr;
+
+    // --- status ---
+    QLabel*       mDebugModeLabel = nullptr;
+    QLabel*       mStatusLabel = nullptr;
+
+    // --- debug mode ---
+    QPushButton*  mDebugOpenBtn = nullptr;
+    QPushButton*  mDebugCloseBtn = nullptr;
+
+    // --- device controls ---
+    QPushButton*  mDroneOpenBtn = nullptr;
+    QPushButton*  mDroneCloseBtn = nullptr;
+    QPushButton*  mCoverOpenBtn = nullptr;
+    QPushButton*  mCoverCloseBtn = nullptr;
+    QPushButton*  mChargeOpenBtn = nullptr;
+    QPushButton*  mChargeCloseBtn = nullptr;
+
+    // --- flight controls ---
+    QPushButton*  mTakeoffBtn = nullptr;
+    QPushButton*  mReturnBtn = nullptr;
+
     QPlainTextEdit* mHistoryEdit = nullptr;
 
+    // --- data ---
+    QVector<DeviceInfo> mAvailableDocks;
     QString mDisplayName;
     QString mGatewaySn;
-    bool mConnected = false;
-    bool mOnline = false;
-    bool mPending = false;
+    double  mDockLat = 0.0;
+    double  mDockLon = 0.0;
+    bool    mConnected = false;
+    bool    mOnline = false;
+    bool    mPending = false;
     DebugModeState mDebugModeState = DebugModeState::Unknown;
+    bool    mUpdatingCombo = false;
 };
 
 #endif // DOCKCONTROLPANEL_H

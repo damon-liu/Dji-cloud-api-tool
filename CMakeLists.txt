@@ -59,6 +59,7 @@ set(HEADERS
     src/core/DockCommandExecutor.h
     src/ui/DockControlPanel.h
     src/ui/DockControlDialog.h
+    src/ui/TakeoffDialog.h
 )
 
 add_executable(DjiCloudApi ${SOURCES} ${HEADERS})

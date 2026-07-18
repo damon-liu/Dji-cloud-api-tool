@@ -626,6 +626,7 @@ void DeviceManager::publishMessage(const QString& topic, const QString& json) {
     mMqttManager->publish(topic, payload);
 }
 
-void DeviceManager::executeDockCommand(const QString& gatewaySn, DockCommandType type) {
-    mDockCmdExecutor->execute(gatewaySn, type);
+void DeviceManager::executeDockCommand(const QString& gatewaySn, DockCommandType type,
+                                       const QJsonObject& data) {
+    mDockCmdExecutor->execute(gatewaySn, type, data);
 }

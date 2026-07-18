@@ -16,7 +16,8 @@ public:
     explicit DockCommandExecutor(MqttClientManager* mqtt, QObject* parent = nullptr);
 
     // 发起指令；已有进行中指令时返回 false
-    bool execute(const QString& gatewaySn, DockCommandType type);
+    bool execute(const QString& gatewaySn, DockCommandType type,
+                 const QJsonObject& data = {});
 
     // 由 DeviceManager 转发所有 MQTT 消息，内部过滤 reply topic
     void onMqttMessage(const QString& topic, const QByteArray& payload);

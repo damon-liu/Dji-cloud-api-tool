@@ -14,7 +14,9 @@ enum class DockCommandType {
     CoverOpen,
     CoverClose,
     ChargeOpen,
-    ChargeClose
+    ChargeClose,
+    Takeoff,   // 一键起飞 takeoff_to_point
+    Return     // 一键返航 return_home
 };
 
 enum class DockCommandState {
@@ -55,7 +57,8 @@ struct DockCommandResult {
 
 class DockCommandBuilder {
 public:
-    static DockCommandRequest build(const QString& gatewaySn, DockCommandType type);
+    static DockCommandRequest build(const QString& gatewaySn, DockCommandType type,
+                                    const QJsonObject& data = {});
     static QString method(DockCommandType type);
     static QString displayName(DockCommandType type);
     static bool requiresDebugMode(DockCommandType type);

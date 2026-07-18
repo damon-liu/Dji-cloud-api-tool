@@ -37,6 +37,7 @@ private:
     void setupStatusBar();
     void connectSignals();
     void refreshTopicList(const QString& sn);
+    void refreshDockControlList(const QString& currentSn);
 
     DeviceManager*     mDevMgr;
     DeviceTreeWidget*  mDeviceTree;

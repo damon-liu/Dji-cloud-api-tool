@@ -80,7 +80,8 @@ public:
 
 public slots:
     void publishMessage(const QString& topic, const QString& json);
-    void executeDockCommand(const QString& gatewaySn, DockCommandType type);
+    void executeDockCommand(const QString& gatewaySn, DockCommandType type,
+                            const QJsonObject& data = {});
 
 signals:
     void brokerConnected();

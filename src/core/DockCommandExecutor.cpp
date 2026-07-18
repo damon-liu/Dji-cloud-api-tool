@@ -14,13 +14,14 @@ DockCommandExecutor::DockCommandExecutor(MqttClientManager* mqtt, QObject* paren
     connect(mTimeoutTimer, &QTimer::timeout, this, &DockCommandExecutor::onTimeout);
 }
 
-bool DockCommandExecutor::execute(const QString& gatewaySn, DockCommandType type) {
+bool DockCommandExecutor::execute(const QString& gatewaySn, DockCommandType type,
+                                  const QJsonObject& data) {
     if (mHasPending) {
         qWarning() << "DockCommandExecutor: command already pending, ignored";
         return false;
     }
 
-    mPending = DockCommandBuilder::build(gatewaySn, type);
+    mPending = DockCommandBuilder::build(gatewaySn, type, data);
     mReplyTopic = QStringLiteral("thing/product/%1/services_reply").arg(mPending.gatewaySn);
     mHasPending = true;
 

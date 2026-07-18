@@ -690,9 +690,59 @@ void MainWindow::connectSignals() {
     connect(mDevMgr, &DeviceManager::dockCommandStateChanged,
             mDockControlPanel, &DockControlPanel::onCommandStateChanged);
 
+    // è®¾å¤å¨çº¿ç¶æåå â å·æ°æºåºåè¡¨
+    connect(mDevMgr, &DeviceManager::deviceOnlineChanged,
+            this, [this](const QString& sn, bool online) {
+        Q_UNUSED(sn); Q_UNUSED(online);
+        QString currentSn = mDeviceTree->selectedDeviceSn();
+        refreshDockControlList(currentSn);
+    });
+
+    connect(mDevMgr, &DeviceManager::deviceAdded,
+            this, [this](const QString&) {
+        QString currentSn = mDeviceTree->selectedDeviceSn();
+        refreshDockControlList(currentSn);
+    });
+    connect(mDevMgr, &DeviceManager::deviceRemoved,
+            this, [this](const QString&) {
+        QString currentSn = mDeviceTree->selectedDeviceSn();
+        refreshDockControlList(currentSn);
+    });
+
     mDeviceTree->rebuild(mDevMgr->topLevelDevices(), mDevMgr->allDevices());
     mDisconnectAct->setEnabled(false);
     updateStatusBar();
+}
+
+void MainWindow::refreshDockControlList(const QString& currentSn) {
+    const auto& allDevs = mDevMgr->allDevices();
+    QVector<DeviceInfo> onlineDocks;
+    double dockLat = 0.0;
+    double dockLon = 0.0;
+
+    for (auto* d : allDevs) {
+        if (d->type == DeviceType::Dock && d->online)
+            onlineDocks.append(*d);
+    }
+
+    if (!currentSn.isEmpty()) {
+        DeviceInfo* dev = mDevMgr->device(currentSn);
+        QString dockSn;
+        if (dev && dev->type == DeviceType::Dock)
+            dockSn = currentSn;
+        else if (dev && !dev->parentSn.isEmpty())
+            dockSn = dev->parentSn;
+
+        if (!dockSn.isEmpty()) {
+            const DockOsd* osd = mDevMgr->latestDockOsd(dockSn);
+            if (osd && osd->valid) {
+                dockLat = osd->latitude;
+                dockLon = osd->longitude;
+            }
+        }
+    }
+
+    mDockControlPanel->setAvailableDocks(onlineDocks, currentSn, dockLat, dockLon);
 }
 
 // ——— 设备选择 ———

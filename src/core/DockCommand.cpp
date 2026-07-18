@@ -15,6 +15,8 @@ QString DockCommandBuilder::method(DockCommandType type) {
     case DockCommandType::CoverClose:     return QStringLiteral("cover_close");
     case DockCommandType::ChargeOpen:     return QStringLiteral("charge_open");
     case DockCommandType::ChargeClose:    return QStringLiteral("charge_close");
+    case DockCommandType::Takeoff:       return QStringLiteral("takeoff_to_point");
+    case DockCommandType::Return:        return QStringLiteral("return_home");
     }
     return {};
 }
@@ -29,16 +31,21 @@ QString DockCommandBuilder::displayName(DockCommandType type) {
     case DockCommandType::CoverClose:     return QString::fromUtf8("关闭舱盖");
     case DockCommandType::ChargeOpen:     return QString::fromUtf8("开启充电");
     case DockCommandType::ChargeClose:    return QString::fromUtf8("关闭充电");
+    case DockCommandType::Takeoff:       return QString::fromUtf8("一键起飞");
+    case DockCommandType::Return:        return QString::fromUtf8("一键返航");
     }
     return {};
 }
 
 bool DockCommandBuilder::requiresDebugMode(DockCommandType type) {
     return type != DockCommandType::DebugModeOpen
-        && type != DockCommandType::DebugModeClose;
+        && type != DockCommandType::DebugModeClose
+        && type != DockCommandType::Takeoff
+        && type != DockCommandType::Return;
 }
 
-DockCommandRequest DockCommandBuilder::build(const QString& gatewaySn, DockCommandType type) {
+DockCommandRequest DockCommandBuilder::build(const QString& gatewaySn, DockCommandType type,
+                                             const QJsonObject& data) {
     DockCommandRequest request;
     request.type = type;
     request.gatewaySn = gatewaySn.trimmed();
@@ -52,7 +59,7 @@ DockCommandRequest DockCommandBuilder::build(const QString& gatewaySn, DockComma
     request.payload[QStringLiteral("timestamp")] = QDateTime::currentMSecsSinceEpoch();
     request.payload[QStringLiteral("gateway")] = request.gatewaySn;
     request.payload[QStringLiteral("method")] = request.method;
-    request.payload[QStringLiteral("data")] = QJsonObject{};
+    request.payload[QStringLiteral("data")] = data.isEmpty() ? QJsonObject{} : data;
     return request;
 }
 
