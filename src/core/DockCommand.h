@@ -49,6 +49,8 @@ struct DockCommandResult {
     QString method;
     int resultCode = -1;
     QString message;
+    QString requestJson;   // 下发报文（缩进格式化）
+    QString replyJson;     // 响应报文（缩进格式化），无回复时为空
 };
 
 class DockCommandBuilder {

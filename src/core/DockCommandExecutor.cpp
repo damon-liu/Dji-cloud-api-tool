@@ -1,6 +1,7 @@
 #include "DockCommandExecutor.h"
 #include "MqttClientManager.h"
 #include <QJsonDocument>
+#include <QJsonParseError>
 #include <QDebug>
 
 DockCommandExecutor::DockCommandExecutor(MqttClientManager* mqtt, QObject* parent)
@@ -23,6 +24,10 @@ bool DockCommandExecutor::execute(const QString& gatewaySn, DockCommandType type
     mReplyTopic = QStringLiteral("thing/product/%1/services_reply").arg(mPending.gatewaySn);
     mHasPending = true;
 
+    mRequestJson = QString::fromUtf8(
+        QJsonDocument(mPending.payload).toJson(QJsonDocument::Indented));
+    mReplyJson.clear();
+
     emitState(DockCommandState::Publishing, -1, QString::fromUtf8("正在发布指令"));
 
     // 确保已订阅 reply topic（subscribeTopics 内部去重，
@@ -44,6 +49,12 @@ void DockCommandExecutor::onMqttMessage(const QString& topic, const QByteArray& 
     DockCommandReply reply = DockCommandBuilder::parseReply(payload);
     if (!reply.valid || reply.tid != mPending.tid)
         return;  // 非本指令的回复（可能来自其他客户端下发）
+
+    QJsonParseError parseError;
+    const QJsonDocument replyDoc = QJsonDocument::fromJson(payload, &parseError);
+    mReplyJson = (parseError.error == QJsonParseError::NoError)
+        ? QString::fromUtf8(replyDoc.toJson(QJsonDocument::Indented))
+        : QString::fromUtf8(payload);  // 非法 JSON 原样展示
 
     mTimeoutTimer->stop();
     mHasPending = false;
@@ -73,5 +84,7 @@ void DockCommandExecutor::emitState(DockCommandState state, int resultCode,
     result.method     = mPending.method;
     result.resultCode = resultCode;
     result.message    = message;
+    result.requestJson = mRequestJson;
+    result.replyJson   = mReplyJson;
     emit commandStateChanged(result);
 }

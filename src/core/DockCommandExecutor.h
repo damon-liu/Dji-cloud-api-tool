@@ -34,6 +34,8 @@ private:
     QTimer*            mTimeoutTimer;
     DockCommandRequest mPending;
     QString            mReplyTopic;
+    QString            mRequestJson;
+    QString            mReplyJson;
     bool               mHasPending = false;
 
     static constexpr int REPLY_TIMEOUT_MS = 10000;
