@@ -186,10 +186,10 @@ void DockControlPanel::setDevice(const QString& displayName, const QString& gate
     }
 
     if (mOnline) {
-        mOnlineLabel->setText(QString::fromUtf8("ð¢ 在线"));
+        mOnlineLabel->setText(QString::fromUtf8("🟢 在线"));
         mOnlineLabel->setStyleSheet("color: #1e8e3e; font-weight: bold; padding: 0 8px;");
     } else {
-        mOnlineLabel->setText(QString::fromUtf8("ð´ 离线"));
+        mOnlineLabel->setText(QString::fromUtf8("🔴 离线"));
         mOnlineLabel->setStyleSheet("color: #d93025; font-weight: bold; padding: 0 8px;");
     }
 
@@ -238,7 +238,7 @@ void DockControlPanel::setAvailableDocks(const QVector<DeviceInfo>& docks,
     for (int i = 0; i < docks.size(); ++i) {
         const auto& d = docks[i];
         mDockCombo->addItem(
-            QString::fromUtf8("ð¢ %1 - %2").arg(d.name, d.sn), d.sn);
+            QString::fromUtf8("🟢 %1 - %2").arg(d.name, d.sn), d.sn);
         if (d.sn == currentSn)
             selectIdx = i;
     }
