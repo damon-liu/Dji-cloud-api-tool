@@ -33,6 +33,9 @@ set(SOURCES
     src/ui/TopicEditDialog.cpp
     src/ui/TopicListWidget.cpp
     src/ui/TopicParsePanel.cpp
+    src/core/DockCommand.cpp
+    src/core/DockCommandExecutor.cpp
+    src/ui/DockControlPanel.cpp
 )
 
 set(HEADERS
@@ -52,6 +55,9 @@ set(HEADERS
     src/ui/TopicListWidget.h
     src/core/TopicMapping.h
     src/ui/TopicParsePanel.h
+    src/core/DockCommand.h
+    src/core/DockCommandExecutor.h
+    src/ui/DockControlPanel.h
 )
 
 add_executable(DjiCloudApi ${SOURCES} ${HEADERS})
