@@ -59,6 +59,7 @@ bool ConfigStore::load(const QString& filePath) {
             pd.mqtt.port     = mqtt.value("port").toInt(8883);
             pd.mqtt.username = mqtt.value("username").toString();
             pd.mqtt.password = mqtt.value("password").toString();
+            pd.mqtt.clientId = mqtt.value("client_id").toString();
 
             QJsonArray devs = pObj["devices"].toArray();
             for (const auto& dVal : devs) {
@@ -146,6 +147,7 @@ bool ConfigStore::load(const QString& filePath) {
     pd.mqtt.port     = mqtt.value("port").toInt(8883);
     pd.mqtt.username = mqtt.value("username").toString();
     pd.mqtt.password = mqtt.value("password").toString();
+    pd.mqtt.clientId = mqtt.value("client_id").toString();
 
     QJsonArray devs = root["devices"].toArray();
     for (const auto& dVal : devs) {
@@ -209,6 +211,8 @@ bool ConfigStore::save(const QString& filePath) {
         mqtt["port"] = pd.mqtt.port;
         mqtt["username"] = pd.mqtt.username;
         mqtt["password"] = pd.mqtt.password;
+        if (!pd.mqtt.clientId.isEmpty())
+            mqtt["client_id"] = pd.mqtt.clientId;
         pObj["mqtt"] = mqtt;
 
         QMap<QString, QJsonObject> dockMap;

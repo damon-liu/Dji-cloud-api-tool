@@ -1,5 +1,5 @@
-#ifndef DOCKCONTROLPANEL_H
-#define DOCKCONTROLPANEL_H
+#ifndef FLIGHTCONTROLPANEL_H
+#define FLIGHTCONTROLPANEL_H
 
 #include <QWidget>
 #include <QComboBox>
@@ -10,10 +10,10 @@ class QLabel;
 class QPushButton;
 class QPlainTextEdit;
 
-class DockControlPanel : public QWidget {
+class FlightControlPanel : public QWidget {
     Q_OBJECT
 public:
-    explicit DockControlPanel(QWidget* parent = nullptr);
+    explicit FlightControlPanel(QWidget* parent = nullptr);
 
     void setDevice(const QString& displayName, const QString& gatewaySn, bool online);
     void clearDevice();
@@ -30,8 +30,6 @@ signals:
                           const QJsonObject& data = {});
 
 private:
-    enum class DebugModeState { Unknown, Disabled, Enabled };
-
     void setupUi();
     void requestCommand(DockCommandType type, const QJsonObject& data = {});
     void updateButtonStates();
@@ -43,26 +41,14 @@ private:
     QLabel*       mOnlineLabel = nullptr;
 
     // --- status ---
-    QLabel*       mDebugModeLabel = nullptr;
     QLabel*       mStatusLabel = nullptr;
 
-    // --- debug mode ---
-    QPushButton*  mDebugOpenBtn = nullptr;
-    QPushButton*  mDebugCloseBtn = nullptr;
+    // --- flight controls ---
+    QPushButton*  mTakeoffBtn = nullptr;
 
-    // --- device controls ---
-    QPushButton*  mDroneOpenBtn = nullptr;
-    QPushButton*  mDroneCloseBtn = nullptr;
-    QPushButton*  mCoverOpenBtn = nullptr;
-    QPushButton*  mCoverCloseBtn = nullptr;
-    QPushButton*  mCoverForceBtn = nullptr;
-    QPushButton*  mChargeOpenBtn = nullptr;
-    QPushButton*  mChargeCloseBtn = nullptr;
-    QPushButton*  mRebootBtn = nullptr;
-
-    // --- fill light controls ---
-    QPushButton*  mFillLightOpenBtn = nullptr;
-    QPushButton*  mFillLightCloseBtn = nullptr;
+    // --- return home controls (后续版本完善) ---
+    QPushButton*  mReturnHomeBtn = nullptr;
+    QPushButton*  mCancelReturnBtn = nullptr;
 
     QPlainTextEdit* mHistoryEdit = nullptr;
 
@@ -75,8 +61,7 @@ private:
     bool    mConnected = false;
     bool    mOnline = false;
     bool    mPending = false;
-    DebugModeState mDebugModeState = DebugModeState::Unknown;
     bool    mUpdatingCombo = false;
 };
 
-#endif // DOCKCONTROLPANEL_H
+#endif // FLIGHTCONTROLPANEL_H

@@ -5,11 +5,10 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPlainTextEdit>
-#include <QTextEdit>
 #include <QComboBox>
 #include <QPushButton>
 #include <QLabel>
-#include <QTimer>
+#include <QGroupBox>
 #include <QMap>
 #include <QList>
 #include <QEvent>
@@ -36,6 +35,10 @@ public:
     void setConnected(bool connected);
     void loadTemplates(const QString& path);
 
+    // 追加外部指令记录（供机场控制/飞行控制/运维模式使用）
+    void appendCommandRecord(const QString& topic, const QString& requestJson,
+                             const QString& replyJson, bool success, const QString& message);
+
 signals:
     void publishRequested(const QString& topic, const QString& json);
 
@@ -53,14 +56,14 @@ private:
     QComboBox*      mTopicCombo       = nullptr;
     QPlainTextEdit* mEditor           = nullptr;
     QPushButton*    mSendBtn          = nullptr;
-    QPushButton*    mHistoryToggleBtn = nullptr;
-    QTextEdit*      mHistoryLog       = nullptr;
-    QTimer*         mHistoryTimer     = nullptr;   // 成功发送后 3s 自动隐藏
+    QGroupBox*      mHistoryGroup     = nullptr;
+    QPlainTextEdit* mHistoryLog       = nullptr;
     QString         mDeviceSn;
     QString         mGatewaySn;
     QString         mLastSentJson;                 // 发送时暂存 JSON，供结果回调使用
     bool            mConnected        = false;
     QList<HistoryEntry> mHistoryEntries;           // 发送历史（含 JSON 参数）
+    QList<int>          mHistoryBlockStarts;        // 每条记录在 mHistoryLog 中的起始 block 号
     QMap<QString, QString> mTemplates;             // topic pattern → template JSON
     QMap<QString, QString> mTopicToPattern;        // 替换后 topic → pattern（用于模板查找）
     static QMap<QString, QString> builtinTemplates();  // 内置默认模板

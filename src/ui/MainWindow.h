@@ -15,6 +15,8 @@
 #include "TopicListWidget.h"
 #include "TopicParsePanel.h"
 #include "DockControlDialog.h"
+#include "FlightControlDialog.h"
+#include "MaintenanceDialog.h"
 #include "DeviceManager.h"
 
 class MainWindow : public QMainWindow {
@@ -48,6 +50,10 @@ private:
     QPushButton*       mTogglePublishBtn;
     DockControlPanel*  mDockControlPanel = nullptr;   // 指向对话框内的面板
     DockControlDialog* mDockCtrlDialog = nullptr;
+    FlightControlPanel*  mFlightControlPanel = nullptr;   // 指向飞行控制对话框内的面板
+    FlightControlDialog* mFlightCtrlDialog = nullptr;
+    MaintenancePanel*    mMaintenancePanel = nullptr;      // 指向运维模式对话框内的面板
+    MaintenanceDialog*   mMaintenanceDialog = nullptr;
     QLabel*            mStatusLabel;
     QLabel*            mDeviceCountLabel;
     QLabel*            mVersionLabel;

@@ -10,8 +10,10 @@
 #include <QMouseEvent>
 #include <QTextCursor>
 #include <QTextBlock>
+#include <QGroupBox>
 
 const QStringList PublishPanel::PUBLISH_PRESETS = {
+    "thing/product/{gateway_sn}/services",
     "thing/product/{sn}/property/set",
     "thing/product/{sn}/services",
     "thing/product/{sn}/events_reply",
@@ -91,23 +93,8 @@ void PublishPanel::setupUi() {
         "padding: 6px; color: #333; }");
     layout->addWidget(mEditor, 1);
 
-    // 发送按钮 + 历史展开按钮
+    // 发送按钮
     auto* btnLayout = new QHBoxLayout;
-
-    mHistoryToggleBtn = new QPushButton(QString::fromUtf8("📋 历史"), this);
-    mHistoryToggleBtn->setCheckable(true);
-    mHistoryToggleBtn->setCursor(Qt::PointingHandCursor);
-    mHistoryToggleBtn->setStyleSheet(
-        "QPushButton { border: 1px solid #dadce0; border-radius: 4px; "
-        "padding: 4px 12px; font-size: 12px; background: #fff; color: #5f6368; }"
-        "QPushButton:hover { background: #f1f3f4; }"
-        "QPushButton:checked { background: #e8f0fe; color: #1a73e8; border-color: #1a73e8; }");
-    connect(mHistoryToggleBtn, &QPushButton::toggled, this, [this](bool checked) {
-        mHistoryLog->setVisible(checked);
-        if (checked)
-            mHistoryTimer->stop();
-    });
-    btnLayout->addWidget(mHistoryToggleBtn);
 
     btnLayout->addStretch();
     mSendBtn = new QPushButton(QString::fromUtf8("发送"), this);
@@ -130,27 +117,19 @@ void PublishPanel::setupUi() {
         emit publishRequested(topic, json);
     });
 
-    // 发送历史（只读），默认隐藏
-    mHistoryLog = new QTextEdit(this);
+    // 下发记录（只读），始终可见
+    mHistoryGroup = new QGroupBox(QString::fromUtf8("下发记录"), this);
+    auto* historyLayout = new QVBoxLayout(mHistoryGroup);
+    mHistoryLog = new QPlainTextEdit(mHistoryGroup);
     mHistoryLog->setReadOnly(true);
-    mHistoryLog->setMaximumHeight(100);
-    mHistoryLog->setFont(QFont("Consolas", 9));
+    mHistoryLog->setPlaceholderText(QString::fromUtf8("暂无下发记录"));
     mHistoryLog->setStyleSheet(
-        "QTextEdit { background: #fafafa; border: 1px solid #e0e0e0; "
+        "QPlainTextEdit { background: #fafafa; border: 1px solid #e0e0e0; "
         "border-radius: 4px; font-family: 'Consolas', monospace; font-size: 11px; "
         "padding: 4px; color: #333; }");
-    mHistoryLog->setPlaceholderText(QString::fromUtf8("发送历史（双击恢复 topic 和参数）"));
     mHistoryLog->viewport()->installEventFilter(this);
-    mHistoryLog->setVisible(false);
-    layout->addWidget(mHistoryLog);
-
-    // 成功发送后 3s 自动隐藏历史
-    mHistoryTimer = new QTimer(this);
-    mHistoryTimer->setSingleShot(true);
-    connect(mHistoryTimer, &QTimer::timeout, this, [this]() {
-        mHistoryLog->setVisible(false);
-        mHistoryToggleBtn->setChecked(false);
-    });
+    historyLayout->addWidget(mHistoryLog);
+    layout->addWidget(mHistoryGroup, 1);
 }
 
 void PublishPanel::setDeviceSn(const QString& sn) {
@@ -191,13 +170,6 @@ void PublishPanel::onPublishResult(const QString& topic, bool success, const QSt
                           : QString::fromUtf8("发送失败: ") + message;
     appendHistory(topic, mLastSentJson, success, msg);
     mLastSentJson.clear();
-
-    // 成功发送后显示历史并 3s 自动隐藏
-    if (success) {
-        mHistoryLog->setVisible(true);
-        mHistoryToggleBtn->setChecked(true);
-        mHistoryTimer->start(3000);
-    }
 }
 
 void PublishPanel::appendHistory(const QString& topic, const QString& json, bool success, const QString& message) {
@@ -214,20 +186,46 @@ void PublishPanel::appendHistory(const QString& topic, const QString& json, bool
     if (mHistoryEntries.size() > MAX_HISTORY)
         mHistoryEntries.removeLast();
 
-    // 用富文本展示（含 JSON 摘要）
-    QString html;
+    // 重建 block 起始索引（最新记录在最前面）
+    mHistoryBlockStarts.clear();
+    mHistoryLog->clear();
+
     for (const auto& e : mHistoryEntries) {
+        mHistoryBlockStarts.append(mHistoryLog->blockCount());
+
         QString icon = e.success ? QString::fromUtf8("✅") : QString::fromUtf8("❌");
-        QString color = e.success ? "#1e8e3e" : "#d93025";
-        // JSON 截短显示（最多 80 字符）
-        QString jsonPreview = e.json.left(80);
-        if (e.json.length() > 80)
-            jsonPreview += "...";
-        html += QString("<span style='color:%1'>[%2] %3 %4  %5</span>"
-                        "<span style='color:#80868b; font-size:10px;'>  %6</span><br>")
-                    .arg(color, e.timeStr, icon, e.topic, e.message, jsonPreview.toHtmlEscaped());
+        QString block;
+        block += QStringLiteral("[%1] %2 %3\n")
+            .arg(e.timeStr, icon, e.message);
+        block += QString::fromUtf8("Topic: %1\n").arg(e.topic);
+        block += QString::fromUtf8("下发:\n%1\n").arg(e.json.trimmed());
+        block += QString::fromUtf8("────────────────────────────\n");
+
+        mHistoryLog->moveCursor(QTextCursor::End);
+        mHistoryLog->insertPlainText(block);
     }
-    mHistoryLog->setHtml(html);
+
+    // 滚动到顶部显示最新记录
+    mHistoryLog->moveCursor(QTextCursor::Start);
+}
+
+void PublishPanel::appendCommandRecord(const QString& topic, const QString& requestJson,
+                                        const QString& replyJson, bool success, const QString& message) {
+    QString timeStr = QTime::currentTime().toString("HH:mm:ss");
+    QString icon = success ? QString::fromUtf8("✅") : QString::fromUtf8("❌");
+
+    QString block;
+    block += QStringLiteral("[%1] %2 %3\n").arg(timeStr, icon, message);
+    block += QString::fromUtf8("Topic: %1\n").arg(topic);
+    block += QString::fromUtf8("下发:\n%1\n").arg(requestJson.trimmed());
+    block += QString::fromUtf8("响应:\n%1\n").arg(replyJson.isEmpty()
+        ? QString::fromUtf8("（无响应）") : replyJson.trimmed());
+    block += QString::fromUtf8("────────────────────────────\n");
+
+    // 最新记录插入顶部
+    mHistoryLog->moveCursor(QTextCursor::Start);
+    mHistoryLog->insertPlainText(block);
+    mHistoryLog->moveCursor(QTextCursor::Start);
 }
 
 bool PublishPanel::eventFilter(QObject* obj, QEvent* event) {
@@ -235,12 +233,18 @@ bool PublishPanel::eventFilter(QObject* obj, QEvent* event) {
         QTextCursor cursor = mHistoryLog->cursorForPosition(
             static_cast<QMouseEvent*>(event)->pos());
         int blockNum = cursor.block().blockNumber();
-        if (blockNum >= 0 && blockNum < mHistoryEntries.size()) {
-            const HistoryEntry& entry = mHistoryEntries[blockNum];
-            if (!entry.topic.isEmpty())
-                mTopicCombo->setCurrentText(entry.topic);
-            if (!entry.json.isEmpty())
-                mEditor->setPlainText(entry.json);
+        // 查找该 block 属于哪条历史记录
+        for (int i = mHistoryBlockStarts.size() - 1; i >= 0; --i) {
+            if (blockNum >= mHistoryBlockStarts[i]) {
+                if (i < mHistoryEntries.size()) {
+                    const HistoryEntry& entry = mHistoryEntries[i];
+                    if (!entry.topic.isEmpty())
+                        mTopicCombo->setCurrentText(entry.topic);
+                    if (!entry.json.isEmpty())
+                        mEditor->setPlainText(entry.json);
+                }
+                break;
+            }
         }
         return true;
     }

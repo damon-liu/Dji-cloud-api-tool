@@ -1,21 +1,21 @@
-#ifndef DOCKCONTROLDIALOG_H
-#define DOCKCONTROLDIALOG_H
+#ifndef FLIGHTCONTROLDIALOG_H
+#define FLIGHTCONTROLDIALOG_H
 
 #include <QCloseEvent>
 #include <QDialog>
 #include <QVBoxLayout>
-#include "DockControlPanel.h"
+#include "FlightControlPanel.h"
 
-// 机场控制独立窗口：非模态薄壳，内嵌 DockControlPanel。
-// 关闭仅隐藏，再次打开恢复同一实例。
-class DockControlDialog : public QDialog {
+// 飞行控制独立窗口：非模态薄壳，内嵌 FlightControlPanel。
+// 关闭仅隐藏（QDialog 默认行为），再次打开为同一实例。
+class FlightControlDialog : public QDialog {
     Q_OBJECT
 public:
-    explicit DockControlDialog(QWidget* parent = nullptr)
+    explicit FlightControlDialog(QWidget* parent = nullptr)
         : QDialog(parent)
-        , mPanel(new DockControlPanel(this))
+        , mPanel(new FlightControlPanel(this))
     {
-        setWindowTitle(QString::fromUtf8("机场控制"));
+        setWindowTitle(QString::fromUtf8("飞行控制"));
         setWindowFlags(windowFlags()
                        | Qt::WindowMinimizeButtonHint
                        | Qt::WindowMaximizeButtonHint);
@@ -28,7 +28,7 @@ public:
         layout->addWidget(mPanel);
     }
 
-    DockControlPanel* panel() const { return mPanel; }
+    FlightControlPanel* panel() const { return mPanel; }
 
 protected:
     void closeEvent(QCloseEvent* event) override {
@@ -37,7 +37,7 @@ protected:
     }
 
 private:
-    DockControlPanel* mPanel;
+    FlightControlPanel* mPanel;
 };
 
-#endif // DOCKCONTROLDIALOG_H
+#endif // FLIGHTCONTROLDIALOG_H

@@ -40,6 +40,7 @@ private:
     QSpinBox*      mPortSpin;
     QLineEdit*     mUsernameEdit;
     QLineEdit*     mPasswordEdit;
+    QLineEdit*     mClientIdEdit;
     QPushButton*   mTestBtn;
     QMqttClient*   mTestClient    = nullptr;
     QTimer*        mTestTimer     = nullptr;

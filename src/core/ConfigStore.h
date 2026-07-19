@@ -15,6 +15,7 @@ struct MqttConfig {
     int     port     = 8883;
     QString username = "admin";
     QString password = "";
+    QString clientId = "";   // 为空时使用默认值
 };
 
 // 单个 Profile 的完整数据

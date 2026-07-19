@@ -62,10 +62,27 @@ ConfigDialog::ConfigDialog(DeviceManager* devMgr, QWidget* parent)
     mPasswordEdit = new QLineEdit(this);
     mPasswordEdit->setEchoMode(QLineEdit::Password);
 
+    // 密码可见切换按钮（👁）：点击切换明/密文
+    auto* togglePwdBtn = new QPushButton(QString::fromUtf8("\xf0\x9f\x91\x81"), this);
+    togglePwdBtn->setFixedWidth(30);
+    togglePwdBtn->setCheckable(true);
+    togglePwdBtn->setToolTip(QString::fromUtf8("\xe6\x98\xbe\xe7\xa4\xba/\xe9\x9a\x90\xe8\x97\x8f\xe5\xaf\x86\xe7\xa0\x81"));
+    connect(togglePwdBtn, &QPushButton::toggled, this, [this](bool checked) {
+        mPasswordEdit->setEchoMode(checked ? QLineEdit::Normal : QLineEdit::Password);
+    });
+
+    auto* passwordRow = new QHBoxLayout;
+    passwordRow->addWidget(mPasswordEdit, 1);
+    passwordRow->addWidget(togglePwdBtn);
+
     form->addRow("Broker IP:", mHostEdit);
     form->addRow(QString::fromUtf8("\xe7\xab\xaf\xe5\x8f\xa3:"), mPortSpin);
     form->addRow(QString::fromUtf8("\xe7\x94\xa8\xe6\x88\xb7\xe5\x90\x8d:"), mUsernameEdit);
-    form->addRow(QString::fromUtf8("\xe5\xaf\x86\xe7\xa0\x81:"), mPasswordEdit);
+    form->addRow(QString::fromUtf8("\xe5\xaf\x86\xe7\xa0\x81:"), passwordRow);
+
+    mClientIdEdit = new QLineEdit(this);
+    mClientIdEdit->setPlaceholderText(QString::fromUtf8("\xe7\x95\x99\xe7\xa9\xba\xe4\xbd\xbf\xe7\x94\xa8\xe9\xbb\x98\xe8\xae\xa4\xe5\x80\xbc"));
+    form->addRow("Client ID:", mClientIdEdit);
     layout->addLayout(form);
 
     // 底部按钮行
@@ -116,6 +133,7 @@ void ConfigDialog::loadProfile(const QString& name) {
     mPortSpin->setValue(cfg.port);
     mUsernameEdit->setText(cfg.username);
     mPasswordEdit->setText(cfg.password);
+    mClientIdEdit->setText(cfg.clientId);
 }
 
 MqttConfig ConfigDialog::getConfig() const {
@@ -124,6 +142,7 @@ MqttConfig ConfigDialog::getConfig() const {
     cfg.port     = mPortSpin->value();
     cfg.username = mUsernameEdit->text().trimmed();
     cfg.password = mPasswordEdit->text();
+    cfg.clientId = mClientIdEdit->text().trimmed();
     return cfg;
 }
 

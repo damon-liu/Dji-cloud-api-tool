@@ -249,7 +249,7 @@ void MainWindow::setupToolBar() {
     toolbar->setFloatable(false);
 
     // 左侧：配置按钮
-    auto* configAct = toolbar->addAction("⚙ 配置");
+    auto* configAct = toolbar->addAction("⚙ 配置中心");
     auto* configBtn = qobject_cast<QToolButton*>(toolbar->widgetForAction(configAct));
     if (configBtn) configBtn->setObjectName("configBtn");
     connect(configAct, &QAction::triggered, this, [this]() {
@@ -280,6 +280,18 @@ void MainWindow::setupToolBar() {
             mDockCtrlDialog->show();
             mDockCtrlDialog->raise();
             mDockCtrlDialog->activateWindow();
+        });
+        menu->addAction("🛫 飞行控制", this, [this]() {
+            if (!mFlightCtrlDialog) return;
+            mFlightCtrlDialog->show();
+            mFlightCtrlDialog->raise();
+            mFlightCtrlDialog->activateWindow();
+        });
+        menu->addAction("🔧 运维模式", this, [this]() {
+            if (!mMaintenanceDialog) return;
+            mMaintenanceDialog->show();
+            mMaintenanceDialog->raise();
+            mMaintenanceDialog->activateWindow();
         });
         featureBtn->setMenu(menu);
     }
@@ -381,8 +393,8 @@ void MainWindow::setupLayout() {
     mTopicListWidget = new TopicListWidget(this);
     leftSplitter->addWidget(mTopicListWidget);
 
-    leftSplitter->setStretchFactor(0, 3);   // 设备树占 3/4
-    leftSplitter->setStretchFactor(1, 1);   // Topic 列表占 1/4
+    leftSplitter->setStretchFactor(0, 3);   // 设备树占 3/5
+    leftSplitter->setStretchFactor(1, 2);   // Topic 列表占 2/5
     leftSplitter->setChildrenCollapsible(false);
 
     leftLayout->addWidget(leftSplitter, 1);
@@ -469,6 +481,15 @@ void MainWindow::setupLayout() {
     mDockCtrlDialog = new DockControlDialog(this);
     mDockControlPanel = mDockCtrlDialog->panel();
     mDockControlPanel->setConnected(mDevMgr->isConnected());
+
+    // 飞行控制独立窗口（功能中心菜单打开）
+    mFlightCtrlDialog = new FlightControlDialog(this);
+    mFlightControlPanel = mFlightCtrlDialog->panel();
+    mFlightControlPanel->setConnected(mDevMgr->isConnected());
+
+    // 运维模式独立窗口（功能中心菜单打开）
+    mMaintenanceDialog = new MaintenanceDialog(this);
+    mMaintenancePanel = mMaintenanceDialog->panel();
 }
 
 // ——— 状态栏 ———
@@ -561,20 +582,21 @@ void MainWindow::connectSignals() {
         mTopicParsePanel->resume();
         mPublishPanel->setConnected(true);
         mDockControlPanel->setConnected(true);
+        mFlightControlPanel->setConnected(true);
         updateStatusBar();
 
-        // 连接成功后自动选中首个设备（优先子飞机，方便查看详细数据）
+        // 连接成功后自动选中首个设备（优先机场，方便查看控制面板）
         if (!mUserDeselected && mDeviceTree->selectedDeviceSn().isEmpty()) {
             const auto& allDevs = mDevMgr->allDevices();
             const DeviceInfo* target = nullptr;
-            // 优先选子飞机
+            // 优先选机场
             for (auto* d : allDevs) {
-                if (d->type == DeviceType::Aircraft && !d->parentSn.isEmpty()) {
+                if (d->type == DeviceType::Dock) {
                     target = d;
                     break;
                 }
             }
-            // 无子飞机则选首个顶级设备
+            // 无机建则选首个顶级设备
             if (!target) {
                 const auto& topLevel = mDevMgr->topLevelDevices();
                 if (!topLevel.isEmpty())
@@ -594,6 +616,7 @@ void MainWindow::connectSignals() {
         mTopicParsePanel->pause();
         mPublishPanel->setConnected(false);
         mDockControlPanel->setConnected(false);
+        mFlightControlPanel->setConnected(false);
         mUserDeselected = false;
     });
     connect(mDevMgr, &DeviceManager::brokerError, this, [this](const QString& err) {
@@ -689,6 +712,23 @@ void MainWindow::connectSignals() {
             mDevMgr, &DeviceManager::executeDockCommand);
     connect(mDevMgr, &DeviceManager::dockCommandStateChanged,
             mDockControlPanel, &DockControlPanel::onCommandStateChanged);
+    // 指令结果同步到 Topic 下发记录
+    connect(mDevMgr, &DeviceManager::dockCommandStateChanged,
+            this, [this](const DockCommandResult& result) {
+        if (result.state == DockCommandState::Publishing
+            || result.state == DockCommandState::WaitingReply)
+            return;
+        bool success = (result.state == DockCommandState::Succeeded);
+        QString topic = QStringLiteral("thing/product/%1/services").arg(result.gatewaySn);
+        mPublishPanel->appendCommandRecord(topic, result.requestJson, result.replyJson,
+                                            success, DockCommandBuilder::displayName(result.type));
+    });
+
+    // FlightControlPanel ↔ DeviceManager
+    connect(mFlightControlPanel, &FlightControlPanel::commandRequested,
+            mDevMgr, &DeviceManager::executeDockCommand);
+    connect(mDevMgr, &DeviceManager::dockCommandStateChanged,
+            mFlightControlPanel, &FlightControlPanel::onCommandStateChanged);
 
     // è®¾å¤å¨çº¿ç¶æåå â å·æ°æºåºåè¡¨
     connect(mDevMgr, &DeviceManager::deviceOnlineChanged,
@@ -743,6 +783,7 @@ void MainWindow::refreshDockControlList(const QString& currentSn) {
     }
 
     mDockControlPanel->setAvailableDocks(onlineDocks, currentSn, dockLat, dockLon);
+    mFlightControlPanel->setAvailableDocks(onlineDocks, currentSn, dockLat, dockLon);
 }
 
 // ——— 设备选择 ———
@@ -755,6 +796,7 @@ void MainWindow::onDeviceSelected(const QString& sn) {
         mPublishPanel->setGatewaySn({});
         mPublishPanel->setTopics({});
         mDockControlPanel->clearDevice();
+        mFlightControlPanel->clearDevice();
         mTopicListWidget->clearTopics();
         mTopicParsePanel->clear();
         mDeleteDeviceBtn->setEnabled(false);
@@ -800,12 +842,16 @@ void MainWindow::onDeviceSelected(const QString& sn) {
 
     if (!dockSn.isEmpty()) {
         DeviceInfo* dockDev = mDevMgr->device(dockSn);
-        if (dockDev)
+        if (dockDev) {
             mDockControlPanel->setDevice(dockDev->name, dockDev->sn, dockDev->online);
-        else
+            mFlightControlPanel->setDevice(dockDev->name, dockDev->sn, dockDev->online);
+        } else {
             mDockControlPanel->clearDevice();
+            mFlightControlPanel->clearDevice();
+        }
     } else {
         mDockControlPanel->clearDevice();
+        mFlightControlPanel->clearDevice();
     }
 
     refreshDockControlList(dockSn);

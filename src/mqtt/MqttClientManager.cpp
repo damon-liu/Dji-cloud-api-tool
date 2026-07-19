@@ -37,7 +37,10 @@ void MqttClientManager::connectToBroker(const MqttConfig& config) {
     mClient->setPort(static_cast<quint16>(config.port));
     mClient->setUsername(config.username);
     mClient->setPassword(config.password);
-    mClient->setClientId("DjiCloudApi_" + QString::number(QCoreApplication::applicationPid()));
+    if (!config.clientId.isEmpty())
+        mClient->setClientId(config.clientId);
+    else
+        mClient->setClientId("DjiCloudApi_" + QString::number(QCoreApplication::applicationPid()));
 
     qDebug() << "MQTT: connecting to" << config.host << ":" << config.port;
     mClient->connectToHost();

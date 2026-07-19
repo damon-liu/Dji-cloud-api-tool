@@ -13,10 +13,14 @@ QString DockCommandBuilder::method(DockCommandType type) {
     case DockCommandType::DroneClose:     return QStringLiteral("drone_close");
     case DockCommandType::CoverOpen:      return QStringLiteral("cover_open");
     case DockCommandType::CoverClose:     return QStringLiteral("cover_close");
+    case DockCommandType::CoverForceClose: return QStringLiteral("cover_force_close");
     case DockCommandType::ChargeOpen:     return QStringLiteral("charge_open");
     case DockCommandType::ChargeClose:    return QStringLiteral("charge_close");
+    case DockCommandType::DeviceReboot:   return QStringLiteral("device_reboot");
     case DockCommandType::Takeoff:       return QStringLiteral("takeoff_to_point");
     case DockCommandType::Return:        return QStringLiteral("return_home");
+    case DockCommandType::FillLightOpen:  return QStringLiteral("fill_light_open");
+    case DockCommandType::FillLightClose: return QStringLiteral("fill_light_close");
     }
     return {};
 }
@@ -29,10 +33,14 @@ QString DockCommandBuilder::displayName(DockCommandType type) {
     case DockCommandType::DroneClose:     return QString::fromUtf8("飞机关机");
     case DockCommandType::CoverOpen:      return QString::fromUtf8("打开舱盖");
     case DockCommandType::CoverClose:     return QString::fromUtf8("关闭舱盖");
+    case DockCommandType::CoverForceClose: return QString::fromUtf8("强制关舱盖");
     case DockCommandType::ChargeOpen:     return QString::fromUtf8("开启充电");
     case DockCommandType::ChargeClose:    return QString::fromUtf8("关闭充电");
+    case DockCommandType::DeviceReboot:   return QString::fromUtf8("机场重启");
     case DockCommandType::Takeoff:       return QString::fromUtf8("一键起飞");
     case DockCommandType::Return:        return QString::fromUtf8("一键返航");
+    case DockCommandType::FillLightOpen:  return QString::fromUtf8("补光灯开启");
+    case DockCommandType::FillLightClose: return QString::fromUtf8("补光灯关闭");
     }
     return {};
 }

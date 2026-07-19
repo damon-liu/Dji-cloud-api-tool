@@ -1,11 +1,14 @@
 #include "DockControlPanel.h"
 
+#include <QAbstractItemView>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QSizePolicy>
 #include <QTextCursor>
 #include <QTime>
 #include <QVBoxLayout>
@@ -31,7 +34,12 @@ void DockControlPanel::setupUi() {
     mDockCombo = new QComboBox(this);
     mDockCombo->setEditable(true);
     mDockCombo->setInsertPolicy(QComboBox::NoInsert);
-    mDockCombo->setMinimumWidth(200);
+    mDockCombo->setMinimumWidth(280);
+    mDockCombo->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
+    mDockCombo->setSizeAdjustPolicy(QComboBox::AdjustToContentsOnFirstShow);
+    mDockCombo->lineEdit()->setAlignment(Qt::AlignLeft);
+    mDockCombo->lineEdit()->setReadOnly(true);
+    mDockCombo->view()->setMinimumWidth(320);
     mDockCombo->setStyleSheet(
         "QComboBox { border: 1px solid #dadce0; border-radius: 4px; padding: 4px 8px;"
         "font-size: 13px; background: #fff; }"
@@ -58,9 +66,11 @@ void DockControlPanel::setupUi() {
 
     mainLayout->addLayout(topRow);
 
-    // --- card row: debug | drone power | cover | charge | flight ---
-    auto* cardRow = new QHBoxLayout;
-    cardRow->setSpacing(10);
+    // --- card grid: 2×3 卡片网格 ---
+    // 第一行：远程调试 | 飞机电源 | 机场舱盖
+    // 第二行：飞机充电 | 机场维护 | 补光灯
+    auto* cardGrid = new QGridLayout;
+    cardGrid->setSpacing(10);
 
     auto* debugGroup = new QGroupBox(QString::fromUtf8("远程调试"), this);
     auto* debugLayout = new QVBoxLayout(debugGroup);
@@ -73,7 +83,6 @@ void DockControlPanel::setupUi() {
     debugBtnRow->addWidget(mDebugOpenBtn);
     debugBtnRow->addWidget(mDebugCloseBtn);
     debugLayout->addLayout(debugBtnRow);
-    cardRow->addWidget(debugGroup, 3);
 
     auto makeCard = [this](const QString& title, const QString& openText,
                            const QString& closeText,
@@ -90,42 +99,69 @@ void DockControlPanel::setupUi() {
         return group;
     };
 
-    cardRow->addWidget(makeCard(QString::fromUtf8("飞机电源"),
-                                QString::fromUtf8("开机"),
-                                QString::fromUtf8("关机"),
-                                mDroneOpenBtn, mDroneCloseBtn), 2);
-    cardRow->addWidget(makeCard(QString::fromUtf8("机场舱盖"),
-                                QString::fromUtf8("打开"),
-                                QString::fromUtf8("关闭"),
-                                mCoverOpenBtn, mCoverCloseBtn), 2);
-    cardRow->addWidget(makeCard(QString::fromUtf8("飞机充电"),
-                                QString::fromUtf8("开启"),
-                                QString::fromUtf8("关闭"),
-                                mChargeOpenBtn, mChargeCloseBtn), 2);
+    auto* droneGroup  = makeCard(QString::fromUtf8("飞机电源"),
+                                 QString::fromUtf8("开机"),
+                                 QString::fromUtf8("关机"),
+                                 mDroneOpenBtn, mDroneCloseBtn);
 
-    // flight control card
-    auto* flightGroup = new QGroupBox(QString::fromUtf8("飞行控制"), this);
-    auto* flightLayout = new QVBoxLayout(flightGroup);
-    flightLayout->addStretch();
-    auto* flightBtnRow = new QHBoxLayout;
-    mTakeoffBtn = new QPushButton(QString::fromUtf8("一键起飞"), flightGroup);
-    mReturnBtn  = new QPushButton(QString::fromUtf8("一键返航"), flightGroup);
-    mTakeoffBtn->setStyleSheet(
-        "QPushButton { background: #1a73e8; color: #fff; font-weight: bold;"
-        "border: none; border-radius: 4px; padding: 6px 12px; }"
-        "QPushButton:hover { background: #1557b0; }"
-        "QPushButton:disabled { background: #dadce0; color: #80868b; }");
-    mReturnBtn->setStyleSheet(
-        "QPushButton { background: #ea4335; color: #fff; font-weight: bold;"
-        "border: none; border-radius: 4px; padding: 6px 12px; }"
-        "QPushButton:hover { background: #c5221f; }"
-        "QPushButton:disabled { background: #dadce0; color: #80868b; }");
-    flightBtnRow->addWidget(mTakeoffBtn);
-    flightBtnRow->addWidget(mReturnBtn);
-    flightLayout->addLayout(flightBtnRow);
-    cardRow->addWidget(flightGroup, 2);
+    // 机场舱盖卡片：打开/关闭
+    auto* coverGroup = new QGroupBox(QString::fromUtf8("机场舱盖"), this);
+    auto* coverLayout = new QVBoxLayout(coverGroup);
+    coverLayout->addStretch();
+    auto* coverBtnRow = new QHBoxLayout;
+    mCoverOpenBtn  = new QPushButton(QString::fromUtf8("打开"), coverGroup);
+    mCoverCloseBtn = new QPushButton(QString::fromUtf8("关闭"), coverGroup);
+    coverBtnRow->addWidget(mCoverOpenBtn);
+    coverBtnRow->addWidget(mCoverCloseBtn);
+    coverLayout->addLayout(coverBtnRow);
 
-    mainLayout->addLayout(cardRow);
+    auto* chargeGroup = makeCard(QString::fromUtf8("飞机充电"),
+                                 QString::fromUtf8("开启"),
+                                 QString::fromUtf8("关闭"),
+                                 mChargeOpenBtn, mChargeCloseBtn);
+
+    // 机场维护卡片
+    auto* maintainGroup = new QGroupBox(QString::fromUtf8("机场维护"), this);
+    auto* maintainLayout = new QVBoxLayout(maintainGroup);
+    maintainLayout->addStretch();
+    auto* maintainBtnRow = new QHBoxLayout;
+    mRebootBtn = new QPushButton(QString::fromUtf8("机场重启"), maintainGroup);
+    mRebootBtn->setStyleSheet(
+        "QPushButton { background: #f29900; color: #fff; font-weight: bold;"
+        "border: none; border-radius: 4px; padding: 6px 12px; }"
+        "QPushButton:hover { background: #e37400; }"
+        "QPushButton:disabled { background: #dadce0; color: #80868b; }");
+    maintainBtnRow->addWidget(mRebootBtn);
+    mCoverForceBtn = new QPushButton(QString::fromUtf8("强制关舱门"), maintainGroup);
+    mCoverForceBtn->setStyleSheet(
+        "QPushButton { border: 1px solid #d93025; border-radius: 4px; color: #d93025;"
+        "font-weight: bold; background: #fff; padding: 6px 12px; }"
+        "QPushButton:hover { background: #fce8e6; }"
+        "QPushButton:disabled { border-color: #dadce0; color: #80868b; background: #f8f9fa; }");
+    maintainBtnRow->addWidget(mCoverForceBtn);
+    maintainLayout->addLayout(maintainBtnRow);
+
+    // 补光灯卡片
+    auto* fillLightGroup = new QGroupBox(QString::fromUtf8("补光灯"), this);
+    auto* fillLightLayout = new QVBoxLayout(fillLightGroup);
+    fillLightLayout->addStretch();
+    auto* fillLightBtnRow = new QHBoxLayout;
+    mFillLightOpenBtn  = new QPushButton(QString::fromUtf8("开启"), fillLightGroup);
+    mFillLightCloseBtn = new QPushButton(QString::fromUtf8("关闭"), fillLightGroup);
+    fillLightBtnRow->addWidget(mFillLightOpenBtn);
+    fillLightBtnRow->addWidget(mFillLightCloseBtn);
+    fillLightLayout->addLayout(fillLightBtnRow);
+
+    cardGrid->addWidget(debugGroup,    0, 0);
+    cardGrid->addWidget(droneGroup,    0, 1);
+    cardGrid->addWidget(coverGroup,    0, 2);
+    cardGrid->addWidget(chargeGroup,   1, 0);
+    cardGrid->addWidget(maintainGroup, 1, 1);
+    cardGrid->addWidget(fillLightGroup, 1, 2);
+    for (int col = 0; col < 3; ++col)
+        cardGrid->setColumnStretch(col, 1);
+
+    mainLayout->addLayout(cardGrid);
 
     // --- history ---
     auto* historyGroup = new QGroupBox(QString::fromUtf8("下发记录"), this);
@@ -138,16 +174,14 @@ void DockControlPanel::setupUi() {
 
     const QList<QPushButton*> buttons = {
         mDebugOpenBtn, mDebugCloseBtn, mDroneOpenBtn, mDroneCloseBtn,
-        mCoverOpenBtn, mCoverCloseBtn, mChargeOpenBtn, mChargeCloseBtn
+        mCoverOpenBtn, mCoverCloseBtn, mCoverForceBtn,
+        mChargeOpenBtn, mChargeCloseBtn, mRebootBtn,
+        mFillLightOpenBtn, mFillLightCloseBtn
     };
     for (auto* button : buttons) {
         button->setCursor(Qt::PointingHandCursor);
         button->setMinimumHeight(30);
     }
-    mTakeoffBtn->setCursor(Qt::PointingHandCursor);
-    mTakeoffBtn->setMinimumHeight(30);
-    mReturnBtn->setCursor(Qt::PointingHandCursor);
-    mReturnBtn->setMinimumHeight(30);
 
     connect(mDebugOpenBtn, &QPushButton::clicked, this,
             [this]() { requestCommand(DockCommandType::DebugModeOpen); });
@@ -161,14 +195,26 @@ void DockControlPanel::setupUi() {
             [this]() { requestCommand(DockCommandType::CoverOpen); });
     connect(mCoverCloseBtn, &QPushButton::clicked, this,
             [this]() { requestCommand(DockCommandType::CoverClose); });
+    connect(mCoverForceBtn, &QPushButton::clicked, this,
+            [this]() {
+        auto ret = QMessageBox::warning(this,
+            QString::fromUtf8("确认强制关舱门"),
+            QString::fromUtf8("强制关舱门将无视传感器状态立即执行，可能导致设备损坏。\n确定要强制关舱门吗？"),
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        if (ret == QMessageBox::Yes)
+            requestCommand(DockCommandType::CoverForceClose);
+    });
     connect(mChargeOpenBtn, &QPushButton::clicked, this,
             [this]() { requestCommand(DockCommandType::ChargeOpen); });
     connect(mChargeCloseBtn, &QPushButton::clicked, this,
             [this]() { requestCommand(DockCommandType::ChargeClose); });
+    connect(mRebootBtn, &QPushButton::clicked, this,
+            [this]() { requestCommand(DockCommandType::DeviceReboot); });
 
-    connect(mTakeoffBtn, &QPushButton::clicked, this, &DockControlPanel::onTakeoffClicked);
-    connect(mReturnBtn, &QPushButton::clicked, this,
-            [this]() { requestCommand(DockCommandType::Return); });
+    connect(mFillLightOpenBtn, &QPushButton::clicked, this,
+            [this]() { requestCommand(DockCommandType::FillLightOpen); });
+    connect(mFillLightCloseBtn, &QPushButton::clicked, this,
+            [this]() { requestCommand(DockCommandType::FillLightClose); });
 }
 
 void DockControlPanel::setDevice(const QString& displayName, const QString& gatewaySn, bool online) {
@@ -238,7 +284,7 @@ void DockControlPanel::setAvailableDocks(const QVector<DeviceInfo>& docks,
     for (int i = 0; i < docks.size(); ++i) {
         const auto& d = docks[i];
         mDockCombo->addItem(
-            QString::fromUtf8("🟢 %1 - %2").arg(d.name, d.sn), d.sn);
+            QString::fromUtf8("%1 - %2").arg(d.name, d.sn), d.sn);
         if (d.sn == currentSn)
             selectIdx = i;
     }
@@ -261,42 +307,9 @@ void DockControlPanel::setAvailableDocks(const QVector<DeviceInfo>& docks,
     }
 }
 
-void DockControlPanel::onTakeoffClicked() {
-    if (mGatewaySn.isEmpty() || mPending) return;
-
-    TakeoffDialog dlg(mDockLat, mDockLon, this);
-    if (dlg.exec() != QDialog::Accepted) return;
-
-    TakeoffParams p = dlg.params();
-    QJsonObject data;
-    data[QStringLiteral("latitude")]  = p.latitude;
-    data[QStringLiteral("longitude")] = p.longitude;
-    data[QStringLiteral("height")]    = p.height;
-    if (p.speed > 0.0)
-        data[QStringLiteral("speed")] = p.speed;
-
-    requestCommand(DockCommandType::Takeoff, data);
-}
-
 void DockControlPanel::requestCommand(DockCommandType type, const QJsonObject& data) {
     if (mGatewaySn.isEmpty() || mPending)
         return;
-
-    if (type == DockCommandType::Return) {
-        if (QMessageBox::question(this, QString::fromUtf8("确认返航"),
-                QString::fromUtf8("确定要让飞机返航吗？"),
-                QMessageBox::Yes | QMessageBox::No,
-                QMessageBox::No) != QMessageBox::Yes)
-            return;
-    } else if (type != DockCommandType::Takeoff) {
-        const QString action = DockCommandBuilder::displayName(type);
-        const QString text = QString::fromUtf8("确定要对机场 %1（%2）执行“%3”吗？")
-            .arg(mDisplayName, mGatewaySn, action);
-        if (QMessageBox::question(this, QString::fromUtf8("确认机场控制"), text,
-                                  QMessageBox::Yes | QMessageBox::No,
-                                  QMessageBox::No) != QMessageBox::Yes)
-            return;
-    }
 
     mPending = true;
     setStatus(QString::fromUtf8("正在执行：%1").arg(DockCommandBuilder::displayName(type)));
@@ -323,19 +336,12 @@ void DockControlPanel::onCommandStateChanged(const DockCommandResult& result) {
             mDebugModeState = DebugModeState::Enabled;
         else if (result.type == DockCommandType::DebugModeClose)
             mDebugModeState = DebugModeState::Disabled;
-        setStatus(QString::fromUtf8("%1成功：%2").arg(action, result.message));
+        setStatus(QString::fromUtf8("%1成功").arg(action));
     } else {
         setStatus(QString::fromUtf8("%1失败：%2").arg(action, result.message), true);
     }
     appendHistory(result);
     updateButtonStates();
-
-    if (result.state == DockCommandState::Succeeded)
-        QMessageBox::information(this, QString::fromUtf8("控制成功"),
-            QString::fromUtf8("“%1”执行成功（%2）").arg(action, result.message));
-    else
-        QMessageBox::warning(this, QString::fromUtf8("控制失败"),
-            QString::fromUtf8("“%1”执行失败：%2").arg(action, result.message));
 }
 
 void DockControlPanel::updateButtonStates() {
@@ -348,12 +354,12 @@ void DockControlPanel::updateButtonStates() {
     mDroneCloseBtn->setEnabled(debugControlsEnabled);
     mCoverOpenBtn->setEnabled(debugControlsEnabled);
     mCoverCloseBtn->setEnabled(debugControlsEnabled);
+    mCoverForceBtn->setEnabled(debugControlsEnabled);
     mChargeOpenBtn->setEnabled(debugControlsEnabled);
     mChargeCloseBtn->setEnabled(debugControlsEnabled);
-
-    const bool flightAvailable = mConnected && mOnline && !mGatewaySn.isEmpty() && !mPending;
-    mTakeoffBtn->setEnabled(flightAvailable);
-    mReturnBtn->setEnabled(flightAvailable);
+    mRebootBtn->setEnabled(debugControlsEnabled);
+    mFillLightOpenBtn->setEnabled(debugControlsEnabled);
+    mFillLightCloseBtn->setEnabled(debugControlsEnabled);
 
     switch (mDebugModeState) {
     case DebugModeState::Enabled:
@@ -374,8 +380,8 @@ void DockControlPanel::updateButtonStates() {
 void DockControlPanel::setStatus(const QString& text, bool error) {
     mStatusLabel->setText(text);
     mStatusLabel->setStyleSheet(error
-        ? QStringLiteral("color: #d93025; padding: 4px;")
-        : QStringLiteral("color: #5f6368; padding: 4px;"));
+        ? QStringLiteral("color: #d93025; font-weight: bold; padding: 4px;")
+        : QStringLiteral("color: #e8710a; font-weight: bold; padding: 4px;"));
 }
 
 void DockControlPanel::appendHistory(const DockCommandResult& result) {

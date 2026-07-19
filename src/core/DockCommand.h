@@ -13,10 +13,14 @@ enum class DockCommandType {
     DroneClose,
     CoverOpen,
     CoverClose,
+    CoverForceClose,  // 强制关舱盖 cover_force_close
     ChargeOpen,
     ChargeClose,
-    Takeoff,   // 一键起飞 takeoff_to_point
-    Return     // 一键返航 return_home
+    DeviceReboot,  // 机场重启 device_reboot
+    Takeoff,        // 一键起飞 takeoff_to_point
+    Return,         // 一键返航 return_home
+    FillLightOpen,  // 补光灯开启
+    FillLightClose  // 补光灯关闭
 };
 
 enum class DockCommandState {
