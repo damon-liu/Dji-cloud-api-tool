@@ -8,19 +8,8 @@
 #include <QComboBox>
 #include <QPushButton>
 #include <QLabel>
-#include <QGroupBox>
 #include <QMap>
-#include <QList>
 #include <QEvent>
-
-// 发送历史条目
-struct HistoryEntry {
-    QString timeStr;
-    QString topic;
-    QString json;       // 发送的 JSON 参数
-    bool    success;
-    QString message;
-};
 
 class PublishPanel : public QWidget {
     Q_OBJECT
@@ -51,23 +40,20 @@ protected:
 private:
     void setupUi();
     void updateSendButtonState();
-    void appendHistory(const QString& topic, const QString& json, bool success, const QString& message);
+    void appendHistory(const QString& topic, const QString& json, bool success, const QString& message,
+                       const QString& replyJson = {});
 
     QComboBox*      mTopicCombo       = nullptr;
     QPlainTextEdit* mEditor           = nullptr;
     QPushButton*    mSendBtn          = nullptr;
-    QGroupBox*      mHistoryGroup     = nullptr;
     QPlainTextEdit* mHistoryLog       = nullptr;
     QString         mDeviceSn;
     QString         mGatewaySn;
-    QString         mLastSentJson;                 // 发送时暂存 JSON，供结果回调使用
+    QString         mLastSentJson;
     bool            mConnected        = false;
-    QList<HistoryEntry> mHistoryEntries;           // 发送历史（含 JSON 参数）
-    QList<int>          mHistoryBlockStarts;        // 每条记录在 mHistoryLog 中的起始 block 号
-    QMap<QString, QString> mTemplates;             // topic pattern → template JSON
-    QMap<QString, QString> mTopicToPattern;        // 替换后 topic → pattern（用于模板查找）
-    static QMap<QString, QString> builtinTemplates();  // 内置默认模板
-    static constexpr int MAX_HISTORY = 20;
+    QMap<QString, QString> mTemplates;
+    QMap<QString, QString> mTopicToPattern;
+    static QMap<QString, QString> builtinTemplates();
 };
 
 #endif // PUBLISHPANEL_H

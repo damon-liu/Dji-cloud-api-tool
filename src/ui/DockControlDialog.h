@@ -17,7 +17,6 @@ public:
     {
         setWindowTitle(QString::fromUtf8("机场控制"));
         setWindowFlags(windowFlags()
-                       | Qt::WindowMinimizeButtonHint
                        | Qt::WindowMaximizeButtonHint);
         setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, false);  // 允许拖拽调整大小
         setSizeGripEnabled(true);

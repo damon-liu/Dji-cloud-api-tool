@@ -17,7 +17,6 @@ public:
     {
         setWindowTitle(QString::fromUtf8("运维模式"));
         setWindowFlags(windowFlags()
-                       | Qt::WindowMinimizeButtonHint
                        | Qt::WindowMaximizeButtonHint);
         setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, false);
         setSizeGripEnabled(true);

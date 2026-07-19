@@ -49,6 +49,8 @@ public:
     bool isTopicEnabled(const QString& deviceSn, const QString& topic) const;
 
     // OSD 缓存
+
+    // OSD 缓存
     const AircraftOsd* latestAircraftOsd(const QString& sn) const;
     const DockOsd* latestDockOsd(const QString& sn) const;
     QString latestRawJson(const QString& sn, const QString& topic = QString()) const;
@@ -97,6 +99,7 @@ signals:
     void dockCommandStateChanged(const DockCommandResult& result);
 
 private slots:
+    void onPublishCompleted(const QString& topic, bool success, const QString& message);
     void onMqttConnected();
     void onMqttDisconnected();
     void onMqttMessage(const QString& topic, const QByteArray& payload);
@@ -120,7 +123,7 @@ private:
     QTimer*                     mOfflineTimer = nullptr;
     QString                     mConfigPath;
     static constexpr int MAX_JSON_HISTORY = 500;
-    static constexpr qint64 OFFLINE_TIMEOUT_MS = 60000;  // 60s 无消息判定离线
+    static constexpr qint64 OFFLINE_TIMEOUT_MS = 5000;   // 5s 无消息判定离线
 };
 
 #endif // DEVICEMANAGER_H

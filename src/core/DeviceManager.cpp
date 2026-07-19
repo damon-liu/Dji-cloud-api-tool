@@ -39,18 +39,19 @@ DeviceManager::DeviceManager(QObject* parent)
     connect(mConfigStore, &ConfigStore::profileSwitched,
             this, &DeviceManager::profileSwitched);
 
-    // Publish 结果转发
+    // Publish 结果转发（过滤 DockCommandExecutor 发起的 topic，
+    // 避免同一条指令在 Topic 下发记录中重复显示）
     connect(mMqttManager, &MqttClientManager::publishCompleted,
-            this, &DeviceManager::publishResult);
+            this, &DeviceManager::onPublishCompleted);
 
     // 机场控制指令执行器
     mDockCmdExecutor = new DockCommandExecutor(mMqttManager, this);
     connect(mDockCmdExecutor, &DockCommandExecutor::commandStateChanged,
             this, &DeviceManager::dockCommandStateChanged);
 
-    // 设备离线检测：每 10 秒检查一次
+    // 设备离线检测：每 2 秒检查一次
     mOfflineTimer = new QTimer(this);
-    mOfflineTimer->setInterval(10000);
+    mOfflineTimer->setInterval(2000);
     connect(mOfflineTimer, &QTimer::timeout, this, &DeviceManager::checkDeviceOffline);
     mOfflineTimer->start();
 }
@@ -551,15 +552,6 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
                 }
 
                 mAircraftOsdCache[childSn] = airOsd;
-                mLastMessageTime[childSn] = QDateTime::currentMSecsSinceEpoch();
-
-                // 子飞机数据来自机场 OSD，机场在线则子飞机也应在线
-                DeviceInfo& childInfo = mDevices[childSn];
-                if (!childInfo.online) {
-                    childInfo.online = true;
-                    emit deviceOnlineChanged(childSn, true);
-                }
-
                 qDebug() << "DeviceManager: mapped child aircraft OSD for" << childSn
                          << "| lat:" << airOsd.latitude << "lon:" << airOsd.longitude
                          << "| battery:" << airOsd.battery_percent << "%"
@@ -586,13 +578,6 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
         info.online = true;
         emit deviceOnlineChanged(sn, true);
 
-        // 父设备上线时，子飞机也一并上线
-        for (auto it = mDevices.begin(); it != mDevices.end(); ++it) {
-            if (it->parentSn == sn && it->type == DeviceType::Aircraft && !it->online) {
-                it->online = true;
-                emit deviceOnlineChanged(it.key(), true);
-            }
-        }
     }
 
     emit deviceOsdUpdated(sn, topic, formatted);
@@ -619,6 +604,13 @@ void DeviceManager::checkDeviceOffline() {
             }
         }
     }
+}
+
+void DeviceManager::onPublishCompleted(const QString& topic, bool success, const QString& message) {
+    // 过滤 DockCommandExecutor 发起的 topic，避免同一条指令在 Topic 下发记录中重复
+    if (mDockCmdExecutor->pendingTopic() == topic)
+        return;
+    emit publishResult(topic, success, message);
 }
 
 void DeviceManager::publishMessage(const QString& topic, const QString& json) {

@@ -22,6 +22,9 @@ public:
     // 由 DeviceManager 转发所有 MQTT 消息，内部过滤 reply topic
     void onMqttMessage(const QString& topic, const QByteArray& payload);
 
+    // 返回当前进行中指令的 topic，无挂起指令时返回空字符串
+    QString pendingTopic() const { return mHasPending ? mPending.topic : QString(); }
+
 signals:
     void commandStateChanged(const DockCommandResult& result);
 

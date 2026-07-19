@@ -66,9 +66,8 @@ void DockControlPanel::setupUi() {
 
     mainLayout->addLayout(topRow);
 
-    // --- card grid: 2×3 卡片网格 ---
-    // 第一行：远程调试 | 飞机电源 | 机场舱盖
-    // 第二行：飞机充电 | 机场维护 | 补光灯
+    // --- card grid: 第一行固定卡片 ---
+    // 飞机充电 | 远程调试 | 飞机电源 | 机场舱盖
     auto* cardGrid = new QGridLayout;
     cardGrid->setSpacing(10);
 
@@ -152,16 +151,48 @@ void DockControlPanel::setupUi() {
     fillLightBtnRow->addWidget(mFillLightCloseBtn);
     fillLightLayout->addLayout(fillLightBtnRow);
 
+    // 第一行：远程调试 | 飞机充电 | 飞机电源 | 机场舱盖
     cardGrid->addWidget(debugGroup,    0, 0);
-    cardGrid->addWidget(droneGroup,    0, 1);
-    cardGrid->addWidget(coverGroup,    0, 2);
-    cardGrid->addWidget(chargeGroup,   1, 0);
-    cardGrid->addWidget(maintainGroup, 1, 1);
-    cardGrid->addWidget(fillLightGroup, 1, 2);
-    for (int col = 0; col < 3; ++col)
+    cardGrid->addWidget(chargeGroup,   0, 1);
+    cardGrid->addWidget(droneGroup,    0, 2);
+    cardGrid->addWidget(coverGroup,    0, 3);
+    for (int col = 0; col < 4; ++col)
         cardGrid->setColumnStretch(col, 1);
 
     mainLayout->addLayout(cardGrid);
+
+    // --- 展开/收起按钮 ---
+    auto* expandBar = new QHBoxLayout;
+    expandBar->addStretch();
+    mExpandBtn = new QPushButton(QString::fromUtf8("展开更多  ▼"), this);
+    mExpandBtn->setFlat(true);
+    mExpandBtn->setCursor(Qt::PointingHandCursor);
+    mExpandBtn->setStyleSheet(
+        "QPushButton { color: #1a73e8; font-size: 12px; padding: 2px 8px; border: none; }"
+        "QPushButton:hover { color: #1557b0; }");
+    expandBar->addWidget(mExpandBtn);
+    expandBar->addStretch();
+    mainLayout->addLayout(expandBar);
+
+    // 第二行（默认隐藏）：机场维护 | 补光灯
+    mExpandRow = new QWidget(this);
+    auto* expandGrid = new QGridLayout(mExpandRow);
+    expandGrid->setContentsMargins(0, 0, 0, 0);
+    expandGrid->setSpacing(10);
+    expandGrid->addWidget(maintainGroup, 0, 0);
+    expandGrid->addWidget(fillLightGroup, 0, 1);
+    for (int col = 0; col < 2; ++col)
+        expandGrid->setColumnStretch(col, 1);
+    mExpandRow->setVisible(false);
+    mainLayout->addWidget(mExpandRow);
+
+    connect(mExpandBtn, &QPushButton::clicked, this, [this]() {
+        bool visible = !mExpandRow->isVisible();
+        mExpandRow->setVisible(visible);
+        mExpandBtn->setText(visible
+            ? QString::fromUtf8("收起更多  ▲")
+            : QString::fromUtf8("展开更多  ▼"));
+    });
 
     // --- history ---
     auto* historyGroup = new QGroupBox(QString::fromUtf8("下发记录"), this);

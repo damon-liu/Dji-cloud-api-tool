@@ -64,6 +64,9 @@ private:
     QPushButton*  mFillLightOpenBtn = nullptr;
     QPushButton*  mFillLightCloseBtn = nullptr;
 
+    QPushButton*    mExpandBtn = nullptr;
+    QWidget*        mExpandRow = nullptr;
+
     QPlainTextEdit* mHistoryEdit = nullptr;
 
     // --- data ---

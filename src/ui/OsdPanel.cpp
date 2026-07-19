@@ -13,7 +13,6 @@ OsdPanel::OsdPanel(QWidget* parent) : QWidget(parent) {
     mRefreshTimer->start();
 }
 
-// —— 辅助：创建 GridLayout 中的 label|value 对 ——
 static void addFieldRow(QGridLayout* grid, int row, int col,
                          const QString& label, QLabel*& valLabel) {
     auto* nameLabel = new QLabel(label);
@@ -68,7 +67,6 @@ void OsdPanel::setupUi() {
     mMainLayout->setContentsMargins(0, 0, 0, 0);
     mMainLayout->setSpacing(6);
 
-    // 标题栏
     auto* titleBar = new QWidget(this);
     auto* titleLayout = new QHBoxLayout(titleBar);
     titleLayout->setContentsMargins(0, 0, 0, 0);
@@ -98,13 +96,11 @@ void OsdPanel::setupUi() {
     titleLayout->addWidget(mIntervalCombo);
     mMainLayout->addWidget(titleBar);
 
-    // 分隔线
     auto* sep = new QFrame(this);
     sep->setFrameShape(QFrame::HLine);
     sep->setFrameShadow(QFrame::Sunken);
     mMainLayout->addWidget(sep);
 
-    // 两个子面板并排
     mPanelsRow = new QHBoxLayout;
     mPanelsRow->setSpacing(8);
 
@@ -118,7 +114,20 @@ void OsdPanel::setupUi() {
     mMainLayout->addStretch();
 }
 
-// —— 显示逻辑 ——
+static QString onlineIcon(bool online) {
+    return online
+        ? QString::fromUtf8("\xf0\x9f\x9f\xa2")   // 🟢
+        : QString::fromUtf8("\xf0\x9f\x94\xb4");  // 🔴
+}
+
+static const DeviceInfo* findChildAircraft(DeviceManager* mgr, const QString& parentSn) {
+    if (!mgr) return nullptr;
+    for (auto* d : mgr->allDevices()) {
+        if (d->parentSn == parentSn && d->type == DeviceType::Aircraft)
+            return d;
+    }
+    return nullptr;
+}
 
 void OsdPanel::showOsd(const DeviceInfo* device,
                          const AircraftOsd* aircraftOsd,
@@ -127,33 +136,35 @@ void OsdPanel::showOsd(const DeviceInfo* device,
     Q_UNUSED(rawJson)
     if (!device) { clear(); return; }
 
-    // 仅在设备类型变化时才切换面板显隐，避免定时刷新导致闪烁
     bool typeChanged = (static_cast<int>(device->type) != mLastDeviceType);
     mLastDeviceType = static_cast<int>(device->type);
+
+    QString dockIcon = onlineIcon(device->online);
 
     if (device->type == DeviceType::Dock) {
         if (typeChanged) {
             mDockPanel->show();
         }
+        mDockPanel->setTitle(dockIcon + QString::fromUtf8(" \xf0\x9f\x8f\xa2 \xe6\x9c\xba\xe5\x9c\xba\xe4\xbf\xa1\xe6\x81\xaf"));
         if (dockOsd && dockOsd->valid)
             showDockOsd(*dockOsd);
 
-        // 子飞机面板：数据到达时自动显示，不仅依赖 typeChanged
         bool hasAircraft = (aircraftOsd && aircraftOsd->valid);
         if (hasAircraft) {
             if (typeChanged || mAircraftPanel->isHidden()) {
                 mAircraftPanel->show();
-                mAircraftPanel->setTitle(QString::fromUtf8("\xe2\x9c\x88 \xe9\xa3\x9e\xe6\x9c\xba\xe4\xbf\xa1\xe6\x81\xaf"));
             }
+            const DeviceInfo* child = findChildAircraft(mDevMgr, device->sn);
+            QString airIcon = child ? onlineIcon(child->online) : dockIcon;
+            mAircraftPanel->setTitle(airIcon + QString::fromUtf8(" \xe2\x9c\x88 \xe9\xa3\x9e\xe6\x9c\xba\xe4\xbf\xa1\xe6\x81\xaf"));
             showAircraftOsd(*aircraftOsd);
         }
     } else {
-        // 独立手飞
         if (typeChanged) {
             mDockPanel->hide();
             mAircraftPanel->show();
-            mAircraftPanel->setTitle(QString::fromUtf8("\xe2\x9c\x88 \xe9\xa3\x9e\xe6\x9c\xba\xe4\xbf\xa1\xe6\x81\xaf"));
         }
+        mAircraftPanel->setTitle(dockIcon + QString::fromUtf8(" \xe2\x9c\x88 \xe9\xa3\x9e\xe6\x9c\xba\xe4\xbf\xa1\xe6\x81\xaf"));
         if (aircraftOsd && aircraftOsd->valid)
             showAircraftOsd(*aircraftOsd);
     }
@@ -164,8 +175,6 @@ void OsdPanel::clear() {
     mAircraftPanel->hide();
     mLastDeviceType = -1;
 }
-
-// —— 机场显示 ——
 
 static QString formatCoord(double val) {
     if (val == 0.0) return "-";
@@ -179,7 +188,6 @@ static QString coverText(int state) {
 }
 
 void OsdPanel::showDockOsd(const DockOsd& osd) {
-    // 核心字段无数据则整块跳过，保持旧值不变
     if (osd.latitude == 0.0 && osd.longitude == 0.0)
         return;
 
@@ -201,8 +209,6 @@ void OsdPanel::showDockOsd(const DockOsd& osd) {
         ? QString::number(osd.rainfall, 'f', 1) + " mm" : "-");
 }
 
-// —— 飞机显示 ——
-
 static QString modeCodeText(int code) {
     if (code < 0) return "-";
     switch (code) {
@@ -220,7 +226,6 @@ static QString modeCodeText(int code) {
 }
 
 void OsdPanel::showAircraftOsd(const AircraftOsd& osd) {
-    // 核心字段无数据则整块跳过，保持旧值不变
     if (osd.latitude == 0.0 && osd.longitude == 0.0)
         return;
 
@@ -248,8 +253,6 @@ void OsdPanel::setFieldValue(QLabel* label, const QString& value) {
         return;
     label->setText(value);
 }
-
-// —— 定时刷新 / 暂停恢复 ——
 
 void OsdPanel::refresh() {
     if (!mDevMgr || mCurrentSn.isEmpty())

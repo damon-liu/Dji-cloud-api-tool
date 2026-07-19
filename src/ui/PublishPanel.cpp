@@ -10,7 +10,6 @@
 #include <QMouseEvent>
 #include <QTextCursor>
 #include <QTextBlock>
-#include <QGroupBox>
 
 const QStringList PublishPanel::PUBLISH_PRESETS = {
     "thing/product/{gateway_sn}/services",
@@ -40,11 +39,15 @@ PublishPanel::PublishPanel(QWidget* parent)
 
     // topic 切换时自动填入对应模板
     connect(mTopicCombo, &QComboBox::currentTextChanged, this, [this](const QString& text) {
-        // 先通过反向映射找到 pattern，再用 pattern 查模板
         QString pattern = mTopicToPattern.value(text);
         QString tpl = mTemplates.value(pattern.isEmpty() ? text : pattern);
+        // 兜底：{gateway_sn} 的 pattern 可能只以 {sn} 形式存在于模板中
+        if (tpl.isEmpty() && pattern.contains("{gateway_sn}")) {
+            QString fallbackKey = pattern;
+            fallbackKey.replace("{gateway_sn}", "{sn}");
+            tpl = mTemplates.value(fallbackKey);
+        }
         if (!tpl.isEmpty()) {
-            // 从 topic 中提取 gateway SN（格式: thing/product/{gateway_sn}/... 或 sys/product/{gateway_sn}/...）
             QStringList parts = text.split('/');
             if (parts.size() >= 3)
                 tpl.replace("{gateway_sn}", parts[2]);
@@ -82,18 +85,20 @@ void PublishPanel::setupUi() {
     topicLayout->addWidget(mTopicCombo, 1);
     layout->addLayout(topicLayout);
 
-    // JSON 编辑区
+    // JSON 编辑区（固定高度，不参与拉伸）
     mEditor = new QPlainTextEdit(this);
     mEditor->setFont(QFont("Consolas", 10));
     mEditor->setLineWrapMode(QPlainTextEdit::NoWrap);
     mEditor->setPlaceholderText("");
+    mEditor->setMinimumHeight(80);
+    mEditor->setMaximumHeight(140);
     mEditor->setStyleSheet(
         "QPlainTextEdit { background: #fff; border: 1px solid #dadce0; "
         "border-radius: 4px; font-family: 'Consolas', monospace; font-size: 12px; "
         "padding: 6px; color: #333; }");
-    layout->addWidget(mEditor, 1);
+    layout->addWidget(mEditor, 0);
 
-    // 发送按钮
+    // 发送按钮（顶到编辑区下方）
     auto* btnLayout = new QHBoxLayout;
 
     btnLayout->addStretch();
@@ -113,14 +118,17 @@ void PublishPanel::setupUi() {
         QString json  = mEditor->toPlainText().trimmed();
         if (topic.isEmpty() || json.isEmpty())
             return;
-        mLastSentJson = json;  // 暂存 JSON，供结果回调使用
+        mLastSentJson = json;
         emit publishRequested(topic, json);
     });
 
-    // 下发记录（只读），始终可见
-    mHistoryGroup = new QGroupBox(QString::fromUtf8("下发记录"), this);
-    auto* historyLayout = new QVBoxLayout(mHistoryGroup);
-    mHistoryLog = new QPlainTextEdit(mHistoryGroup);
+    // 下发记录标签
+    auto* historyLabel = new QLabel(QString::fromUtf8("下发记录:"));
+    historyLabel->setStyleSheet("font-size: 12px; color: #5f6368;");
+    layout->addWidget(historyLabel);
+
+    // 下发记录（只读），占据剩余空间
+    mHistoryLog = new QPlainTextEdit(this);
     mHistoryLog->setReadOnly(true);
     mHistoryLog->setPlaceholderText(QString::fromUtf8("暂无下发记录"));
     mHistoryLog->setStyleSheet(
@@ -128,8 +136,7 @@ void PublishPanel::setupUi() {
         "border-radius: 4px; font-family: 'Consolas', monospace; font-size: 11px; "
         "padding: 4px; color: #333; }");
     mHistoryLog->viewport()->installEventFilter(this);
-    historyLayout->addWidget(mHistoryLog);
-    layout->addWidget(mHistoryGroup, 1);
+    layout->addWidget(mHistoryLog, 1);
 }
 
 void PublishPanel::setDeviceSn(const QString& sn) {
@@ -144,7 +151,7 @@ void PublishPanel::setTopics(const QStringList& /*subscribed*/) {
             QString topic = QString(tpl).replace("{sn}", mDeviceSn);
             if (!mGatewaySn.isEmpty())
                 topic.replace("{gateway_sn}", mGatewaySn);
-            mTopicToPattern[topic] = tpl;  // 反向映射必须先于 addItem（addItem 触发 currentTextChanged）
+            mTopicToPattern[topic] = tpl;
             mTopicCombo->addItem(topic);
         }
     }
@@ -172,54 +179,18 @@ void PublishPanel::onPublishResult(const QString& topic, bool success, const QSt
     mLastSentJson.clear();
 }
 
-void PublishPanel::appendHistory(const QString& topic, const QString& json, bool success, const QString& message) {
-    QString timeStr = QTime::currentTime().toString("HH:mm:ss");
-
-    HistoryEntry entry;
-    entry.timeStr = timeStr;
-    entry.topic   = topic;
-    entry.json    = json;
-    entry.success = success;
-    entry.message = message;
-
-    mHistoryEntries.prepend(entry);
-    if (mHistoryEntries.size() > MAX_HISTORY)
-        mHistoryEntries.removeLast();
-
-    // 重建 block 起始索引（最新记录在最前面）
-    mHistoryBlockStarts.clear();
-    mHistoryLog->clear();
-
-    for (const auto& e : mHistoryEntries) {
-        mHistoryBlockStarts.append(mHistoryLog->blockCount());
-
-        QString icon = e.success ? QString::fromUtf8("✅") : QString::fromUtf8("❌");
-        QString block;
-        block += QStringLiteral("[%1] %2 %3\n")
-            .arg(e.timeStr, icon, e.message);
-        block += QString::fromUtf8("Topic: %1\n").arg(e.topic);
-        block += QString::fromUtf8("下发:\n%1\n").arg(e.json.trimmed());
-        block += QString::fromUtf8("────────────────────────────\n");
-
-        mHistoryLog->moveCursor(QTextCursor::End);
-        mHistoryLog->insertPlainText(block);
-    }
-
-    // 滚动到顶部显示最新记录
-    mHistoryLog->moveCursor(QTextCursor::Start);
-}
-
-void PublishPanel::appendCommandRecord(const QString& topic, const QString& requestJson,
-                                        const QString& replyJson, bool success, const QString& message) {
+void PublishPanel::appendHistory(const QString& topic, const QString& json,
+                                 bool success, const QString& message,
+                                 const QString& replyJson) {
     QString timeStr = QTime::currentTime().toString("HH:mm:ss");
     QString icon = success ? QString::fromUtf8("✅") : QString::fromUtf8("❌");
 
     QString block;
     block += QStringLiteral("[%1] %2 %3\n").arg(timeStr, icon, message);
     block += QString::fromUtf8("Topic: %1\n").arg(topic);
-    block += QString::fromUtf8("下发:\n%1\n").arg(requestJson.trimmed());
-    block += QString::fromUtf8("响应:\n%1\n").arg(replyJson.isEmpty()
-        ? QString::fromUtf8("（无响应）") : replyJson.trimmed());
+    block += QString::fromUtf8("下发:\n%1\n").arg(json.trimmed());
+    if (!replyJson.isEmpty())
+        block += QString::fromUtf8("响应:\n%1\n").arg(replyJson.trimmed());
     block += QString::fromUtf8("────────────────────────────\n");
 
     // 最新记录插入顶部
@@ -228,31 +199,20 @@ void PublishPanel::appendCommandRecord(const QString& topic, const QString& requ
     mHistoryLog->moveCursor(QTextCursor::Start);
 }
 
+void PublishPanel::appendCommandRecord(const QString& topic, const QString& requestJson,
+                                        const QString& replyJson, bool success, const QString& message) {
+    QString msg = success ? message
+                          : QString::fromUtf8("失败（%1）").arg(message);
+    appendHistory(topic, requestJson, success, msg, replyJson);
+}
+
 bool PublishPanel::eventFilter(QObject* obj, QEvent* event) {
-    if (obj == mHistoryLog->viewport() && event->type() == QEvent::MouseButtonDblClick) {
-        QTextCursor cursor = mHistoryLog->cursorForPosition(
-            static_cast<QMouseEvent*>(event)->pos());
-        int blockNum = cursor.block().blockNumber();
-        // 查找该 block 属于哪条历史记录
-        for (int i = mHistoryBlockStarts.size() - 1; i >= 0; --i) {
-            if (blockNum >= mHistoryBlockStarts[i]) {
-                if (i < mHistoryEntries.size()) {
-                    const HistoryEntry& entry = mHistoryEntries[i];
-                    if (!entry.topic.isEmpty())
-                        mTopicCombo->setCurrentText(entry.topic);
-                    if (!entry.json.isEmpty())
-                        mEditor->setPlainText(entry.json);
-                }
-                break;
-            }
-        }
-        return true;
-    }
+    Q_UNUSED(obj) Q_UNUSED(event)
     return QWidget::eventFilter(obj, event);
 }
 
 void PublishPanel::loadTemplates(const QString& path) {
-    mTemplates = builtinTemplates();  // 兜底（含 drc/down 等 MD 中没有的模板）
+    mTemplates = builtinTemplates();
 
     QFile file(path);
     if (!file.exists()) {
@@ -264,41 +224,34 @@ void PublishPanel::loadTemplates(const QString& path) {
         return;
     }
 
-    // ——— 解析 topic-send-construct.md ———
-    // 格式: *topic*: <pattern> 后跟 ```json ... ``` 代码块
     QString currentTopic;
     QString currentJson;
     bool    inCodeBlock = false;
-    QMap<QString, QString> parsed;  // MD pattern → template JSON
+    QMap<QString, QString> parsed;
 
     while (!file.atEnd()) {
         QString line = QString::fromUtf8(file.readLine()).trimmed();
 
-        // 匹配 *topic*: <pattern>
         if (!inCodeBlock && line.startsWith("*topic*:")) {
             if (!currentTopic.isEmpty() && !currentJson.isEmpty())
                 parsed[currentTopic] = currentJson;
-            currentTopic = line.mid(8).trimmed();   // 去掉 "*topic*:" 前缀
+            currentTopic = line.mid(8).trimmed();
             currentJson.clear();
         }
-        // 代码块开始
         else if (!inCodeBlock && !currentTopic.isEmpty() &&
                  (line == "```json" || line == "```")) {
             inCodeBlock = true;
             currentJson.clear();
         }
-        // 代码块结束
         else if (inCodeBlock && line == "```") {
             inCodeBlock = false;
         }
-        // 代码块内容
         else if (inCodeBlock) {
             if (!currentJson.isEmpty())
                 currentJson += "\n";
             currentJson += line;
         }
     }
-    // 保存最后一个
     if (!currentTopic.isEmpty() && !currentJson.isEmpty())
         parsed[currentTopic] = currentJson;
     file.close();
@@ -308,20 +261,16 @@ void PublishPanel::loadTemplates(const QString& path) {
         return;
     }
 
-    // 将 MD 模板合并到 mTemplates（key 映射为 PUBLISH_PRESETS 的 {sn} 格式）
     for (auto it = parsed.begin(); it != parsed.end(); ++it) {
         QString mdPattern = it.key();
 
-        // 跳过 drc/up（上行 topic，下发用的是 drc/down，保留 builtin 兜底）
         if (mdPattern.contains("drc/up"))
             continue;
 
-        // key 映射: {gateway_sn} → {sn}，匹配 PUBLISH_PRESETS
         QString key = mdPattern;
         key.replace("{gateway_sn}", "{sn}");
 
         QString tpl = it.value();
-        // "gateway":"sn" → "gateway":"{gateway_sn}" 占位符（运行时由构造函数提取实际 SN）
         tpl.replace("\"gateway\": \"sn\"", "\"gateway\": \"{gateway_sn}\"");
         tpl.replace("\"gateway\":\"sn\"",  "\"gateway\":\"{gateway_sn}\"");
         tpl.replace("\"gateway\": \"SN\"", "\"gateway\": \"{gateway_sn}\"");
