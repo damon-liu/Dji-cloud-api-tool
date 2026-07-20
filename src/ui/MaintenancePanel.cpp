@@ -12,13 +12,13 @@ QGroupBox* MaintenancePanel::makeToggleCard(const QString& title,
                                               QPushButton*& leftBtn, QPushButton*& rightBtn) {
     auto* group = new QGroupBox(title, this);
     auto* v = new QVBoxLayout(group);
-    v->addStretch();
     auto* row = new QHBoxLayout;
     leftBtn  = new QPushButton(leftText, group);
     rightBtn = new QPushButton(rightText, group);
     row->addWidget(leftBtn);
     row->addWidget(rightBtn);
     v->addLayout(row);
+    v->setAlignment(row, Qt::AlignVCenter);
     return group;
 }
 
@@ -26,9 +26,12 @@ QGroupBox* MaintenancePanel::makeActionCard(const QString& title, const QString&
                                               QPushButton*& btn) {
     auto* group = new QGroupBox(title, this);
     auto* v = new QVBoxLayout(group);
-    v->addStretch();
+    auto* row = new QHBoxLayout;
     btn = new QPushButton(btnText, group);
-    v->addWidget(btn);
+    row->addWidget(btn);
+    row->addStretch();
+    v->addLayout(row);
+    v->setAlignment(row, Qt::AlignVCenter);
     return group;
 }
 
@@ -65,18 +68,9 @@ void MaintenancePanel::setupUi() {
     mHintLabel->setWordWrap(true);
     mainLayout->addWidget(mHintLabel);
 
-    // --- 滚动区：包裹卡片网格 + 展开按钮 + 展开区域 ---
-    auto* scrollArea = new QScrollArea(this);
-    scrollArea->setWidgetResizable(true);
-    scrollArea->setFrameShape(QFrame::NoFrame);
-    scrollArea->setStyleSheet(
-        "QScrollArea { background: transparent; }"
-        "QScrollBar:vertical { width: 8px; background: #f5f5f5; }"
-        "QScrollBar::handle:vertical { background: #c4c4c4; border-radius: 4px; }"
-        "QScrollBar::handle:vertical:hover { background: #a0a0a0; }");
-
-    auto* scrollContent = new QWidget(scrollArea);
-    auto* scrollLayout = new QVBoxLayout(scrollContent);
+    // --- 卡片区域（卡片网格 + 展开按钮 + 展开区域）---
+    auto* cardsWidget = new QWidget(this);
+    auto* scrollLayout = new QVBoxLayout(cardsWidget);
     scrollLayout->setContentsMargins(0, 0, 0, 0);
     scrollLayout->setSpacing(6);
 
@@ -109,7 +103,7 @@ void MaintenancePanel::setupUi() {
     // --- 展开/收起按钮 ---
     auto* expandBar = new QHBoxLayout;
     expandBar->addStretch();
-    mExpandBtn = new QPushButton(QString::fromUtf8("展开更多  ▼"), scrollContent);
+    mExpandBtn = new QPushButton(QString::fromUtf8("展开更多  ▼"), cardsWidget);
     mExpandBtn->setFlat(true);
     mExpandBtn->setCursor(Qt::PointingHandCursor);
     mExpandBtn->setStyleSheet(
@@ -120,7 +114,7 @@ void MaintenancePanel::setupUi() {
     scrollLayout->addLayout(expandBar);
 
     // 展开区域（默认隐藏）：每行 3 列
-    mExpandRow = new QWidget(scrollContent);
+    mExpandRow = new QWidget(cardsWidget);
     auto* expandGrid = new QGridLayout(mExpandRow);
     expandGrid->setContentsMargins(0, 0, 0, 0);
     expandGrid->setSpacing(10);
@@ -128,7 +122,6 @@ void MaintenancePanel::setupUi() {
     // 机场空调：3个按钮（制冷/制热/送风）
     auto* acGroup = new QGroupBox(QString::fromUtf8("机场空调工作模式"), mExpandRow);
     auto* acLayout = new QVBoxLayout(acGroup);
-    acLayout->addStretch();
     auto* acBtnRow = new QHBoxLayout;
     mAcCoolBtn = new QPushButton(QString::fromUtf8("制冷"), acGroup);
     mAcHeatBtn = new QPushButton(QString::fromUtf8("制热"), acGroup);
@@ -137,6 +130,7 @@ void MaintenancePanel::setupUi() {
     acBtnRow->addWidget(mAcHeatBtn);
     acBtnRow->addWidget(mAcFanBtn);
     acLayout->addLayout(acBtnRow);
+    acLayout->setAlignment(acBtnRow, Qt::AlignVCenter);
 
     auto* alarmGroup = makeToggleCard(
         QString::fromUtf8("机场声光报警"),
@@ -167,7 +161,6 @@ void MaintenancePanel::setupUi() {
     // 运营商切换：3个按钮
     auto* carrierGroup = new QGroupBox(QString::fromUtf8("运营商切换"), mExpandRow);
     auto* carrierLayout = new QVBoxLayout(carrierGroup);
-    carrierLayout->addStretch();
     auto* carrierBtnRow = new QHBoxLayout;
     mCarrierMobileBtn  = new QPushButton(QString::fromUtf8("移动"), carrierGroup);
     mCarrierUnicomBtn  = new QPushButton(QString::fromUtf8("联通"), carrierGroup);
@@ -176,6 +169,7 @@ void MaintenancePanel::setupUi() {
     carrierBtnRow->addWidget(mCarrierUnicomBtn);
     carrierBtnRow->addWidget(mCarrierTelecomBtn);
     carrierLayout->addLayout(carrierBtnRow);
+    carrierLayout->setAlignment(carrierBtnRow, Qt::AlignVCenter);
 
     expandGrid->addWidget(carrierGroup, 2, 0);
 
@@ -183,10 +177,7 @@ void MaintenancePanel::setupUi() {
         expandGrid->setColumnStretch(col, 1);
     mExpandRow->setVisible(false);
     scrollLayout->addWidget(mExpandRow);
-
-    scrollLayout->addStretch();
-    scrollArea->setWidget(scrollContent);
-    mainLayout->addWidget(scrollArea, 1);
+    mainLayout->addWidget(cardsWidget, 0);
 
     connect(mExpandBtn, &QPushButton::clicked, this, [this]() {
         bool visible = !mExpandRow->isVisible();
