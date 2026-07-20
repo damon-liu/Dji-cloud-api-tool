@@ -65,12 +65,11 @@ void MaintenancePanel::setupUi() {
     mHintLabel->setWordWrap(true);
     mainLayout->addWidget(mHintLabel);
 
-    // --- 卡片网格：第一行默认可见 ---
-    // 补光灯开关 | 电池保养状态
+    // --- 卡片网格：第一行 3 列默认可见 ---
     auto* cardGrid = new QGridLayout;
     cardGrid->setSpacing(10);
 
-    // 第1行：补光灯开关 | 电池保养状态
+    // 第1行：补光灯开关 | 电池保养状态 | 电池运行模式
     auto* fillLightGroup = makeToggleCard(
         QString::fromUtf8("补光灯开关"),
         QString::fromUtf8("开启"), QString::fromUtf8("关闭"),
@@ -79,10 +78,15 @@ void MaintenancePanel::setupUi() {
         QString::fromUtf8("电池保养状态"),
         QString::fromUtf8("普通"), QString::fromUtf8("保养"),
         mBatteryNormalBtn, mBatteryMaintainBtn);
+    auto* batteryModeGroup = makeToggleCard(
+        QString::fromUtf8("电池运行模式"),
+        QString::fromUtf8("标准"), QString::fromUtf8("静音"),
+        mBatteryStandardBtn, mBatterySilentBtn);
     cardGrid->addWidget(fillLightGroup,    0, 0);
     cardGrid->addWidget(batteryMaintGroup, 0, 1);
+    cardGrid->addWidget(batteryModeGroup,  0, 2);
 
-    for (int col = 0; col < 2; ++col)
+    for (int col = 0; col < 3; ++col)
         cardGrid->setColumnStretch(col, 1);
 
     mainLayout->addLayout(cardGrid);
@@ -100,17 +104,11 @@ void MaintenancePanel::setupUi() {
     expandBar->addStretch();
     mainLayout->addLayout(expandBar);
 
-    // 第二行（默认隐藏）：其余所有卡片
+    // 展开区域（默认隐藏）：每行 3 列
     mExpandRow = new QWidget(this);
     auto* expandGrid = new QGridLayout(mExpandRow);
     expandGrid->setContentsMargins(0, 0, 0, 0);
     expandGrid->setSpacing(10);
-
-    // 电池运行模式 | 机场空调工作模式
-    auto* batteryModeGroup = makeToggleCard(
-        QString::fromUtf8("电池运行模式"),
-        QString::fromUtf8("标准"), QString::fromUtf8("静音"),
-        mBatteryStandardBtn, mBatterySilentBtn);
 
     // 机场空调：3个按钮（制冷/制热/送风）
     auto* acGroup = new QGroupBox(QString::fromUtf8("机场空调工作模式"), this);
@@ -125,10 +123,6 @@ void MaintenancePanel::setupUi() {
     acBtnRow->addWidget(mAcFanBtn);
     acLayout->addLayout(acBtnRow);
 
-    expandGrid->addWidget(batteryModeGroup, 0, 0);
-    expandGrid->addWidget(acGroup,          0, 1);
-
-    // 声光报警 | 飞行器数据格式化
     auto* alarmGroup = makeToggleCard(
         QString::fromUtf8("机场声光报警"),
         QString::fromUtf8("开启"), QString::fromUtf8("关闭"),
@@ -136,24 +130,24 @@ void MaintenancePanel::setupUi() {
     auto* aircraftFormatGroup = makeActionCard(
         QString::fromUtf8("飞行器数据格式化"),
         QString::fromUtf8("格式化"), mAircraftFormatBtn);
-    expandGrid->addWidget(alarmGroup,         1, 0);
-    expandGrid->addWidget(aircraftFormatGroup, 1, 1);
+    expandGrid->addWidget(acGroup,             0, 0);
+    expandGrid->addWidget(alarmGroup,          0, 1);
+    expandGrid->addWidget(aircraftFormatGroup, 0, 2);
 
-    // 机场数据格式化 | eSIM 激活
+    // 机场数据格式化 | eSIM 激活 | SIM 切换
     auto* dockFormatGroup = makeActionCard(
         QString::fromUtf8("机场数据格式化"),
         QString::fromUtf8("格式化"), mDockFormatBtn);
     auto* esimGroup = makeActionCard(
         QString::fromUtf8("eSIM 激活"),
         QString::fromUtf8("激活"), mEsimActivateBtn);
-    expandGrid->addWidget(dockFormatGroup, 2, 0);
-    expandGrid->addWidget(esimGroup,       2, 1);
-
-    // SIM 切换 | 运营商切换
     auto* simGroup = makeToggleCard(
         QString::fromUtf8("SIM 切换"),
         QString::fromUtf8("SIM 1"), QString::fromUtf8("SIM 2"),
         mSim1Btn, mSim2Btn);
+    expandGrid->addWidget(dockFormatGroup, 1, 0);
+    expandGrid->addWidget(esimGroup,       1, 1);
+    expandGrid->addWidget(simGroup,        1, 2);
 
     // 运营商切换：3个按钮
     auto* carrierGroup = new QGroupBox(QString::fromUtf8("运营商切换"), this);
@@ -168,10 +162,9 @@ void MaintenancePanel::setupUi() {
     carrierBtnRow->addWidget(mCarrierTelecomBtn);
     carrierLayout->addLayout(carrierBtnRow);
 
-    expandGrid->addWidget(simGroup,     3, 0);
-    expandGrid->addWidget(carrierGroup, 3, 1);
+    expandGrid->addWidget(carrierGroup, 2, 0);
 
-    for (int col = 0; col < 2; ++col)
+    for (int col = 0; col < 3; ++col)
         expandGrid->setColumnStretch(col, 1);
     mExpandRow->setVisible(false);
     mainLayout->addWidget(mExpandRow);
