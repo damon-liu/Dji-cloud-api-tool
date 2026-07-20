@@ -65,6 +65,21 @@ void MaintenancePanel::setupUi() {
     mHintLabel->setWordWrap(true);
     mainLayout->addWidget(mHintLabel);
 
+    // --- 滚动区：包裹卡片网格 + 展开按钮 + 展开区域 ---
+    auto* scrollArea = new QScrollArea(this);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setStyleSheet(
+        "QScrollArea { background: transparent; }"
+        "QScrollBar:vertical { width: 8px; background: #f5f5f5; }"
+        "QScrollBar::handle:vertical { background: #c4c4c4; border-radius: 4px; }"
+        "QScrollBar::handle:vertical:hover { background: #a0a0a0; }");
+
+    auto* scrollContent = new QWidget(scrollArea);
+    auto* scrollLayout = new QVBoxLayout(scrollContent);
+    scrollLayout->setContentsMargins(0, 0, 0, 0);
+    scrollLayout->setSpacing(6);
+
     // --- 卡片网格：第一行 3 列默认可见 ---
     auto* cardGrid = new QGridLayout;
     cardGrid->setSpacing(10);
@@ -89,12 +104,12 @@ void MaintenancePanel::setupUi() {
     for (int col = 0; col < 3; ++col)
         cardGrid->setColumnStretch(col, 1);
 
-    mainLayout->addLayout(cardGrid);
+    scrollLayout->addLayout(cardGrid);
 
     // --- 展开/收起按钮 ---
     auto* expandBar = new QHBoxLayout;
     expandBar->addStretch();
-    mExpandBtn = new QPushButton(QString::fromUtf8("展开更多  ▼"), this);
+    mExpandBtn = new QPushButton(QString::fromUtf8("展开更多  ▼"), scrollContent);
     mExpandBtn->setFlat(true);
     mExpandBtn->setCursor(Qt::PointingHandCursor);
     mExpandBtn->setStyleSheet(
@@ -102,10 +117,10 @@ void MaintenancePanel::setupUi() {
         "QPushButton:hover { color: #1557b0; }");
     expandBar->addWidget(mExpandBtn);
     expandBar->addStretch();
-    mainLayout->addLayout(expandBar);
+    scrollLayout->addLayout(expandBar);
 
     // 展开区域（默认隐藏）：每行 3 列
-    mExpandRow = new QWidget(this);
+    mExpandRow = new QWidget(scrollContent);
     auto* expandGrid = new QGridLayout(mExpandRow);
     expandGrid->setContentsMargins(0, 0, 0, 0);
     expandGrid->setSpacing(10);
@@ -167,7 +182,11 @@ void MaintenancePanel::setupUi() {
     for (int col = 0; col < 3; ++col)
         expandGrid->setColumnStretch(col, 1);
     mExpandRow->setVisible(false);
-    mainLayout->addWidget(mExpandRow);
+    scrollLayout->addWidget(mExpandRow);
+
+    scrollLayout->addStretch();
+    scrollArea->setWidget(scrollContent);
+    mainLayout->addWidget(scrollArea, 1);
 
     connect(mExpandBtn, &QPushButton::clicked, this, [this]() {
         bool visible = !mExpandRow->isVisible();
