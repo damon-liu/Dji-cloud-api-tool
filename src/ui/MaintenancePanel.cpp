@@ -53,32 +53,17 @@ void MaintenancePanel::appendHistory(const QString& action) {
 
 void MaintenancePanel::setupUi() {
     auto* mainLayout = new QVBoxLayout(this);
-    mainLayout->setContentsMargins(0, 0, 0, 0);
-    mainLayout->setSpacing(0);
-
-    // --- 滚动区域：包裹提示 + 卡片 + 展开按钮 ---
-    auto* scrollArea = new QScrollArea(this);
-    scrollArea->setWidgetResizable(true);
-    scrollArea->setFrameShape(QFrame::NoFrame);
-    scrollArea->setStyleSheet(
-        "QScrollArea { background: transparent; }"
-        "QScrollBar:vertical { width: 8px; background: #f5f5f5; }"
-        "QScrollBar::handle:vertical { background: #c4c4c4; border-radius: 4px; }"
-        "QScrollBar::handle:vertical:hover { background: #a0a0a0; }");
-
-    auto* scrollContent = new QWidget(scrollArea);
-    auto* scrollLayout = new QVBoxLayout(scrollContent);
-    scrollLayout->setContentsMargins(8, 8, 8, 8);
-    scrollLayout->setSpacing(6);
+    mainLayout->setContentsMargins(8, 8, 8, 8);
+    mainLayout->setSpacing(6);
 
     // --- 状态提示 ---
     mHintLabel = new QLabel(
-        QString::fromUtf8("⚠️ 运维模式功能将在后续版本中完善，当前仅供预览"), scrollContent);
+        QString::fromUtf8("⚠️ 运维模式功能将在后续版本中完善，当前仅供预览"), this);
     mHintLabel->setStyleSheet(
         "color: #b06000; font-weight: bold; padding: 6px 12px;"
         "background: #fff8e1; border: 1px solid #ffcc02; border-radius: 4px;");
     mHintLabel->setWordWrap(true);
-    scrollLayout->addWidget(mHintLabel);
+    mainLayout->addWidget(mHintLabel);
 
     // --- 卡片网格：第一行 3 列默认可见 ---
     auto* cardGrid = new QGridLayout;
@@ -104,12 +89,12 @@ void MaintenancePanel::setupUi() {
     for (int col = 0; col < 3; ++col)
         cardGrid->setColumnStretch(col, 1);
 
-    scrollLayout->addLayout(cardGrid);
+    mainLayout->addLayout(cardGrid);
 
     // --- 展开/收起按钮 ---
     auto* expandBar = new QHBoxLayout;
     expandBar->addStretch();
-    mExpandBtn = new QPushButton(QString::fromUtf8("展开更多  ▼"), scrollContent);
+    mExpandBtn = new QPushButton(QString::fromUtf8("展开更多  ▼"), this);
     mExpandBtn->setFlat(true);
     mExpandBtn->setCursor(Qt::PointingHandCursor);
     mExpandBtn->setStyleSheet(
@@ -117,10 +102,10 @@ void MaintenancePanel::setupUi() {
         "QPushButton:hover { color: #1557b0; }");
     expandBar->addWidget(mExpandBtn);
     expandBar->addStretch();
-    scrollLayout->addLayout(expandBar);
+    mainLayout->addLayout(expandBar);
 
     // 展开区域（默认隐藏）：每行 3 列
-    mExpandRow = new QWidget(scrollContent);
+    mExpandRow = new QWidget(this);
     auto* expandGrid = new QGridLayout(mExpandRow);
     expandGrid->setContentsMargins(0, 0, 0, 0);
     expandGrid->setSpacing(10);
@@ -182,13 +167,7 @@ void MaintenancePanel::setupUi() {
     for (int col = 0; col < 3; ++col)
         expandGrid->setColumnStretch(col, 1);
     mExpandRow->setVisible(false);
-    scrollLayout->addWidget(mExpandRow);
-
-    // scrollLayout 末尾加弹簧，防止内容不足时卡片被拉伸
-    scrollLayout->addStretch();
-
-    scrollArea->setWidget(scrollContent);
-    mainLayout->addWidget(scrollArea, 1);
+    mainLayout->addWidget(mExpandRow);
 
     connect(mExpandBtn, &QPushButton::clicked, this, [this]() {
         bool visible = !mExpandRow->isVisible();
