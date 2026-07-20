@@ -73,6 +73,10 @@ private:
     // --- 状态提示 ---
     QLabel* mHintLabel = nullptr;
 
+    // --- 展开/收起 ---
+    QPushButton* mExpandBtn = nullptr;
+    QWidget*     mExpandRow = nullptr;
+
     // --- 下发记录 ---
     QPlainTextEdit* mHistoryEdit = nullptr;
 };

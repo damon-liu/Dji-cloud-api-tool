@@ -65,11 +65,12 @@ void MaintenancePanel::setupUi() {
     mHintLabel->setWordWrap(true);
     mainLayout->addWidget(mHintLabel);
 
-    // --- 卡片网格：2列 × 5行 ---
+    // --- 卡片网格：第一行默认可见 ---
+    // 补光灯开关 | 电池保养状态
     auto* cardGrid = new QGridLayout;
     cardGrid->setSpacing(10);
 
-    // 第1行：补光灯开关 | 电池保养状态切换
+    // 第1行：补光灯开关 | 电池保养状态
     auto* fillLightGroup = makeToggleCard(
         QString::fromUtf8("补光灯开关"),
         QString::fromUtf8("开启"), QString::fromUtf8("关闭"),
@@ -81,7 +82,31 @@ void MaintenancePanel::setupUi() {
     cardGrid->addWidget(fillLightGroup,    0, 0);
     cardGrid->addWidget(batteryMaintGroup, 0, 1);
 
-    // 第2行：电池运行模式 | 机场空调工作模式
+    for (int col = 0; col < 2; ++col)
+        cardGrid->setColumnStretch(col, 1);
+
+    mainLayout->addLayout(cardGrid);
+
+    // --- 展开/收起按钮 ---
+    auto* expandBar = new QHBoxLayout;
+    expandBar->addStretch();
+    mExpandBtn = new QPushButton(QString::fromUtf8("展开更多  ▼"), this);
+    mExpandBtn->setFlat(true);
+    mExpandBtn->setCursor(Qt::PointingHandCursor);
+    mExpandBtn->setStyleSheet(
+        "QPushButton { color: #1a73e8; font-size: 12px; padding: 2px 8px; border: none; }"
+        "QPushButton:hover { color: #1557b0; }");
+    expandBar->addWidget(mExpandBtn);
+    expandBar->addStretch();
+    mainLayout->addLayout(expandBar);
+
+    // 第二行（默认隐藏）：其余所有卡片
+    mExpandRow = new QWidget(this);
+    auto* expandGrid = new QGridLayout(mExpandRow);
+    expandGrid->setContentsMargins(0, 0, 0, 0);
+    expandGrid->setSpacing(10);
+
+    // 电池运行模式 | 机场空调工作模式
     auto* batteryModeGroup = makeToggleCard(
         QString::fromUtf8("电池运行模式"),
         QString::fromUtf8("标准"), QString::fromUtf8("静音"),
@@ -100,10 +125,10 @@ void MaintenancePanel::setupUi() {
     acBtnRow->addWidget(mAcFanBtn);
     acLayout->addLayout(acBtnRow);
 
-    cardGrid->addWidget(batteryModeGroup, 1, 0);
-    cardGrid->addWidget(acGroup,          1, 1);
+    expandGrid->addWidget(batteryModeGroup, 0, 0);
+    expandGrid->addWidget(acGroup,          0, 1);
 
-    // 第3行：声光报警 | 飞行器数据格式化
+    // 声光报警 | 飞行器数据格式化
     auto* alarmGroup = makeToggleCard(
         QString::fromUtf8("机场声光报警"),
         QString::fromUtf8("开启"), QString::fromUtf8("关闭"),
@@ -111,20 +136,20 @@ void MaintenancePanel::setupUi() {
     auto* aircraftFormatGroup = makeActionCard(
         QString::fromUtf8("飞行器数据格式化"),
         QString::fromUtf8("格式化"), mAircraftFormatBtn);
-    cardGrid->addWidget(alarmGroup,         2, 0);
-    cardGrid->addWidget(aircraftFormatGroup, 2, 1);
+    expandGrid->addWidget(alarmGroup,         1, 0);
+    expandGrid->addWidget(aircraftFormatGroup, 1, 1);
 
-    // 第4行：机场数据格式化 | eSIM 激活
+    // 机场数据格式化 | eSIM 激活
     auto* dockFormatGroup = makeActionCard(
         QString::fromUtf8("机场数据格式化"),
         QString::fromUtf8("格式化"), mDockFormatBtn);
     auto* esimGroup = makeActionCard(
         QString::fromUtf8("eSIM 激活"),
         QString::fromUtf8("激活"), mEsimActivateBtn);
-    cardGrid->addWidget(dockFormatGroup, 3, 0);
-    cardGrid->addWidget(esimGroup,       3, 1);
+    expandGrid->addWidget(dockFormatGroup, 2, 0);
+    expandGrid->addWidget(esimGroup,       2, 1);
 
-    // 第5行：SIM 切换 | 运营商切换
+    // SIM 切换 | 运营商切换
     auto* simGroup = makeToggleCard(
         QString::fromUtf8("SIM 切换"),
         QString::fromUtf8("SIM 1"), QString::fromUtf8("SIM 2"),
@@ -143,13 +168,21 @@ void MaintenancePanel::setupUi() {
     carrierBtnRow->addWidget(mCarrierTelecomBtn);
     carrierLayout->addLayout(carrierBtnRow);
 
-    cardGrid->addWidget(simGroup,     4, 0);
-    cardGrid->addWidget(carrierGroup, 4, 1);
+    expandGrid->addWidget(simGroup,     3, 0);
+    expandGrid->addWidget(carrierGroup, 3, 1);
 
     for (int col = 0; col < 2; ++col)
-        cardGrid->setColumnStretch(col, 1);
+        expandGrid->setColumnStretch(col, 1);
+    mExpandRow->setVisible(false);
+    mainLayout->addWidget(mExpandRow);
 
-    mainLayout->addLayout(cardGrid);
+    connect(mExpandBtn, &QPushButton::clicked, this, [this]() {
+        bool visible = !mExpandRow->isVisible();
+        mExpandRow->setVisible(visible);
+        mExpandBtn->setText(visible
+            ? QString::fromUtf8("收起更多  ▲")
+            : QString::fromUtf8("展开更多  ▼"));
+    });
 
     // --- 统一样式所有按钮 ---
     const QList<QPushButton*> buttons = {
