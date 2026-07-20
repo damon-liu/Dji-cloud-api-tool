@@ -9,6 +9,7 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QPlainTextEdit>
+#include <QScrollArea>
 #include <QTextCursor>
 #include <QTime>
 
