@@ -134,7 +134,8 @@ docker run --rm dji-cloud-api:latest
 
 ## 📸 界面截图
 
-![image-20260720113631465](https://damon-siyuan.oss-cn-wuhan-lr.aliyuncs.com/markdown/image-20260720113631465.png)
+<img width="2544" height="1392" alt="image-20260720113631465" src="https://github.com/user-attachments/assets/61b9e902-0611-4d1a-a4fd-4c141aef0d48" />
+
 
 ```
 ┌─────────────┬──────────────────────────────────┐
@@ -204,7 +205,8 @@ docker run --rm dji-cloud-api:latest
 
 ## 📸 界面截图
 
-![image-20260710165818685](https://damon-siyuan.oss-cn-wuhan-lr.aliyuncs.com/markdown/image-20260710165818685.png)
+<img width="2544" height="1392" alt="image-20260720113631465" src="https://github.com/user-attachments/assets/5a521f78-3ce8-4944-ba46-07e57311403b" />
+
 
 ## 🏗 架构
 
