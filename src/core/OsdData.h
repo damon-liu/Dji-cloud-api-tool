@@ -7,7 +7,7 @@
 
 // OSD 公共基类
 struct OsdBase {
-    qint64   timestamp = 0;    // 毫秒时间戳
+    qint64   timestamp = 0;    // 毫秒时间�?
     double   longitude = 0.0;  // 经度
     double   latitude  = 0.0;  // 纬度
     double   altitude  = 0.0;  // 海拔高度 (m)
@@ -30,22 +30,22 @@ struct OsdBase {
 
 // 飞机 OSD 数据
 struct AircraftOsd : public OsdBase {
-    int     battery_percent      = -1;   // 电量百分比
+    int     battery_percent      = -1;   // 电量百分�?
     double  battery_voltage      = 0;    // 电压 mV
     double  speed_horizontal     = 0;    // 水平速度 m/s
     double  speed_vertical       = 0;    // 垂直速度 m/s
-    double  heading              = 0;    // 航向角 度
-    double  pitch                = 0;    // 俯仰角 度
-    double  roll                 = 0;    // 横滚角 度
-    double  yaw                  = 0;    // 偏航角 度
-    double  home_distance        = 0;    // 距home点距离 m
-    int     flight_time_sec      = 0;    // 已飞行时间 秒
+    double  heading              = 0;    // 航向�?�?
+    double  pitch                = 0;    // 俯仰�?�?
+    double  roll                 = 0;    // 横滚�?�?
+    double  yaw                  = 0;    // 偏航�?�?
+    double  home_distance        = 0;    // 距home点距�?m
+    int     flight_time_sec      = 0;    // 已飞行时�?�?
     int     rc_signal_strength   = 0;    // 遥控信号强度 0-100
-    int     mode_code            = -1;   // 飞行模式码
-    double  battery_temperature  = -273; // 电池温度 ℃
-    double  height               = 0;    // 相对起飞点高度 m
-    int     gps_number           = 0;    // GPS搜星数
-    double  wind_speed           = -1;   // 风速 m/s
+    int     mode_code            = -1;   // 飞行模式�?
+    double  battery_temperature  = -273; // 电池温度 �?
+    double  height               = 0;    // 相对起飞点高�?m
+    int     gps_number           = 0;    // GPS搜星�?
+    double  wind_speed           = -1;   // 风�?m/s
 
     void parse(const QJsonObject& data) {
         parseCommon(data);
@@ -64,8 +64,8 @@ struct AircraftOsd : public OsdBase {
             mode_code = data["mode_code"].toInt();
         if (data.contains("battery_temperature"))
             battery_temperature = data["battery_temperature"].toDouble();
-        if (data.contains("height"))
-            height = data["height"].toDouble();
+        if (data.contains("elevation"))
+            height = data["elevation"].toDouble();
         if (data.contains("gps_number"))
             gps_number = data["gps_number"].toInt();
         if (data.contains("wind_speed"))
@@ -86,16 +86,16 @@ struct DockOsd : public OsdBase {
     double  working_voltage        = 0;    // mV
     double  working_current        = 0;    // mA
     double  backup_battery_voltage = 0;    // mV
-    double  wind_speed             = -1;   // m/s, -1 表示无数据
-    double  environment_temp       = -273; // ℃, -273 表示无数据
-    double  environment_humidity   = -1;   // %, -1 表示无数据
-    double  alternate_land_lat     = 0;    // 备降点纬度
-    double  alternate_land_lon     = 0;    // 备降点经度
-    double  dock_inside_temp       = -273; // 舱内温度 ℃ (JSON key: temperature)
-    double  rainfall               = -1;   // 降雨量 mm, -1 表示无数据
-    int     putter_state           = -1;   // 推杆状态: 0=收回, 1=推出
-    int     gps_number             = 0;    // GPS搜星数
-    int     rtk_number             = 0;    // RTK搜星数
+    double  wind_speed             = -1;   // m/s, -1 表示无数�?
+    double  environment_temp       = -273; // �? -273 表示无数�?
+    double  environment_humidity   = -1;   // %, -1 表示无数�?
+    double  alternate_land_lat     = 0;    // 备降点纬�?
+    double  alternate_land_lon     = 0;    // 备降点经�?
+    double  dock_inside_temp       = -273; // 舱内温度 �?(JSON key: temperature)
+    double  rainfall               = -1;   // 降雨�?mm, -1 表示无数�?
+    int     putter_state           = -1;   // 推杆状�? 0=收回, 1=推出
+    int     gps_number             = 0;    // GPS搜星�?
+    int     rtk_number             = 0;    // RTK搜星�?
 
     void parse(const QJsonObject& data) {
         parseCommon(data);
@@ -120,7 +120,7 @@ struct DockOsd : public OsdBase {
         }
         if (data.contains("putter_state"))
             putter_state = data["putter_state"].toInt();
-        // 舱内温度 JSON key 为 "temperature"
+        // 舱内温度 JSON key �?"temperature"
         if (data.contains("temperature"))
             dock_inside_temp = data["temperature"].toDouble();
         if (data.contains("rainfall"))
