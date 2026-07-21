@@ -1,7 +1,6 @@
 #include "DeviceManager.h"
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QJsonArray>
 #include <QDateTime>
 #include <QDebug>
 
@@ -196,6 +195,10 @@ QVector<DeviceInfo*> DeviceManager::topLevelDevices() {
 
 QStringList DeviceManager::topicsForDevice(const QString& sn) const {
     return mTopicManager->topicsForDevice(sn);
+}
+
+QString DeviceManager::deviceForTopic(const QString& topic) const {
+    return mTopicManager->deviceForTopic(topic);
 }
 
 void DeviceManager::addTopic(const QString& deviceSn, const QString& topic) {
@@ -517,59 +520,6 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
                     qDebug() << "DeviceManager: auto-detected child aircraft"
                              << detectedSn << "for dock" << sn;
                 }
-            }
-
-            // 将机场 OSD 中的飞行器相关字段映射到子飞机缓存，
-            // 使选中子飞机时 OSD 面板有数据可显示
-            QString childSn;
-            for (auto it = mDevices.begin(); it != mDevices.end(); ++it) {
-                if (it->parentSn == sn && it->type == DeviceType::Aircraft) {
-                    childSn = it->sn;
-                    break;
-                }
-            }
-            if (!childSn.isEmpty()) {
-                const QJsonObject& merged = mMergedOsdData[sn][topic];
-                AircraftOsd airOsd;
-                airOsd.parseCommon(merged);
-                airOsd.mode_code    = merged.value("mode_code").toInt(-1);
-                airOsd.height       = merged.value("height").toDouble();
-                airOsd.heading      = merged.value("heading").toDouble();
-                airOsd.wind_speed   = merged.value("wind_speed").toDouble();
-
-                QJsonObject ps = merged.value("position_state").toObject();
-                airOsd.gps_number = ps.value("gps_number").toInt();
-                airOsd.rtk_number = ps.value("rtk_number").toInt();
-
-                QJsonObject dcs = merged.value("drone_charge_state").toObject();
-                airOsd.battery_percent = dcs.value("capacity_percent").toInt(-1);
-
-                QJsonObject dbmi = merged.value("drone_battery_maintenance_info").toObject();
-                QJsonArray batteries = dbmi.value("batteries").toArray();
-                if (!batteries.isEmpty()) {
-                    QJsonObject batt = batteries[0].toObject();
-                    airOsd.battery_voltage     = batt.value("voltage").toDouble();
-                    airOsd.battery_temperature = batt.value("temperature").toDouble();
-                }
-
-                mAircraftOsdCache[childSn] = airOsd;
-                qDebug() << "DeviceManager: mapped child aircraft OSD for" << childSn
-                         << "| lat:" << airOsd.latitude << "lon:" << airOsd.longitude
-                         << "| battery:" << airOsd.battery_percent << "%"
-                         << "| battTemp:" << airOsd.battery_temperature
-                         << "| merged keys:" << merged.keys();
-
-                // 生成子飞机的合成 JSON（用于原始 JSON 面板展示）
-                QJsonObject synthRoot;
-                synthRoot["gateway"] = sn;
-                synthRoot["timestamp"] = root.value("timestamp");
-                synthRoot["data"] = merged;
-                QJsonDocument synthDoc(synthRoot);
-                QString synthJson = QString::fromUtf8(synthDoc.toJson(QJsonDocument::Indented));
-                QString childTopic = QString("thing/product/%1/osd").arg(childSn);
-                mRawJsonCache[childSn][childTopic] = synthJson;
-
-                emit deviceOsdUpdated(childSn, childTopic, synthJson);
             }
         }
     }

@@ -19,41 +19,75 @@
 // 内置默认 topic 映射 JSON（文件缺失时降级使用）
 static const char* TOPIC_MAPPINGS_BUILTIN = R"(
 {
-    "topics": {
-        "thing/product/{sn}/osd": {
-            "description": "OSD 遥测数据",
-            "fields": {
-                "job_number": {"zh":"累计作业次数","unit":"次"},
-                "electric_supply_voltage": {"zh":"供电电压","unit":"mV"},
-                "working_voltage": {"zh":"工作电压","unit":"mV"},
-                "wind_speed": {"zh":"风速","unit":"m/s"},
-                "environment_temperature": {"zh":"环境温度","unit":"℃"},
-                "humidity": {"zh":"湿度","unit":"%"},
-                "latitude": {"zh":"纬度","unit":"°"},
-                "longitude": {"zh":"经度","unit":"°"},
-                "height": {"zh":"海拔高度","unit":"m"},
-                "battery.capacity_percent": {"zh":"电池电量","unit":"%"},
-                "horizontal_speed": {"zh":"水平速度","unit":"m/s"},
-                "vertical_speed": {"zh":"垂直速度","unit":"m/s"},
-                "attitude_head": {"zh":"航向角","unit":"°"},
-                "attitude_pitch": {"zh":"俯仰角","unit":"°"},
-                "attitude_roll": {"zh":"横滚角","unit":"°"},
-                "home_distance": {"zh":"距Home距离","unit":"m"},
-                "mode_code": {"zh":"模式码","unit":"","values":{"0":"待机","4":"自动起飞","5":"航线飞行","9":"自动返航","10":"自动降落"}},
-                "drone_in_dock": {"zh":"飞机在舱","unit":"","values":{"0":"否","1":"是"}},
-                "cover_state": {"zh":"舱盖","unit":"","values":{"0":"关闭","1":"打开"}},
-                "position_state.gps_number": {"zh":"GPS搜星","unit":""},
-                "position_state.rtk_number": {"zh":"RTK搜星","unit":""}
-            },
-            "groups": [
-                {"id":"basic","label":"📋 基础信息","keys":["job_number","mode_code","drone_in_dock","cover_state"]},
-                {"id":"power","label":"🔋 电源","keys":["electric_supply_voltage","working_voltage","battery.capacity_percent"]},
-                {"id":"flight","label":"✈ 飞行","keys":["horizontal_speed","vertical_speed","attitude_head","attitude_pitch","attitude_roll","home_distance"]},
-                {"id":"position","label":"📍 定位","keys":["latitude","longitude","height","position_state.gps_number","position_state.rtk_number"]},
-                {"id":"environment","label":"🌡 环境","keys":["wind_speed","environment_temperature","humidity"]}
-            ]
-        }
+  "topics": {
+    "dock/thing/product/{sn}/osd": {
+      "description": "机场 OSD 遥测数据",
+      "fields": {
+        "acc_time": {"zh":"累计运行时间","unit":"秒"},
+        "cover_state": {"zh":"舱盖状态","unit":"","values":{"0":"关闭","1":"打开","2":"半开","3":"异常"}},
+        "drone_in_dock": {"zh":"飞机在舱内","unit":"","values":{"0":"舱外","1":"舱内"}},
+        "electric_supply_voltage": {"zh":"市电供电电压","unit":"mV"},
+        "emergency_stop_state": {"zh":"急停按钮","unit":"","values":{"0":"正常","1":"按下"}},
+        "environment_temperature": {"zh":"外部环境温度","unit":"℃"},
+        "flighttask_step_code": {"zh":"机场任务状态","unit":"","values":{"0":"作业准备中","1":"飞行作业中","2":"作业后状态恢复","5":"任务空闲"}},
+        "heading": {"zh":"机场朝向角","unit":"°"},
+        "height": {"zh":"椭球高度","unit":"m"},
+        "humidity": {"zh":"舱内湿度","unit":"%"},
+        "job_number": {"zh":"累计作业次数","unit":"次"},
+        "latitude": {"zh":"机场纬度","unit":"°"},
+        "longitude": {"zh":"机场经度","unit":"°"},
+        "mode_code": {"zh":"机场运行模式","unit":"","values":{"0":"空闲","1":"现场调试","2":"远程调试","4":"作业中"}},
+        "position_state.gps_number": {"zh":"GPS搜星数","unit":""},
+        "position_state.is_fixed": {"zh":"定位状态","unit":"","values":{"0":"未开始","1":"定位中","2":"定位成功","3":"定位失败"}},
+        "position_state.rtk_number": {"zh":"RTK搜星数","unit":""},
+        "putter_state": {"zh":"推杆状态","unit":"","values":{"0":"收回","1":"推出","2":"半推出","3":"异常"}},
+        "supplement_light_state": {"zh":"补光灯状态","unit":"","values":{"0":"关闭","1":"打开"}},
+        "temperature": {"zh":"舱内温度","unit":"℃"},
+        "wind_speed": {"zh":"风速","unit":"m/s"},
+        "working_current": {"zh":"工作电流","unit":"mA"},
+        "working_voltage": {"zh":"工作电压","unit":"mV"}
+      },
+      "groups": [
+        {"id":"common","label":"📋 常用信息","keys":[["cover_state","putter_state","drone_in_dock"],["latitude","longitude"],["temperature","environment_temperature","wind_speed"]]},
+        {"id":"position","label":"📍 定位","keys":[["position_state.is_fixed","position_state.gps_number","position_state.rtk_number"]]},
+        {"id":"operation","label":"🔧 运行状态","keys":[["mode_code","flighttask_step_code"],["emergency_stop_state","supplement_light_state"]]},
+        {"id":"statistics","label":"⏱ 运行统计","keys":[["job_number","acc_time"]]}
+      ]
+    },
+    "aircraft/thing/product/{sn}/osd": {
+      "description": "飞机 OSD 遥测数据",
+      "fields": {
+        "attitude_head": {"zh":"航向角","unit":"°"},
+        "attitude_pitch": {"zh":"俯仰角","unit":"°"},
+        "attitude_roll": {"zh":"横滚角","unit":"°"},
+        "battery.capacity_percent": {"zh":"总电量","unit":"%"},
+        "battery.remain_flight_time": {"zh":"剩余飞行时间","unit":"秒"},
+        "battery.return_home_power": {"zh":"返航所需电量","unit":"%"},
+        "battery.batteries[0].temperature": {"zh":"左电池温度","unit":"℃"},
+        "battery.batteries[0].voltage": {"zh":"左电池电压","unit":"mV"},
+        "battery.batteries[1].temperature": {"zh":"右电池温度","unit":"℃"},
+        "battery.batteries[1].voltage": {"zh":"右电池电压","unit":"mV"},
+        "elevation": {"zh":"相对起飞点高度","unit":"m"},
+        "height": {"zh":"椭球高度","unit":"m"},
+        "home_distance": {"zh":"距Home点距离","unit":"m"},
+        "horizontal_speed": {"zh":"水平速度","unit":"m/s"},
+        "latitude": {"zh":"纬度","unit":"°"},
+        "longitude": {"zh":"经度","unit":"°"},
+        "mode_code": {"zh":"飞行状态","unit":"","values":{"0":"待命","4":"自动起飞","5":"航线飞行","9":"自动返航","10":"自动降落"}},
+        "position_state.gps_number": {"zh":"GPS搜星数","unit":""},
+        "position_state.is_fixed": {"zh":"定位收敛状态","unit":"","values":{"0":"未开始","1":"收敛中","2":"已收敛","3":"失败"}},
+        "position_state.rtk_number": {"zh":"RTK搜星数","unit":""},
+        "vertical_speed": {"zh":"垂直速度","unit":"m/s"},
+        "wind_speed": {"zh":"风速","unit":"m/s"}
+      },
+      "groups": [
+        {"id":"common","label":"📋 常用信息","keys":[["mode_code"],["latitude","longitude"],["height","elevation","home_distance"],["horizontal_speed","vertical_speed"],["battery.capacity_percent","battery.remain_flight_time"]]},
+        {"id":"position","label":"📍 定位","keys":[["position_state.is_fixed","position_state.gps_number","position_state.rtk_number"]]},
+        {"id":"attitude","label":"✈️ 姿态","keys":[["attitude_head","attitude_pitch","attitude_roll"]]},
+        {"id":"battery","label":"🔋 电池","keys":[["battery.capacity_percent","battery.remain_flight_time","battery.return_home_power"],["battery.batteries[0].voltage","battery.batteries[0].temperature"],["battery.batteries[1].voltage","battery.batteries[1].temperature"]]}
+      ]
     }
+  }
 }
 )";
 
@@ -659,15 +693,24 @@ void MainWindow::connectSignals() {
             mDeviceTree->selectDevice(prevSelected);
     });
 
-    // TopicParsePanel: topic 选中变化 → 更新解析面板（仅显示已启用/订阅的 topic）
+    // TopicParsePanel: topic 选中变化 → 更新解析面板
+    // 使用 topic 所属设备的 SN 和类型查找映射配置，确保 dock/aircraft OSD 使用各自的 groups
     connect(mTopicListWidget, &TopicListWidget::topicSelectionChanged,
             mTopicParsePanel, [this](const QString& selectedTopic) {
-        QString sn = mDeviceTree->selectedDeviceSn();
-        // 仅当 topic 已启用时才解析，禁用的 topic 清空面板
-        if (!selectedTopic.isEmpty() && mDevMgr->isTopicEnabled(sn, selectedTopic))
-            mTopicParsePanel->setTopic(sn, selectedTopic);
-        else
-            mTopicParsePanel->setTopic(sn, {});
+        QString dataSn;
+        QString devType;
+        if (!selectedTopic.isEmpty()) {
+            // 优先用 topic 的所属设备（topic 可能是 dock 列表中携带的 aircraft OSD）
+            QString topicSn = mDevMgr->deviceForTopic(selectedTopic);
+            if (topicSn.isEmpty())
+                topicSn = mDeviceTree->selectedDeviceSn();
+            DeviceInfo* topicDev = mDevMgr->device(topicSn);
+            if (topicDev && mDevMgr->isTopicEnabled(topicSn, selectedTopic)) {
+                dataSn = topicSn;
+                devType = (topicDev->type == DeviceType::Dock) ? "dock" : "aircraft";
+            }
+        }
+        mTopicParsePanel->setTopic(dataSn, selectedTopic, devType);
     });
 
     // 加载 topic 映射配置
@@ -866,32 +909,64 @@ void MainWindow::onDeviceSelected(const QString& sn) {
     mAddDeviceBtn->setEnabled(true);
 
     // 更新 TopicParsePanel
+    // 使用 topic 所属设备的 SN 和类型，确保 dock/aircraft OSD 使用各自的 groups
     QString selectedTopic = mTopicListWidget->selectedTopic();
-    mTopicParsePanel->setTopic(sn, selectedTopic);
+    QString topicDataType;
+    QString dataSn = sn;
+    if (!selectedTopic.isEmpty()) {
+        QString topicSn = mDevMgr->deviceForTopic(selectedTopic);
+        if (!topicSn.isEmpty())
+            dataSn = topicSn;
+        DeviceInfo* topicDev = mDevMgr->device(dataSn);
+        QString devType = topicDev
+            ? (topicDev->type == DeviceType::Dock ? "dock" : "aircraft")
+            : QString();
+        topicDataType = devType;
+    }
+    mTopicParsePanel->setTopic(dataSn, selectedTopic, topicDataType);
 }
 
 void MainWindow::onOsdUpdated(const QString& sn, const QString& topic, const QString& rawJson) {
-    if (mDeviceTree->selectedDeviceSn() != sn)
+    QString selectedSn = mDeviceTree->selectedDeviceSn();
+    if (selectedSn.isEmpty() || !mDevMgr)
+        return;
+
+    // 确认当前消息应触发 UI 更新：
+    //   - SN 直接匹配选中设备；或
+    //   - 选中机场，且消息来自该机场关联的子飞机
+    bool shouldUpdate = (selectedSn == sn);
+    if (!shouldUpdate) {
+        DeviceInfo* selectedDev = mDevMgr->device(selectedSn);
+        if (selectedDev && selectedDev->type == DeviceType::Dock) {
+            for (auto* d : mDevMgr->allDevices()) {
+                if (d->sn == sn && d->parentSn == selectedSn) {
+                    shouldUpdate = true;
+                    break;
+                }
+            }
+        }
+    }
+    if (!shouldUpdate)
         return;
 
     // 刷新 OSD 面板数据（轻量更新，不重建 JSON 历史）
-    DeviceInfo* dev = mDevMgr->device(sn);
+    DeviceInfo* dev = mDevMgr->device(selectedSn);
     if (dev) {
-        const AircraftOsd* airOsd = mDevMgr->latestAircraftOsd(sn);
-        const DockOsd* dockOsd   = mDevMgr->latestDockOsd(sn);
+        const AircraftOsd* airOsd = mDevMgr->latestAircraftOsd(selectedSn);
+        const DockOsd* dockOsd   = mDevMgr->latestDockOsd(selectedSn);
 
         // 机场设备：同时查找子飞机的 OSD 一起展示
         if (dev->type == DeviceType::Dock && !airOsd) {
             const auto& allDevs = mDevMgr->allDevices();
             for (auto* d : allDevs) {
-                if (d->parentSn == sn && d->type == DeviceType::Aircraft) {
+                if (d->parentSn == selectedSn && d->type == DeviceType::Aircraft) {
                     airOsd = mDevMgr->latestAircraftOsd(d->sn);
                     break;
                 }
             }
         }
 
-        mOsdPanel->showOsd(dev, airOsd, dockOsd, mDevMgr->latestRawJson(sn, topic));
+        mOsdPanel->showOsd(dev, airOsd, dockOsd, mDevMgr->latestRawJson(selectedSn, topic));
     }
 
     // 按用户选中的 topic 过滤追加
