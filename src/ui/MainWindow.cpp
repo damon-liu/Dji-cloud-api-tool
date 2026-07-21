@@ -1064,14 +1064,30 @@ void MainWindow::refreshTopicList(const QString& sn) {
         mTopicListWidget->clearTopics();
         return;
     }
-    QStringList topics = mDevMgr->topicsForDevice(sn);
+    QStringList allTopics = mDevMgr->topicsForDevice(sn);
+
+    // 方案A：dock 设备的 topic 列表只显示属于自己的 topic，
+    // 子设备（飞机）的 topic 在选中子设备节点时才显示
+    DeviceInfo* dev = mDevMgr->device(sn);
+    QStringList filteredTopics;
+    if (dev && dev->type == DeviceType::Dock) {
+        for (const auto& t : allTopics) {
+            QString ownerSn = mDevMgr->deviceForTopic(t);
+            // ownerSn 为空（auto-detection 前）或等于本设备 → 保留
+            if (ownerSn.isEmpty() || ownerSn == sn)
+                filteredTopics.append(t);
+        }
+    } else {
+        filteredTopics = allTopics;
+    }
+
     // Collect disabled topics from DeviceManager
     QSet<QString> disabled;
-    for (const auto& t : topics) {
+    for (const auto& t : filteredTopics) {
         if (!mDevMgr->isTopicEnabled(sn, t))
             disabled.insert(t);
     }
-    mTopicListWidget->setTopics(sn, topics, disabled);
+    mTopicListWidget->setTopics(sn, filteredTopics, disabled);
 }
 
 void MainWindow::updateStatusBar() {
