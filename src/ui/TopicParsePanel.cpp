@@ -1,5 +1,6 @@
 #include "TopicParsePanel.h"
 #include "DeviceManager.h"
+#include <QFormLayout>
 #include <QFrame>
 #include <QPointer>
 #include <QClipboard>

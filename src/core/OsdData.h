@@ -45,6 +45,7 @@ struct AircraftOsd : public OsdBase {
     double  battery_temperature  = -273; // 电池温度 ℃
     double  height               = 0;    // 相对起飞点高度 m
     int     gps_number           = 0;    // GPS搜星数
+    int     rtk_number           = 0;    // RTK搜星数
     double  wind_speed           = -1;   // 风速 m/s
 
     void parse(const QJsonObject& data) {
@@ -68,6 +69,11 @@ struct AircraftOsd : public OsdBase {
             height = data["height"].toDouble();
         if (data.contains("gps_number"))
             gps_number = data["gps_number"].toInt();
+        if (data.contains("position_state")) {
+            QJsonObject ps = data["position_state"].toObject();
+            if (ps.contains("rtk_number"))
+                rtk_number = ps["rtk_number"].toInt();
+        }
         if (data.contains("wind_speed"))
             wind_speed = data["wind_speed"].toDouble();
     }

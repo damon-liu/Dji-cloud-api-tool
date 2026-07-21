@@ -57,7 +57,7 @@ void OsdPanel::setupAircraftPanel() {
     addFieldRow(mAirGrid, 2, 0, QString::fromUtf8("\xe9\xab\x98\xe5\xba\xa6:"), mAirHeight);
     addFieldRow(mAirGrid, 2, 1, QString::fromUtf8("\xe8\xb7\x9dHome:"), mAirHomeDist);
     addFieldRow(mAirGrid, 3, 0, QString::fromUtf8("\xe9\xa3\x8e\xe9\x80\x9f:"), mAirWind);
-    addFieldRow(mAirGrid, 3, 1, QString::fromUtf8("GPS\xe6\x90\x9c\xe6\x98\x9f:"), mAirGps);
+    addFieldRow(mAirGrid, 3, 1, QString::fromUtf8("RTK\xe6\x90\x9c\xe6\x98\x9f:"), mAirRtk);
 
     mAircraftPanel->hide();
 }
@@ -244,8 +244,8 @@ void OsdPanel::showAircraftOsd(const AircraftOsd& osd) {
         ? QString::number(osd.home_distance, 'f', 1) + " m" : "-");
     setFieldValue(mAirWind, osd.wind_speed >= 0
         ? QString::number(osd.wind_speed, 'f', 1) + " m/s" : "-");
-    setFieldValue(mAirGps, osd.gps_number > 0
-        ? QString::number(osd.gps_number) + QString::fromUtf8(" \xe9\xa2\x97") : "-");
+    setFieldValue(mAirRtk, osd.rtk_number > 0
+        ? QString::number(osd.rtk_number) + QString::fromUtf8(" \xe9\xa2\x97") : "-");
 }
 
 void OsdPanel::setFieldValue(QLabel* label, const QString& value) {

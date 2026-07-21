@@ -69,7 +69,7 @@ private:
     QLabel* mAirHeight;
     QLabel* mAirHomeDist;
     QLabel* mAirWind;
-    QLabel* mAirGps;
+    QLabel* mAirRtk;
 
     // 定时刷新
     DeviceManager* mDevMgr = nullptr;

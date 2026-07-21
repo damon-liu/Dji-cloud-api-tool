@@ -856,6 +856,16 @@
           "label": "📋 基础信息"
         },
         {
+          "id": "sub_device",
+          "keys": [
+            "sub_device.device_sn",
+            "sub_device.device_model_key",
+            "sub_device.device_online_status",
+            "sub_device.device_paired"
+          ],
+          "label": "📱 子设备"
+        },
+        {
           "id": "power",
           "keys": [
             "electric_supply_voltage",
@@ -1147,16 +1157,6 @@
             "media_file_detail.remain_upload"
           ],
           "label": "📁 媒体"
-        },
-        {
-          "id": "sub_device",
-          "keys": [
-            "sub_device.device_sn",
-            "sub_device.device_model_key",
-            "sub_device.device_online_status",
-            "sub_device.device_paired"
-          ],
-          "label": "📱 子设备"
         }
       ]
     },

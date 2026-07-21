@@ -4,8 +4,7 @@
 #include <QWidget>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QGroupBox>
-#include <QFormLayout>
+#include <QFrame>
 #include <QLabel>
 #include <QPushButton>
 #include <QComboBox>
@@ -17,6 +16,8 @@
 #include <QJsonArray>
 #include <QSet>
 #include <QEvent>
+#include <QPointer>
+#include "FlowLayout.h"
 #include "TopicMapping.h"
 
 class DeviceManager;
@@ -44,6 +45,15 @@ private:
     void setupUi();
     void renderGroups(const QJsonObject& data);
     QMap<QString, QString> flattenJson(const QJsonObject& obj, const QString& prefix = {}) const;
+
+    QWidget* createCard(const QString& key, const QString& zhName,
+                        const QString& displayValue, const QString& rawValue,
+                        const FieldMapping& fm);
+    QWidget* createListRow(const QString& key, const QString& zhName,
+                           const QString& displayValue);
+    QWidget* createGroupHeader(const QString& label);
+    void highlightCard(QWidget* card);
+    void toggleViewMode();
     void setFieldValue(QLabel* label, const QString& value, bool highlight);
 
     DeviceManager*      mDevMgr    = nullptr;
@@ -58,6 +68,8 @@ private:
     QLabel*             mTopicLabel;
     QComboBox*          mIntervalCombo;
     QPushButton*        mPauseBtn;
+    QPushButton*        mViewModeBtn;
+    bool                mCardMode    = true;   // true=卡片网格, false=列表
     QVBoxLayout*        mContentLayout;
     QScrollArea*        mScrollArea;
     QWidget*            mContentWidget;
@@ -65,6 +77,9 @@ private:
 
     QMap<QString, QString> mPrevValues;
     QString                mLastJson;
+
+    // 跟踪卡片 widget，用于值变化高亮
+    QMap<QString, QWidget*> mCards;
 };
 
 #endif // TOPICPARSEPANEL_H

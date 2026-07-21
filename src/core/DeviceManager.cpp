@@ -539,6 +539,7 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
 
                 QJsonObject ps = merged.value("position_state").toObject();
                 airOsd.gps_number = ps.value("gps_number").toInt();
+                airOsd.rtk_number = ps.value("rtk_number").toInt();
 
                 QJsonObject dcs = merged.value("drone_charge_state").toObject();
                 airOsd.battery_percent = dcs.value("capacity_percent").toInt(-1);
