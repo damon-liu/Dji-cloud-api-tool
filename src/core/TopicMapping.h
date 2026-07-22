@@ -20,9 +20,9 @@ struct FieldMapping {
 
 // 分组定义
 struct GroupDef {
-    QString id;                         // 分组 ID (如 "power")
-    QString label;                      // 分组标签 (如 "🔋 电源")
-    QStringList keys;                   // 该分组包含的字段 key (支持点号分隔的嵌套路径)
+    QString id;                           // 分组 ID (如 "power")
+    QString label;                        // 分组标签 (如 "🔋 电源")
+    QList<QStringList> rows;              // 每行 1~3 个字段 key (支持点号分隔的嵌套路径)
 };
 
 // 一个 topic 的完整映射配置
@@ -68,41 +68,70 @@ public:
         return loadFromDocument(doc);
     }
 
-    // 根据实际 topic 查找映射配置（支持 {sn} 通配符模式匹配）
-    TopicMappingConfig mappingForTopic(const QString& topic) const {
-        // 1. 精确匹配
-        if (mConfigs.contains(topic))
-            return mConfigs[topic];
-
-        // 2. 模式匹配：将配置中的 {sn} 替换为 [^/]+ 做正则匹配
-        for (auto it = mConfigs.begin(); it != mConfigs.end(); ++it) {
-            QString pattern = it.key();
-            if (!pattern.contains("{sn}"))
-                continue;
-            QString escaped = QRegularExpression::escape(pattern);
-            escaped.replace("\\{sn\\}", "[^/]+");
-            QRegularExpression re("^" + escaped + "$");
-            if (re.match(topic).hasMatch())
-                return it.value();
+    // 提取 topic pattern 中的设备类型前缀（如 "dock/thing/product/{sn}/osd" → "dock"）
+    // 支持格式: "dock/..."、"aircraft/..."，无前缀时返回空字符串
+    static QString extractDeviceTypeFromPattern(const QString& pattern) {
+        if (pattern.startsWith("dock/") || pattern.startsWith("aircraft/")) {
+            int slash = pattern.indexOf('/');
+            return pattern.left(slash);
         }
-
-        return TopicMappingConfig{}; // 空配置
+        return {};
     }
 
-    bool hasMappingForTopic(const QString& topic) const {
-        if (mConfigs.contains(topic))
-            return true;
-        for (auto it = mConfigs.begin(); it != mConfigs.end(); ++it) {
-            QString pattern = it.key();
-            if (!pattern.contains("{sn}"))
-                continue;
-            QString escaped = QRegularExpression::escape(pattern);
-            escaped.replace("\\{sn\\}", "[^/]+");
-            QRegularExpression re("^" + escaped + "$");
-            if (re.match(topic).hasMatch())
-                return true;
+    // 去除 topic pattern 中的设备类型前缀（"dock/thing/product/{sn}/osd" → "thing/product/{sn}/osd"）
+    static QString stripDeviceTypeFromPattern(const QString& pattern) {
+        if (pattern.startsWith("dock/") || pattern.startsWith("aircraft/")) {
+            int slash = pattern.indexOf('/');
+            return pattern.mid(slash + 1);
         }
-        return false;
+        return pattern;
+    }
+
+    // 根据实际 topic 和设备类型查找映射配置
+    // deviceType: "dock" / "aircraft" / ""（不区分）
+    // 支持 {sn} 通配符模式匹配，以及 dock/ aircraft/ 前缀的设备类型筛选
+    TopicMappingConfig mappingForTopic(const QString& topic, const QString& deviceType = "") const {
+        struct Match {
+            TopicMappingConfig config;
+            QString deviceType;
+        };
+        QList<Match> matches;
+
+        for (auto it = mConfigs.begin(); it != mConfigs.end(); ++it) {
+            QString key = it.key();
+            QString cfgDevType = extractDeviceTypeFromPattern(key);
+            QString pattern   = stripDeviceTypeFromPattern(key);
+
+            // 构建正则
+            QString reStr = QRegularExpression::escape(pattern);
+            if (pattern.contains("{sn}"))
+                reStr.replace("\\{sn\\}", "[^/]+");
+
+            QRegularExpression re("^" + reStr + "$");
+            if (re.match(topic).hasMatch())
+                matches.append({it.value(), cfgDevType});
+        }
+
+        if (matches.isEmpty())
+            return TopicMappingConfig{};
+
+        // 优先级：精确设备类型匹配 > 无设备类型前缀 > 任意
+        if (!deviceType.isEmpty()) {
+            for (const auto& m : matches) {
+                if (m.deviceType == deviceType)
+                    return m.config;
+            }
+        }
+        for (const auto& m : matches) {
+            if (m.deviceType.isEmpty())
+                return m.config;
+        }
+        return matches.first().config;
+    }
+
+    // 检查是否有匹配的映射配置
+    bool hasMappingForTopic(const QString& topic, const QString& deviceType = "") const {
+        return !mappingForTopic(topic, deviceType).fields.isEmpty();
     }
 
     // 检查是否有可用的映射
@@ -151,8 +180,20 @@ private:
                 gd.id    = gobj.value("id").toString();
                 gd.label = gobj.value("label").toString();
                 QJsonArray keysArr = gobj.value("keys").toArray();
-                for (const auto& kv : keysArr)
-                    gd.keys.append(kv.toString());
+                for (const auto& kv : keysArr) {
+                    if (kv.isArray()) {
+                        // 嵌套数组：每个子数组 = 一行，内含 1~3 个字段
+                        QStringList row;
+                        QJsonArray rowArr = kv.toArray();
+                        for (const auto& rv : rowArr)
+                            row.append(rv.toString());
+                        if (!row.isEmpty())
+                            gd.rows.append(row);
+                    } else {
+                        // 兼容旧格式：单个字符串包装为单元素行
+                        gd.rows.append(QStringList{kv.toString()});
+                    }
+                }
                 cfg.groups.append(gd);
             }
 

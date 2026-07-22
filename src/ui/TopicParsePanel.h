@@ -30,10 +30,12 @@ public:
     void setDeviceManager(DeviceManager* mgr) { mDevMgr = mgr; }
     void setTopic(const QString& deviceSn, const QString& topic);
     void setTopicMapping(TopicMapping* mapping) { mMapping = mapping; }
+    void setTopic(const QString& deviceSn, const QString& topic, const QString& deviceType = {});
     void clear();
 
 protected:
     bool eventFilter(QObject* obj, QEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
 public slots:
     void refresh();
@@ -56,10 +58,11 @@ private:
     void toggleViewMode();
     void setFieldValue(QLabel* label, const QString& value, bool highlight);
 
-    DeviceManager*      mDevMgr    = nullptr;
-    TopicMapping*       mMapping   = nullptr;
+    DeviceManager*      mDevMgr     = nullptr;
+    TopicMapping*       mMapping    = nullptr;
     QString             mDeviceSn;
     QString             mTopic;
+    QString             mDeviceType;
     bool                mPaused    = false;
     bool                mAutoPaused = false;
     int                 mIntervalMs = 2000;

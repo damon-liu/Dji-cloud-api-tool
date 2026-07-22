@@ -11,6 +11,7 @@
 #include <QInputDialog>
 #include <QToolButton>
 #include <QMenu>
+#include <QScreen>
 #include <QDesktopServices>
 #include <QUrl>
 #include <QFile>
@@ -652,6 +653,7 @@ void MainWindow::connectSignals() {
         mDockControlPanel->setConnected(false);
         mFlightControlPanel->setConnected(false);
         mUserDeselected = false;
+        hideVideoWindows();
     });
     connect(mDevMgr, &DeviceManager::brokerError, this, [this](const QString& err) {
         statusBar()->showMessage("MQTT 错误: " + err, 5000);
@@ -772,6 +774,15 @@ void MainWindow::connectSignals() {
             mDevMgr, &DeviceManager::executeDockCommand);
     connect(mDevMgr, &DeviceManager::dockCommandStateChanged,
             mFlightControlPanel, &FlightControlPanel::onCommandStateChanged);
+
+    // 一键起飞成功 → 弹出视频流窗口
+    connect(mDevMgr, &DeviceManager::dockCommandStateChanged,
+            this, [this](const DockCommandResult& result) {
+        if (result.type == DockCommandType::Takeoff
+            && result.state == DockCommandState::Succeeded) {
+            showVideoWindows();
+        }
+    });
 
     // è®¾å¤å¨çº¿ç¶æåå â å·æ°æºåºåè¡¨
     connect(mDevMgr, &DeviceManager::deviceOnlineChanged,
@@ -1093,4 +1104,47 @@ void MainWindow::refreshTopicList(const QString& sn) {
 void MainWindow::updateStatusBar() {
     mDeviceCountLabel->setText("设备: " +
         QString::number(mDevMgr->allDevices().size()));
+}
+
+void MainWindow::showVideoWindows() {
+    if (mVideoWindows.isEmpty()) {
+        for (int i = 0; i < 3; ++i) {
+            auto* win = new VideoStreamWindow(i, this);
+            mVideoWindows.append(win);
+        }
+    }
+
+    QRect mainGeo = geometry();
+    int videoW = 480;
+    int videoH = 270;
+    int gap = 8;
+    int totalHeight = 3 * videoH + 2 * gap;
+
+    int x = mainGeo.x() - videoW - gap;
+    int y = mainGeo.y() + (mainGeo.height() - totalHeight) / 2;
+
+    QScreen* screen = QGuiApplication::primaryScreen();
+    if (screen) {
+        QRect screenGeo = screen->availableGeometry();
+        if (x < screenGeo.x())
+            x = screenGeo.x();
+        if (y < screenGeo.y())
+            y = screenGeo.y();
+        if (y + totalHeight > screenGeo.y() + screenGeo.height())
+            y = screenGeo.y() + screenGeo.height() - totalHeight;
+    }
+
+    for (int i = 0; i < 3; ++i) {
+        mVideoWindows[i]->setWindowTitle(QString::fromUtf8("视频流 %1").arg(i + 1));
+        mVideoWindows[i]->resize(videoW, videoH);
+        mVideoWindows[i]->move(x, y + i * (videoH + gap));
+        mVideoWindows[i]->show();
+        mVideoWindows[i]->raise();
+    }
+}
+
+void MainWindow::hideVideoWindows() {
+    for (auto* win : mVideoWindows) {
+        win->hide();
+    }
 }

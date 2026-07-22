@@ -66,7 +66,7 @@ void FlightControlPanel::setupUi() {
 
     mainLayout->addLayout(topRow);
 
-    // --- 飞行控制卡片（后续版本完善） ---
+    // --- 飞行控制 ---
     auto* flightGroup = new QGroupBox(QString::fromUtf8("飞行控制"), this);
     auto* flightLayout = new QVBoxLayout(flightGroup);
     flightLayout->addStretch();
@@ -80,16 +80,9 @@ void FlightControlPanel::setupUi() {
     flightBtnRow->addWidget(mTakeoffBtn);
     flightLayout->addLayout(flightBtnRow);
 
-    auto* flightNotice = new QLabel(
-        QString::fromUtf8("⚠ 飞行控制功能将在后续版本中完善，当前暂不可用"), flightGroup);
-    flightNotice->setStyleSheet(
-        "color: #b06000; font-size: 12px; font-weight: normal; padding: 6px 0 0 0;");
-    flightNotice->setWordWrap(true);
-    flightLayout->addWidget(flightNotice);
-
     mainLayout->addWidget(flightGroup);
 
-    // --- 返航控制卡片（后续版本完善） ---
+    // --- 返航控制 ---
     auto* returnGroup = new QGroupBox(QString::fromUtf8("返航控制"), this);
     auto* returnLayout = new QVBoxLayout(returnGroup);
     returnLayout->addStretch();
@@ -110,13 +103,6 @@ void FlightControlPanel::setupUi() {
     returnBtnRow->addWidget(mCancelReturnBtn);
     returnLayout->addLayout(returnBtnRow);
 
-    auto* returnNotice = new QLabel(
-        QString::fromUtf8("⚠ 返航控制功能将在后续版本中完善，当前暂不可用"), returnGroup);
-    returnNotice->setStyleSheet(
-        "color: #b06000; font-size: 12px; font-weight: normal; padding: 6px 0 0 0;");
-    returnNotice->setWordWrap(true);
-    returnLayout->addWidget(returnNotice);
-
     mainLayout->addWidget(returnGroup);
 
     // --- history ---
@@ -135,14 +121,14 @@ void FlightControlPanel::setupUi() {
     mCancelReturnBtn->setCursor(Qt::PointingHandCursor);
     mCancelReturnBtn->setMinimumHeight(30);
 
-    // 所有控制按钮：后续版本完善，当前仅提示
-    auto showComingSoon = [this]() {
+    connect(mTakeoffBtn, &QPushButton::clicked, this,
+            [this]() { requestCommand(DockCommandType::Takeoff); });
+    connect(mReturnHomeBtn, &QPushButton::clicked, this,
+            [this]() { requestCommand(DockCommandType::Return); });
+    connect(mCancelReturnBtn, &QPushButton::clicked, this, [this]() {
         QMessageBox::information(this, QString::fromUtf8("功能预告"),
-            QString::fromUtf8("该功能将在后续版本中完善，敬请期待！"));
-    };
-    connect(mTakeoffBtn, &QPushButton::clicked, this, showComingSoon);
-    connect(mReturnHomeBtn, &QPushButton::clicked, this, showComingSoon);
-    connect(mCancelReturnBtn, &QPushButton::clicked, this, showComingSoon);
+            QString::fromUtf8("取消返航功能将在后续版本中完善，敬请期待！"));
+    });
 }
 
 void FlightControlPanel::setDevice(const QString& displayName, const QString& gatewaySn, bool online) {

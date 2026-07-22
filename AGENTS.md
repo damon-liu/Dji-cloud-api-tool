@@ -1,8 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-> Keep this file in sync with `AGENTS.md`.
+> Keep `CLAUDE.md` in sync with this file — it's a copy used by Claude Code.
 
 ## Build
 

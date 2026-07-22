@@ -1,7 +1,6 @@
 #include "OsdPanel.h"
 #include "DeviceManager.h"
 #include <QDateTime>
-#include <QScrollArea>
 #include <QFrame>
 
 OsdPanel::OsdPanel(QWidget* parent) : QWidget(parent) {
@@ -32,12 +31,13 @@ void OsdPanel::setupDockPanel() {
     mDockGrid->setColumnStretch(3, 1);
 
     addFieldRow(mDockGrid, 0, 0, QString::fromUtf8("\xe7\xbb\x8f\xe7\xba\xac\xe5\xba\xa6:"), mDockLatLon);
-    addFieldRow(mDockGrid, 0, 1, QString::fromUtf8("\xe8\x88\xb1\xe7\x9b\x96:"), mDockCover);
-    addFieldRow(mDockGrid, 1, 0, QString::fromUtf8("\xe9\xa3\x9e\xe8\xa1\x8c\xe5\x99\xa8:"), mDockDroneIn);
-    addFieldRow(mDockGrid, 1, 1, QString::fromUtf8("\xe8\x88\xb1\xe5\x86\x85\xe6\xb8\xa9\xe5\xba\xa6:"), mDockInsideTemp);
-    addFieldRow(mDockGrid, 2, 0, QString::fromUtf8("\xe7\x8e\xaf\xe5\xa2\x83\xe6\xb8\xa9\xe5\xba\xa6:"), mDockEnvTemp);
-    addFieldRow(mDockGrid, 2, 1, QString::fromUtf8("\xe9\xa3\x8e\xe9\x80\x9f:"), mDockWind);
-    addFieldRow(mDockGrid, 3, 0, QString::fromUtf8("\xe9\x99\x8d\xe9\x9b\xa8\xe9\x87\x8f:"), mDockRain);
+    addFieldRow(mDockGrid, 0, 1, QString::fromUtf8("\xe6\xa4\xad\xe7\x90\x83\xe9\xab\x98\xe5\xba\xa6:"), mDockHeight);
+    addFieldRow(mDockGrid, 1, 0, QString::fromUtf8("\xe8\x88\xb1\xe7\x9b\x96:"), mDockCover);
+    addFieldRow(mDockGrid, 1, 1, QString::fromUtf8("\xe9\xa3\x9e\xe8\xa1\x8c\xe5\x99\xa8:"), mDockDroneIn);
+    addFieldRow(mDockGrid, 2, 0, QString::fromUtf8("\xe8\x88\xb1\xe5\x86\x85\xe6\xb8\xa9\xe5\xba\xa6:"), mDockInsideTemp);
+    addFieldRow(mDockGrid, 2, 1, QString::fromUtf8("\xe7\x8e\xaf\xe5\xa2\x83\xe6\xb8\xa9\xe5\xba\xa6:"), mDockEnvTemp);
+    addFieldRow(mDockGrid, 3, 0, QString::fromUtf8("\xe9\xa3\x8e\xe9\x80\x9f:"), mDockWind);
+    addFieldRow(mDockGrid, 3, 1, QString::fromUtf8("\xe9\x99\x8d\xe9\x9b\xa8\xe9\x87\x8f:"), mDockRain);
 
     mDockPanel->hide();
 }
@@ -149,14 +149,23 @@ void OsdPanel::showOsd(const DeviceInfo* device,
         if (dockOsd && dockOsd->valid)
             showDockOsd(*dockOsd);
 
+        // 即使 OSD 数据尚未到达，机场有关联飞机时也显示飞机面板
+        const DeviceInfo* child = findChildAircraft(mDevMgr, device->sn);
         bool hasAircraft = (aircraftOsd && aircraftOsd->valid);
-        if (hasAircraft) {
+        if (child) {
             if (typeChanged || mAircraftPanel->isHidden()) {
                 mAircraftPanel->show();
             }
-            const DeviceInfo* child = findChildAircraft(mDevMgr, device->sn);
-            QString airIcon = child ? onlineIcon(child->online) : dockIcon;
+            QString airIcon = onlineIcon(child->online);
             mAircraftPanel->setTitle(airIcon + QString::fromUtf8(" \xe2\x9c\x88 \xe9\xa3\x9e\xe6\x9c\xba\xe4\xbf\xa1\xe6\x81\xaf"));
+            if (hasAircraft) {
+                showAircraftOsd(*aircraftOsd);
+            }
+        } else if (hasAircraft) {
+            if (typeChanged || mAircraftPanel->isHidden()) {
+                mAircraftPanel->show();
+            }
+            mAircraftPanel->setTitle(dockIcon + QString::fromUtf8(" \xe2\x9c\x88 \xe9\xa3\x9e\xe6\x9c\xba\xe4\xbf\xa1\xe6\x81\xaf"));
             showAircraftOsd(*aircraftOsd);
         }
     } else {
@@ -207,6 +216,8 @@ void OsdPanel::showDockOsd(const DockOsd& osd) {
         ? QString::number(osd.wind_speed, 'f', 1) + " m/s" : "-");
     setFieldValue(mDockRain, osd.rainfall >= 0
         ? QString::number(osd.rainfall, 'f', 1) + " mm" : "-");
+    setFieldValue(mDockHeight, osd.height > 0
+        ? QString::number(osd.height, 'f', 1) + " m" : "-");
 }
 
 static QString modeCodeText(int code) {
@@ -238,13 +249,13 @@ void OsdPanel::showAircraftOsd(const AircraftOsd& osd) {
         ? QString::number(osd.battery_percent) + "%" : "-");
     setFieldValue(mAirBattTemp, osd.battery_temperature > -200
         ? QString::number(osd.battery_temperature, 'f', 1) + " \xe2\x84\x83" : "-");
-    setFieldValue(mAirHeight, osd.height > 0
+    setFieldValue(mAirHeight, osd.height >= 0
         ? QString::number(osd.height, 'f', 1) + " m" : "-");
-    setFieldValue(mAirHomeDist, osd.home_distance > 0
+    setFieldValue(mAirHomeDist, osd.home_distance >= 0
         ? QString::number(osd.home_distance, 'f', 1) + " m" : "-");
     setFieldValue(mAirWind, osd.wind_speed >= 0
         ? QString::number(osd.wind_speed, 'f', 1) + " m/s" : "-");
-    setFieldValue(mAirRtk, osd.rtk_number > 0
+    setFieldValue(mAirRtk, osd.rtk_number >= 0
         ? QString::number(osd.rtk_number) + QString::fromUtf8(" \xe9\xa2\x97") : "-");
 }
 
@@ -265,6 +276,17 @@ void OsdPanel::refresh() {
     const AircraftOsd* airOsd = mDevMgr->latestAircraftOsd(mCurrentSn);
     const DockOsd* dockOsd = mDevMgr->latestDockOsd(mCurrentSn);
     QString rawJson = mDevMgr->latestRawJson(mCurrentSn);
+
+    // 机场设备：同时查找子飞机的 OSD 一起展示
+    if (dev->type == DeviceType::Dock && !airOsd) {
+        for (auto* d : mDevMgr->allDevices()) {
+            if (d->parentSn == mCurrentSn && d->type == DeviceType::Aircraft) {
+                airOsd = mDevMgr->latestAircraftOsd(d->sn);
+                break;
+            }
+        }
+    }
+
     showOsd(dev, airOsd, dockOsd, rawJson);
 }
 

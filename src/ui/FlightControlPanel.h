@@ -46,7 +46,7 @@ private:
     // --- flight controls ---
     QPushButton*  mTakeoffBtn = nullptr;
 
-    // --- return home controls (后续版本完善) ---
+    // --- return home controls ---
     QPushButton*  mReturnHomeBtn = nullptr;
     QPushButton*  mCancelReturnBtn = nullptr;
 

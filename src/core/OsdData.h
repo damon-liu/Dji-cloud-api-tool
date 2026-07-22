@@ -3,6 +3,7 @@
 
 #include <QString>
 #include <QJsonObject>
+#include <QJsonArray>
 #include <QJsonValue>
 
 // OSD 公共基类
@@ -50,7 +51,11 @@ struct AircraftOsd : public OsdBase {
 
     void parse(const QJsonObject& data) {
         parseCommon(data);
-        battery_percent    = data.value("battery_percent").toInt(-1);
+        // 电量从 battery.capacity_percent 取值
+        if (data.contains("battery")) {
+            QJsonObject batt = data["battery"].toObject();
+            battery_percent = batt.value("capacity_percent").toInt(-1);
+        }
         battery_voltage    = data.value("battery_voltage").toDouble();
         speed_horizontal   = data.value("speed_horizontal").toDouble();
         speed_vertical     = data.value("speed_vertical").toDouble();
@@ -63,10 +68,19 @@ struct AircraftOsd : public OsdBase {
         rc_signal_strength = data.value("rc_signal_strength").toInt();
         if (data.contains("mode_code"))
             mode_code = data["mode_code"].toInt();
-        if (data.contains("battery_temperature"))
-            battery_temperature = data["battery_temperature"].toDouble();
-        if (data.contains("height"))
-            height = data["height"].toDouble();
+        // 电池温度从 battery.batteries[0].temperature 取值
+        if (data.contains("battery")) {
+            QJsonObject batt = data["battery"].toObject();
+            QJsonArray batteries = batt.value("batteries").toArray();
+            if (!batteries.isEmpty()) {
+                QJsonObject b0 = batteries[0].toObject();
+                if (b0.contains("temperature"))
+                    battery_temperature = b0["temperature"].toDouble();
+            }
+        }
+        // 高度从 elevation（相对起飞点高度）取值
+        if (data.contains("elevation"))
+            height = data["elevation"].toDouble();
         if (data.contains("gps_number"))
             gps_number = data["gps_number"].toInt();
         if (data.contains("position_state")) {
@@ -102,6 +116,7 @@ struct DockOsd : public OsdBase {
     int     putter_state           = -1;   // 推杆状态: 0=收回, 1=推出
     int     gps_number             = 0;    // GPS搜星数
     int     rtk_number             = 0;    // RTK搜星数
+    double  height                 = 0.0;  // 椭球高度 m
 
     void parse(const QJsonObject& data) {
         parseCommon(data);
@@ -131,6 +146,8 @@ struct DockOsd : public OsdBase {
             dock_inside_temp = data["temperature"].toDouble();
         if (data.contains("rainfall"))
             rainfall = data["rainfall"].toDouble();
+        if (data.contains("height"))
+            height = data["height"].toDouble();
         // 解析嵌套 position_state
         if (data.contains("position_state")) {
             QJsonObject ps = data["position_state"].toObject();
