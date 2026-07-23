@@ -66,27 +66,35 @@ void DockControlPanel::setupUi() {
 
     mainLayout->addLayout(topRow);
 
-    // --- card grid: 第一行固定卡片 ---
-    // 飞机充电 | 远程调试 | 飞机电源 | 机场舱盖
-    auto* cardGrid = new QGridLayout;
-    cardGrid->setSpacing(10);
-
+    // ===================================================
+    // 远程调试（参照飞行控制界面布局）
+    // ===================================================
     auto* debugGroup = new QGroupBox(QString::fromUtf8("远程调试"), this);
     auto* debugLayout = new QVBoxLayout(debugGroup);
+    debugLayout->setSpacing(8);
+
+    // -- 状态行：状态标签 + stretch + 进入/退出 --
+    auto* debugStatusRow = new QHBoxLayout;
     mDebugModeLabel = new QLabel(QString::fromUtf8("状态：未知"), debugGroup);
-    debugLayout->addWidget(mDebugModeLabel);
-    debugLayout->addStretch();
-    auto* debugBtnRow = new QHBoxLayout;
+    debugStatusRow->addWidget(mDebugModeLabel);
+    debugStatusRow->addStretch();
     mDebugOpenBtn  = new QPushButton(QString::fromUtf8("进入"), debugGroup);
     mDebugCloseBtn = new QPushButton(QString::fromUtf8("退出"), debugGroup);
-    debugBtnRow->addWidget(mDebugOpenBtn);
-    debugBtnRow->addWidget(mDebugCloseBtn);
-    debugLayout->addLayout(debugBtnRow);
+    debugStatusRow->addWidget(mDebugOpenBtn);
+    debugStatusRow->addWidget(mDebugCloseBtn);
+    debugLayout->addLayout(debugStatusRow);
 
-    auto makeCard = [this](const QString& title, const QString& openText,
-                           const QString& closeText,
-                           QPushButton*& openBtn, QPushButton*& closeBtn) {
-        auto* group = new QGroupBox(title, this);
+    // 分隔线
+    auto* debugSep = new QFrame(debugGroup);
+    debugSep->setFrameShape(QFrame::HLine);
+    debugSep->setFrameShadow(QFrame::Sunken);
+    debugLayout->addWidget(debugSep);
+
+    // -- 子卡片辅助 lambda --
+    auto makeCard = [debugGroup](const QString& title, const QString& openText,
+                                 const QString& closeText,
+                                 QPushButton*& openBtn, QPushButton*& closeBtn) {
+        auto* group = new QGroupBox(title, debugGroup);
         auto* v = new QVBoxLayout(group);
         v->addStretch();
         auto* row = new QHBoxLayout;
@@ -98,13 +106,18 @@ void DockControlPanel::setupUi() {
         return group;
     };
 
+    auto* chargeGroup = makeCard(QString::fromUtf8("飞机充电"),
+                                 QString::fromUtf8("开启"),
+                                 QString::fromUtf8("关闭"),
+                                 mChargeOpenBtn, mChargeCloseBtn);
+
     auto* droneGroup  = makeCard(QString::fromUtf8("飞机电源"),
                                  QString::fromUtf8("开机"),
                                  QString::fromUtf8("关机"),
                                  mDroneOpenBtn, mDroneCloseBtn);
 
-    // 机场舱盖卡片：打开/关闭
-    auto* coverGroup = new QGroupBox(QString::fromUtf8("机场舱盖"), this);
+    // 机场舱盖卡片
+    auto* coverGroup = new QGroupBox(QString::fromUtf8("机场舱盖"), debugGroup);
     auto* coverLayout = new QVBoxLayout(coverGroup);
     coverLayout->addStretch();
     auto* coverBtnRow = new QHBoxLayout;
@@ -114,85 +127,44 @@ void DockControlPanel::setupUi() {
     coverBtnRow->addWidget(mCoverCloseBtn);
     coverLayout->addLayout(coverBtnRow);
 
-    auto* chargeGroup = makeCard(QString::fromUtf8("飞机充电"),
-                                 QString::fromUtf8("开启"),
-                                 QString::fromUtf8("关闭"),
-                                 mChargeOpenBtn, mChargeCloseBtn);
-
     // 机场维护卡片
-    auto* maintainGroup = new QGroupBox(QString::fromUtf8("机场维护"), this);
+    auto* maintainGroup = new QGroupBox(QString::fromUtf8("机场维护"), debugGroup);
     auto* maintainLayout = new QVBoxLayout(maintainGroup);
     maintainLayout->addStretch();
     auto* maintainBtnRow = new QHBoxLayout;
     mRebootBtn = new QPushButton(QString::fromUtf8("机场重启"), maintainGroup);
+    mRebootBtn->setFocusPolicy(Qt::NoFocus);
     mRebootBtn->setStyleSheet(
         "QPushButton { background: #f29900; color: #fff; font-weight: bold;"
-        "border: none; border-radius: 4px; padding: 6px 12px; }"
+        "border: none; border-radius: 4px; padding: 6px 16px; font-size: 13px; }"
         "QPushButton:hover { background: #e37400; }"
         "QPushButton:disabled { background: #dadce0; color: #80868b; }");
     maintainBtnRow->addWidget(mRebootBtn);
     mCoverForceBtn = new QPushButton(QString::fromUtf8("强制关舱门"), maintainGroup);
+    mCoverForceBtn->setFocusPolicy(Qt::NoFocus);
     mCoverForceBtn->setStyleSheet(
         "QPushButton { border: 1px solid #d93025; border-radius: 4px; color: #d93025;"
-        "font-weight: bold; background: #fff; padding: 6px 12px; }"
+        "font-weight: bold; background: #fff; padding: 6px 16px; font-size: 13px; }"
         "QPushButton:hover { background: #fce8e6; }"
         "QPushButton:disabled { border-color: #dadce0; color: #80868b; background: #f8f9fa; }");
     maintainBtnRow->addWidget(mCoverForceBtn);
     maintainLayout->addLayout(maintainBtnRow);
 
-    // 补光灯卡片
-    auto* fillLightGroup = new QGroupBox(QString::fromUtf8("补光灯"), this);
-    auto* fillLightLayout = new QVBoxLayout(fillLightGroup);
-    fillLightLayout->addStretch();
-    auto* fillLightBtnRow = new QHBoxLayout;
-    mFillLightOpenBtn  = new QPushButton(QString::fromUtf8("开启"), fillLightGroup);
-    mFillLightCloseBtn = new QPushButton(QString::fromUtf8("关闭"), fillLightGroup);
-    fillLightBtnRow->addWidget(mFillLightOpenBtn);
-    fillLightBtnRow->addWidget(mFillLightCloseBtn);
-    fillLightLayout->addLayout(fillLightBtnRow);
+    // -- 第一行：飞机充电 | 飞机电源 --
+    auto* deviceRow1 = new QHBoxLayout;
+    deviceRow1->setSpacing(10);
+    deviceRow1->addWidget(chargeGroup, 1);
+    deviceRow1->addWidget(droneGroup, 1);
+    debugLayout->addLayout(deviceRow1);
 
-    // 第一行：远程调试 | 飞机充电 | 飞机电源 | 机场舱盖
-    cardGrid->addWidget(debugGroup,    0, 0);
-    cardGrid->addWidget(chargeGroup,   0, 1);
-    cardGrid->addWidget(droneGroup,    0, 2);
-    cardGrid->addWidget(coverGroup,    0, 3);
-    for (int col = 0; col < 4; ++col)
-        cardGrid->setColumnStretch(col, 1);
+    // -- 第二行：机场维护 | 机场舱盖 --
+    auto* deviceRow2 = new QHBoxLayout;
+    deviceRow2->setSpacing(10);
+    deviceRow2->addWidget(maintainGroup, 1);
+    deviceRow2->addWidget(coverGroup, 1);
+    debugLayout->addLayout(deviceRow2);
 
-    mainLayout->addLayout(cardGrid);
-
-    // --- 展开/收起按钮 ---
-    auto* expandBar = new QHBoxLayout;
-    expandBar->addStretch();
-    mExpandBtn = new QPushButton(QString::fromUtf8("展开更多  ▼"), this);
-    mExpandBtn->setFlat(true);
-    mExpandBtn->setCursor(Qt::PointingHandCursor);
-    mExpandBtn->setStyleSheet(
-        "QPushButton { color: #1a73e8; font-size: 12px; padding: 2px 8px; border: none; }"
-        "QPushButton:hover { color: #1557b0; }");
-    expandBar->addWidget(mExpandBtn);
-    expandBar->addStretch();
-    mainLayout->addLayout(expandBar);
-
-    // 第二行（默认隐藏）：机场维护 | 补光灯
-    mExpandRow = new QWidget(this);
-    auto* expandGrid = new QGridLayout(mExpandRow);
-    expandGrid->setContentsMargins(0, 0, 0, 0);
-    expandGrid->setSpacing(10);
-    expandGrid->addWidget(maintainGroup, 0, 0);
-    expandGrid->addWidget(fillLightGroup, 0, 1);
-    for (int col = 0; col < 2; ++col)
-        expandGrid->setColumnStretch(col, 1);
-    mExpandRow->setVisible(false);
-    mainLayout->addWidget(mExpandRow);
-
-    connect(mExpandBtn, &QPushButton::clicked, this, [this]() {
-        bool visible = !mExpandRow->isVisible();
-        mExpandRow->setVisible(visible);
-        mExpandBtn->setText(visible
-            ? QString::fromUtf8("收起更多  ▲")
-            : QString::fromUtf8("展开更多  ▼"));
-    });
+    mainLayout->addWidget(debugGroup);
 
     // --- history ---
     auto* historyGroup = new QGroupBox(QString::fromUtf8("下发记录"), this);
@@ -206,12 +178,18 @@ void DockControlPanel::setupUi() {
     const QList<QPushButton*> buttons = {
         mDebugOpenBtn, mDebugCloseBtn, mDroneOpenBtn, mDroneCloseBtn,
         mCoverOpenBtn, mCoverCloseBtn, mCoverForceBtn,
-        mChargeOpenBtn, mChargeCloseBtn, mRebootBtn,
-        mFillLightOpenBtn, mFillLightCloseBtn
+        mChargeOpenBtn, mChargeCloseBtn, mRebootBtn
     };
     for (auto* button : buttons) {
         button->setCursor(Qt::PointingHandCursor);
-        button->setMinimumHeight(30);
+        button->setFocusPolicy(Qt::NoFocus);
+        button->setMinimumHeight(34);
+        button->setStyleSheet(
+            "QPushButton { border: 1px solid #dadce0; border-radius: 4px;"
+            "background: #fff; color: #333; font-weight: bold;"
+            "padding: 6px 16px; font-size: 13px; }"
+            "QPushButton:hover { border-color: #1a73e8; color: #1a73e8; background: #e8f0fe; }"
+            "QPushButton:disabled { border-color: #dadce0; color: #80868b; background: #f8f9fa; }");
     }
 
     connect(mDebugOpenBtn, &QPushButton::clicked, this,
@@ -241,11 +219,6 @@ void DockControlPanel::setupUi() {
             [this]() { requestCommand(DockCommandType::ChargeClose); });
     connect(mRebootBtn, &QPushButton::clicked, this,
             [this]() { requestCommand(DockCommandType::DeviceReboot); });
-
-    connect(mFillLightOpenBtn, &QPushButton::clicked, this,
-            [this]() { requestCommand(DockCommandType::FillLightOpen); });
-    connect(mFillLightCloseBtn, &QPushButton::clicked, this,
-            [this]() { requestCommand(DockCommandType::FillLightClose); });
 }
 
 void DockControlPanel::setDevice(const QString& displayName, const QString& gatewaySn, bool online) {
@@ -389,8 +362,6 @@ void DockControlPanel::updateButtonStates() {
     mChargeOpenBtn->setEnabled(debugControlsEnabled);
     mChargeCloseBtn->setEnabled(debugControlsEnabled);
     mRebootBtn->setEnabled(debugControlsEnabled);
-    mFillLightOpenBtn->setEnabled(debugControlsEnabled);
-    mFillLightCloseBtn->setEnabled(debugControlsEnabled);
 
     switch (mDebugModeState) {
     case DebugModeState::Enabled:

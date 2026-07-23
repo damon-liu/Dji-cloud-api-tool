@@ -60,13 +60,6 @@ private:
     QPushButton*  mChargeCloseBtn = nullptr;
     QPushButton*  mRebootBtn = nullptr;
 
-    // --- fill light controls ---
-    QPushButton*  mFillLightOpenBtn = nullptr;
-    QPushButton*  mFillLightCloseBtn = nullptr;
-
-    QPushButton*    mExpandBtn = nullptr;
-    QWidget*        mExpandRow = nullptr;
-
     QPlainTextEdit* mHistoryEdit = nullptr;
 
     // --- data ---

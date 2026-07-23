@@ -3,6 +3,7 @@
 
 #include <QCloseEvent>
 #include <QDialog>
+#include <QScrollArea>
 #include <QVBoxLayout>
 #include "DockControlPanel.h"
 
@@ -13,18 +14,26 @@ class DockControlDialog : public QDialog {
 public:
     explicit DockControlDialog(QWidget* parent = nullptr)
         : QDialog(parent)
-        , mPanel(new DockControlPanel(this))
+        , mPanel(new DockControlPanel)
     {
         setWindowTitle(QString::fromUtf8("机场控制"));
         setWindowFlags(windowFlags()
                        | Qt::WindowMaximizeButtonHint);
         setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, false);  // 允许拖拽调整大小
         setSizeGripEnabled(true);
-        setMinimumSize(560, 440);
-        resize(720, 560);
+        setMinimumSize(680, 500);
+        resize(800, 620);
+
         auto* layout = new QVBoxLayout(this);
-        layout->setContentsMargins(8, 8, 8, 8);
-        layout->addWidget(mPanel);
+        layout->setContentsMargins(0, 0, 0, 0);
+
+        auto* scrollArea = new QScrollArea(this);
+        scrollArea->setWidgetResizable(true);
+        scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        scrollArea->setFrameShape(QFrame::NoFrame);
+        scrollArea->setWidget(mPanel);
+
+        layout->addWidget(scrollArea);
     }
 
     DockControlPanel* panel() const { return mPanel; }

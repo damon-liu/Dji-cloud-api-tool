@@ -819,20 +819,27 @@ void MainWindow::refreshDockControlList(const QString& currentSn) {
             onlineDocks.append(*d);
     }
 
-    if (!currentSn.isEmpty()) {
-        DeviceInfo* dev = mDevMgr->device(currentSn);
-        QString dockSn;
-        if (dev && dev->type == DeviceType::Dock)
-            dockSn = currentSn;
-        else if (dev && !dev->parentSn.isEmpty())
-            dockSn = dev->parentSn;
+    auto resolveDockSn = [&](const QString& sn) -> QString {
+        if (!sn.isEmpty()) {
+            DeviceInfo* dev = mDevMgr->device(sn);
+            if (dev && dev->type == DeviceType::Dock)
+                return sn;
+            if (dev && !dev->parentSn.isEmpty())
+                return dev->parentSn;
+        }
+        return {};
+    };
 
-        if (!dockSn.isEmpty()) {
-            const DockOsd* osd = mDevMgr->latestDockOsd(dockSn);
-            if (osd && osd->valid) {
-                dockLat = osd->latitude;
-                dockLon = osd->longitude;
-            }
+    QString dockSn = resolveDockSn(currentSn);
+    if (dockSn.isEmpty() && !onlineDocks.isEmpty()) {
+        dockSn = onlineDocks.first().sn;
+    }
+
+    if (!dockSn.isEmpty()) {
+        const DockOsd* osd = mDevMgr->latestDockOsd(dockSn);
+        if (osd && osd->valid) {
+            dockLat = osd->latitude;
+            dockLon = osd->longitude;
         }
     }
 
@@ -978,6 +985,16 @@ void MainWindow::onOsdUpdated(const QString& sn, const QString& topic, const QSt
         }
 
         mOsdPanel->showOsd(dev, airOsd, dockOsd, mDevMgr->latestRawJson(selectedSn, topic));
+    }
+
+    // 实时同步机场坐标到飞行控制面板
+    QString flightGwSn = mFlightControlPanel->currentGatewaySn();
+    if (!flightGwSn.isEmpty()) {
+        const DockOsd* flightDockOsd = mDevMgr->latestDockOsd(flightGwSn);
+        if (flightDockOsd && flightDockOsd->valid) {
+            mFlightControlPanel->updateDockPosition(
+                flightDockOsd->latitude, flightDockOsd->longitude);
+        }
     }
 
     // 按用户选中的 topic 过滤追加

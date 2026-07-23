@@ -1,3 +1,232 @@
+## 飞行控制权抢夺
+
+**Topic:** thing/product/*{gateway_sn}*/services
+
+**Direction:** down
+
+**Method:** flight_authority_grab
+
+**Data:** null
+
+**Example:**
+
+```json
+{
+	"bid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"data": {},
+	"tid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"timestamp": 1654070968655,
+	"method": "flight_authority_grab"
+}
+```
+
+**Topic:** thing/product/*{gateway_sn}*/services_reply
+
+**Direction:** up
+
+**Method:** flight_authority_grab
+
+**Data:**
+
+| Column | Name   | Type | constraint | Description   |
+| ------ | ------ | ---- | ---------- | ------------- |
+| result | 返回码 | int  |            | 非 0 代表错误 |
+
+**Example:**
+
+```json
+{
+	"bid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"data": {
+		"result": 0
+	},
+	"tid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"timestamp": 1654070968655,
+	"method": "flight_authority_grab"
+}
+```
+
+
+
+## 负载控制权抢夺
+
+**Topic:** thing/product/*{gateway_sn}*/services
+
+**Direction:** down
+
+**Method:** payload_authority_grab
+
+**Data:**
+
+| Column        | Name       | Type | constraint | Description                                                  |
+| ------------- | ---------- | ---- | ---------- | ------------------------------------------------------------ |
+| payload_index | 负载枚举值 | text |            | 镜头负载与挂载位置枚举值。非标准的 device_mode_key，格式为 {type-subtype-gimbalindex}，可以参考[产品支持](https://developer.dji.com/doc/cloud-api-tutorial/cn/overview/product-support.html) |
+
+**Example:**
+
+```json
+{
+	"bid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"data": {
+		"payload_index": "39-0-7"
+	},
+	"tid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"timestamp": 1654070968655,
+	"method": "payload_authority_grab"
+}
+```
+
+**Topic:** thing/product/*{gateway_sn}*/services_reply
+
+**Direction:** up
+
+**Method:** payload_authority_grab
+
+**Data:**
+
+| Column | Name   | Type | constraint | Description   |
+| ------ | ------ | ---- | ---------- | ------------- |
+| result | 返回码 | int  |            | 非 0 代表错误 |
+
+**Example:**
+
+```json
+{
+	"bid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"data": {
+		"result": 0
+	},
+	"tid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"timestamp": 1654070968655,
+	"method": "payload_authority_grab"
+}
+```
+
+
+
+## 进入指令飞行控制模式
+
+**Topic:** thing/product/*{gateway_sn}*/services
+
+**Direction:** down
+
+**Method:** drc_mode_enter
+
+**Data:**
+
+| Column        | Name             | Type   | constraint                                 | Description                                                  |
+| ------------- | ---------------- | ------ | ------------------------------------------ | ------------------------------------------------------------ |
+| mqtt_broker   | Broker 连接信息  | struct |                                            | 获取 MQTT 中继服务的地址与认证信息                           |
+| »address      | 服务器连接地址   | text   |                                            | 服务器连接地址，例如：192.0.2.1:8883, mqtt.dji.com:8883      |
+| »client_id    | 客户端 ID        | text   |                                            | 可自定义的 MQTT 客户端 ID。建议使用设备的 SN 码，也可以与具有语义的前缀组合，例如，drc-4J4R101 |
+| »username     | 用户名           | text   |                                            | 建立连接时使用的用户名                                       |
+| »password     | 密码             | text   |                                            | 建立连接时认证所需要的密码                                   |
+| »expire_time  | 认证信息过期时间 | int    | {"unit_name":"秒 / s"}                     | 在有效期内认证信息可以重复使用，另外认证信息过期后，并不会影响已建立连接的设备 |
+| »enable_tls   | 是否启用 TLS     | bool   |                                            | 启用 TLS 即对 MQTT 链路开启加密                              |
+| osd_frequency | OSD 频率         | int    | {"max":30,"min":1,"unit_name":"赫兹 / Hz"} | 设置 OSD 上报频率                                            |
+| hsi_frequency | HSI 频率         | int    | {"max":30,"min":1,"unit_name":"赫兹 / Hz"} | 设置 HSI 上报频率                                            |
+
+**Example:**
+
+```json
+{
+	"bid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"data": {
+		"hsi_frequency": 1,
+		"mqtt_broker": {
+			"address": "mqtt.dji.com:8883",
+			"client_id": "sn_a",
+			"enable_tls": true,
+			"expire_time": 1672744922,
+			"password": "jwt_token",
+			"username": "sn_a_username"
+		},
+		"osd_frequency": 10
+	},
+	"tid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"timestamp": 1654070968655,
+	"method": "drc_mode_enter"
+}
+```
+
+**Topic:** thing/product/*{gateway_sn}*/services_reply
+
+**Direction:** up
+
+**Method:** drc_mode_enter
+
+**Data:**
+
+| Column | Name   | Type | constraint | Description   |
+| ------ | ------ | ---- | ---------- | ------------- |
+| result | 返回码 | int  |            | 非 0 代表错误 |
+
+**Example:**
+
+```json
+{
+	"bid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"data": {
+		"result": 0
+	},
+	"tid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"timestamp": 1654070968655,
+	"method": "drc_mode_enter"
+}
+```
+
+
+
+## 退出指令飞行控制模式
+
+**Topic:** thing/product/*{gateway_sn}*/services
+
+**Direction:** down
+
+**Method:** drc_mode_exit
+
+**Data:** null
+
+**Example:**
+
+```json
+{
+	"bid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"data": {},
+	"tid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"timestamp": 1654070968655,
+	"method": "drc_mode_exit"
+}
+```
+
+**Topic:** thing/product/*{gateway_sn}*/services_reply
+
+**Direction:** up
+
+**Method:** drc_mode_exit
+
+**Data:**
+
+| Column | Name   | Type | constraint | Description   |
+| ------ | ------ | ---- | ---------- | ------------- |
+| result | 返回码 | int  |            | 非 0 代表错误 |
+
+**Example:**
+
+```json
+{
+	"bid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"data": {
+		"result": 0
+	},
+	"tid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"timestamp": 1654070968655,
+	"method": "drc_mode_exit"
+}
+```
+
+
+
 ## 一键起飞
 
 **Topic:** thing/product/*{gateway_sn}*/services
@@ -51,3 +280,83 @@
 	"method": "takeoff_to_point"
 }
 ```
+
+
+
+## 取消返航
+
+返航后，飞行器会退出航线模式，此时取消返航，飞行器会悬停
+
+**Topic:** thing/product/*{gateway_sn}*/services
+
+**Direction:** down
+
+**Method:** return_home_cancel
+
+**Data:** null
+
+**Example:**
+
+```json
+{
+	"bid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"data": {},
+	"tid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"timestamp": 1654070968655,
+	"method": "return_home_cancel"
+}
+```
+
+**Topic:** thing/product/*{gateway_sn}*/services_reply
+
+**Direction:** up
+
+**Method:** return_home_cancel
+
+**Data:**
+
+| Column | Name   | Type | constraint | Description   |
+| ------ | ------ | ---- | ---------- | ------------- |
+| result | 返回码 | int  |            | 非 0 代表错误 |
+
+**Example:**
+
+```json
+{
+	"bid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"data": {
+		"result": 0
+	},
+	"need_reply": 1,
+	"tid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx",
+	"timestamp": 1654070968655,
+	"method": "return_home_cancel"
+}
+```
+
+
+
+## 一键返航
+
+**Topic:** thing/product/*{gateway_sn}*/services
+
+**Direction:** down
+
+**Method:** return_home
+
+**Data:** null
+
+**Topic:** thing/product/*{gateway_sn}*/services_reply
+
+**Direction:** up
+
+**Method:** return_home
+
+**Data:**
+
+| Column  | Name     | Type        | constraint                                                   | Description   |
+| ------- | -------- | ----------- | ------------------------------------------------------------ | ------------- |
+| result  | 返回码   | int         |                                                              | 非 0 代表错误 |
+| output  | 输出     | struct      |                                                              |               |
+| »status | 任务状态 | enum_string | {"canceled":"取消或终止","failed":"失败","in_progress":"执行中","ok":"执行成功","paused":"暂停","rejected":"拒绝","sent":"已下发","timeout":"超时"} |               |
+

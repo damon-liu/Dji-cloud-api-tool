@@ -18,6 +18,7 @@ public:
     void setDevice(const QString& displayName, const QString& gatewaySn, bool online);
     void clearDevice();
     void setConnected(bool connected);
+    void updateDockPosition(double lat, double lon);
     void setAvailableDocks(const QVector<DeviceInfo>& docks, const QString& currentSn,
                            double dockLat, double dockLon);
     QString currentGatewaySn() const { return mGatewaySn; }
@@ -43,13 +44,28 @@ private:
     // --- status ---
     QLabel*       mStatusLabel = nullptr;
 
-    // --- flight controls ---
+    // --- flight command section ---
+    QLabel*       mFlightAuthStatusLabel = nullptr;
+    QPushButton*  mFlightAuthGrabBtn = nullptr;
+    QPushButton*  mFlightAuthReleaseBtn = nullptr;
     QPushButton*  mTakeoffBtn = nullptr;
-
-    // --- return home controls ---
     QPushButton*  mReturnHomeBtn = nullptr;
     QPushButton*  mCancelReturnBtn = nullptr;
+    QPushButton*  mEmergencyStopBtn = nullptr;
 
+    // --- payload section ---
+    QLabel*       mPayloadAuthStatusLabel = nullptr;
+    QPushButton*  mPayloadAuthGrabBtn = nullptr;
+    QPushButton*  mPayloadAuthReleaseBtn = nullptr;
+    QPushButton*  mCameraPhotoBtn = nullptr;
+    QPushButton*  mCameraRecordStartBtn = nullptr;
+    QPushButton*  mCameraRecordStopBtn = nullptr;
+    QPushButton*  mGimbalCenterBtn = nullptr;
+    QPushButton*  mGimbalDownBtn = nullptr;
+    QPushButton*  mGimbalYawCenterBtn = nullptr;
+    QPushButton*  mGimbalPitchDownBtn = nullptr;
+
+    // --- history ---
     QPlainTextEdit* mHistoryEdit = nullptr;
 
     // --- data ---
@@ -61,6 +77,8 @@ private:
     bool    mConnected = false;
     bool    mOnline = false;
     bool    mPending = false;
+    bool    mHasFlightAuthority = false;
+    bool    mHasPayloadAuthority = false;
     bool    mUpdatingCombo = false;
 };
 

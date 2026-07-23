@@ -3,6 +3,7 @@
 
 #include <QCloseEvent>
 #include <QDialog>
+#include <QScrollArea>
 #include <QVBoxLayout>
 #include "FlightControlPanel.h"
 
@@ -13,7 +14,7 @@ class FlightControlDialog : public QDialog {
 public:
     explicit FlightControlDialog(QWidget* parent = nullptr)
         : QDialog(parent)
-        , mPanel(new FlightControlPanel(this))
+        , mPanel(new FlightControlPanel)
     {
         setWindowTitle(QString::fromUtf8("飞行控制"));
         setWindowFlags(windowFlags()
@@ -22,9 +23,17 @@ public:
         setSizeGripEnabled(true);
         setMinimumSize(560, 440);
         resize(720, 560);
+
         auto* layout = new QVBoxLayout(this);
-        layout->setContentsMargins(8, 8, 8, 8);
-        layout->addWidget(mPanel);
+        layout->setContentsMargins(0, 0, 0, 0);
+
+        auto* scrollArea = new QScrollArea(this);
+        scrollArea->setWidgetResizable(true);
+        scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        scrollArea->setFrameShape(QFrame::NoFrame);
+        scrollArea->setWidget(mPanel);
+
+        layout->addWidget(scrollArea);
     }
 
     FlightControlPanel* panel() const { return mPanel; }

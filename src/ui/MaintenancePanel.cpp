@@ -200,6 +200,7 @@ void MaintenancePanel::setupUi() {
     };
     for (auto* button : buttons) {
         button->setCursor(Qt::PointingHandCursor);
+        button->setFocusPolicy(Qt::NoFocus);
         button->setMinimumHeight(30);
         button->setStyleSheet(
             "QPushButton { border: 1px solid #dadce0; border-radius: 4px;"

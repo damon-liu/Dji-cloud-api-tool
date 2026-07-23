@@ -19,8 +19,18 @@ QString DockCommandBuilder::method(DockCommandType type) {
     case DockCommandType::DeviceReboot:   return QStringLiteral("device_reboot");
     case DockCommandType::Takeoff:       return QStringLiteral("takeoff_to_point");
     case DockCommandType::Return:        return QStringLiteral("return_home");
-    case DockCommandType::FillLightOpen:  return QStringLiteral("fill_light_open");
-    case DockCommandType::FillLightClose: return QStringLiteral("fill_light_close");
+    case DockCommandType::ReturnHomeCancel: return QStringLiteral("return_home_cancel");
+    case DockCommandType::EmergencyStop:   return QStringLiteral("drone_emergency_stop");
+    case DockCommandType::FillLightOpen:          return QStringLiteral("fill_light_open");
+    case DockCommandType::FillLightClose:         return QStringLiteral("fill_light_close");
+    case DockCommandType::FlightAuthorityGrab:    return QStringLiteral("flight_authority_grab");
+    case DockCommandType::FlightAuthorityRelease: return QStringLiteral("drc_mode_exit");
+    case DockCommandType::PayloadAuthorityGrab:   return QStringLiteral("payload_authority_grab");
+    case DockCommandType::PayloadAuthorityRelease: return QStringLiteral("drc_mode_exit");
+    case DockCommandType::CameraPhotoTake:        return QStringLiteral("camera_photo_take");
+    case DockCommandType::CameraRecordStart:      return QStringLiteral("camera_recording_start");
+    case DockCommandType::CameraRecordStop:       return QStringLiteral("camera_recording_stop");
+    case DockCommandType::GimbalReset:            return QStringLiteral("gimbal_reset");
     }
     return {};
 }
@@ -39,8 +49,18 @@ QString DockCommandBuilder::displayName(DockCommandType type) {
     case DockCommandType::DeviceReboot:   return QString::fromUtf8("机场重启");
     case DockCommandType::Takeoff:       return QString::fromUtf8("一键起飞");
     case DockCommandType::Return:        return QString::fromUtf8("一键返航");
+    case DockCommandType::ReturnHomeCancel: return QString::fromUtf8("取消返航");
+    case DockCommandType::EmergencyStop:   return QString::fromUtf8("急停");
     case DockCommandType::FillLightOpen:  return QString::fromUtf8("补光灯开启");
     case DockCommandType::FillLightClose: return QString::fromUtf8("补光灯关闭");
+    case DockCommandType::FlightAuthorityGrab:    return QString::fromUtf8("获取飞行控制权");
+    case DockCommandType::FlightAuthorityRelease: return QString::fromUtf8("释放飞行控制权");
+    case DockCommandType::PayloadAuthorityGrab:   return QString::fromUtf8("获取负载控制权");
+    case DockCommandType::PayloadAuthorityRelease: return QString::fromUtf8("释放负载控制权");
+    case DockCommandType::CameraPhotoTake:        return QString::fromUtf8("拍照");
+    case DockCommandType::CameraRecordStart:      return QString::fromUtf8("开始录像");
+    case DockCommandType::CameraRecordStop:       return QString::fromUtf8("结束录像");
+    case DockCommandType::GimbalReset:            return QString::fromUtf8("云台复位");
     }
     return {};
 }
@@ -49,7 +69,17 @@ bool DockCommandBuilder::requiresDebugMode(DockCommandType type) {
     return type != DockCommandType::DebugModeOpen
         && type != DockCommandType::DebugModeClose
         && type != DockCommandType::Takeoff
-        && type != DockCommandType::Return;
+        && type != DockCommandType::Return
+        && type != DockCommandType::ReturnHomeCancel
+        && type != DockCommandType::EmergencyStop
+        && type != DockCommandType::FlightAuthorityGrab
+        && type != DockCommandType::FlightAuthorityRelease
+        && type != DockCommandType::PayloadAuthorityGrab
+        && type != DockCommandType::PayloadAuthorityRelease
+        && type != DockCommandType::CameraPhotoTake
+        && type != DockCommandType::CameraRecordStart
+        && type != DockCommandType::CameraRecordStop
+        && type != DockCommandType::GimbalReset;
 }
 
 DockCommandRequest DockCommandBuilder::build(const QString& gatewaySn, DockCommandType type,

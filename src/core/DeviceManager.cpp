@@ -487,14 +487,17 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
         }
     }
 
-    // 解析 OSD 数据
+    // 解析 OSD 数据 — 字段级合并：从已有缓存拷贝，再 parse 当前消息的数据，
+    // 确保 DJI 分消息推送的字段子集不会互相覆盖
     DeviceInfo& info = mDevices[sn];
     if (topic.contains("/osd")) {
         if (info.type == DeviceType::Aircraft) {
-            AircraftOsd osd = AircraftOsd::fromJson(data);
+            AircraftOsd osd = mAircraftOsdCache.value(sn);
+            osd.parse(data);
             mAircraftOsdCache[sn] = osd;
         } else if (info.type == DeviceType::Dock) {
-            DockOsd osd = DockOsd::fromJson(data);
+            DockOsd osd = mDockOsdCache.value(sn);
+            osd.parse(data);
             mDockOsdCache[sn] = osd;
 
             // 自动检测库内飞机：从 OSD 的 sub_device.device_sn 提取飞机 SN，
