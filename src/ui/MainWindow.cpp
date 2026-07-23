@@ -2,6 +2,7 @@
 #include "ConfigDialog.h"
 #include "TopicEditDialog.h"
 #include <QAction>
+#include <QCloseEvent>
 #include <QMessageBox>
 #include <QApplication>
 #include <QVBoxLayout>
@@ -327,6 +328,10 @@ void MainWindow::setupToolBar() {
             mMaintenanceDialog->show();
             mMaintenanceDialog->raise();
             mMaintenanceDialog->activateWindow();
+        });
+        menu->addSeparator();
+        menu->addAction("📺 视频直播", this, [this]() {
+            showVideoWindows();
         });
         featureBtn->setMenu(menu);
     }
@@ -775,15 +780,6 @@ void MainWindow::connectSignals() {
     connect(mDevMgr, &DeviceManager::dockCommandStateChanged,
             mFlightControlPanel, &FlightControlPanel::onCommandStateChanged);
 
-    // 一键起飞成功 → 弹出视频流窗口
-    connect(mDevMgr, &DeviceManager::dockCommandStateChanged,
-            this, [this](const DockCommandResult& result) {
-        if (result.type == DockCommandType::Takeoff
-            && result.state == DockCommandState::Succeeded) {
-            showVideoWindows();
-        }
-    });
-
     // è®¾å¤å¨çº¿ç¶æåå â å·æ°æºåºåè¡¨
     connect(mDevMgr, &DeviceManager::deviceOnlineChanged,
             this, [this](const QString& sn, bool online) {
@@ -814,6 +810,9 @@ void MainWindow::refreshDockControlList(const QString& currentSn) {
     double dockLat = 0.0;
     double dockLon = 0.0;
     double dockAlt = 0.0;
+    QString dockLatStr;
+    QString dockLonStr;
+    QString dockAltStr;
 
     for (auto* d : allDevs) {
         if (d->type == DeviceType::Dock && d->online)
@@ -841,12 +840,16 @@ void MainWindow::refreshDockControlList(const QString& currentSn) {
         if (osd && osd->valid) {
             dockLat = osd->latitude;
             dockLon = osd->longitude;
-            dockAlt = osd->altitude;
+            dockAlt = osd->height;
+            dockLatStr = osd->latitudeStr;
+            dockLonStr = osd->longitudeStr;
+            dockAltStr = osd->heightStr;
         }
     }
 
     mDockControlPanel->setAvailableDocks(onlineDocks, currentSn, dockLat, dockLon, dockAlt);
-    mFlightControlPanel->setAvailableDocks(onlineDocks, currentSn, dockLat, dockLon, dockAlt);
+    mFlightControlPanel->setAvailableDocks(onlineDocks, currentSn, dockLat, dockLon, dockAlt,
+                                           dockLatStr, dockLonStr, dockAltStr);
 }
 
 // ——— 设备选择 ———
@@ -996,7 +999,9 @@ void MainWindow::onOsdUpdated(const QString& sn, const QString& topic, const QSt
         if (flightDockOsd && flightDockOsd->valid) {
             mFlightControlPanel->updateDockPosition(
                 flightDockOsd->latitude, flightDockOsd->longitude,
-                flightDockOsd->altitude);
+                flightDockOsd->height,
+                flightDockOsd->latitudeStr, flightDockOsd->longitudeStr,
+                flightDockOsd->heightStr);
         }
     }
 
@@ -1128,17 +1133,39 @@ void MainWindow::updateStatusBar() {
 
 void MainWindow::showVideoWindows() {
     if (mVideoWindows.isEmpty()) {
-        for (int i = 0; i < 3; ++i) {
-            auto* win = new VideoStreamWindow(i, this);
-            mVideoWindows.append(win);
-        }
+        // 窗口0: 飞机 — 切换镜头：红外(默认)/变焦/广角
+        auto* aircraftWin = new VideoStreamWindow(
+            0,
+            QString::fromUtf8("飞机"),
+            QString::fromUtf8("红外相机"),
+            QStringList{
+                QString::fromUtf8("红外相机"),
+                QString::fromUtf8("变焦相机"),
+                QString::fromUtf8("广角相机")
+            },
+            QString::fromUtf8("切换镜头"),
+            nullptr);
+        mVideoWindows.append(aircraftWin);
+
+        // 窗口1: 机场 — 切换视频：机场外(默认)/机场内
+        auto* dockWin = new VideoStreamWindow(
+            1,
+            QString::fromUtf8("机场"),
+            QString::fromUtf8("机场外视频"),
+            QStringList{
+                QString::fromUtf8("机场外视频"),
+                QString::fromUtf8("机场内视频")
+            },
+            QString::fromUtf8("切换视频"),
+            nullptr);
+        mVideoWindows.append(dockWin);
     }
 
     QRect mainGeo = geometry();
-    int videoW = 480;
-    int videoH = 270;
-    int gap = 8;
-    int totalHeight = 3 * videoH + 2 * gap;
+    int videoW = 640;
+    int videoH = 400;
+    int gap = 30;
+    int totalHeight = 2 * videoH + 1 * gap;
 
     int x = mainGeo.x() - videoW - gap;
     int y = mainGeo.y() + (mainGeo.height() - totalHeight) / 2;
@@ -1154,8 +1181,7 @@ void MainWindow::showVideoWindows() {
             y = screenGeo.y() + screenGeo.height() - totalHeight;
     }
 
-    for (int i = 0; i < 3; ++i) {
-        mVideoWindows[i]->setWindowTitle(QString::fromUtf8("视频流 %1").arg(i + 1));
+    for (int i = 0; i < mVideoWindows.size(); ++i) {
         mVideoWindows[i]->resize(videoW, videoH);
         mVideoWindows[i]->move(x, y + i * (videoH + gap));
         mVideoWindows[i]->show();
@@ -1167,4 +1193,14 @@ void MainWindow::hideVideoWindows() {
     for (auto* win : mVideoWindows) {
         win->hide();
     }
+}
+
+void MainWindow::closeEvent(QCloseEvent* event) {
+    // 关闭所有视频直播窗口
+    for (auto* win : mVideoWindows) {
+        win->close();       // non-spontaneous → accept → 真正关闭
+        win->deleteLater();
+    }
+    mVideoWindows.clear();
+    event->accept();
 }

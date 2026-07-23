@@ -25,6 +25,9 @@ class MainWindow : public QMainWindow {
 public:
     explicit MainWindow(DeviceManager* devMgr, QWidget* parent = nullptr);
 
+protected:
+    void closeEvent(QCloseEvent* event) override;
+
 private slots:
     void onDeviceSelected(const QString& sn);
     void onOsdUpdated(const QString& sn, const QString& topic, const QString& rawJson);
