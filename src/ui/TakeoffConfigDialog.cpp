@@ -1,6 +1,7 @@
 #include "TakeoffConfigDialog.h"
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -11,15 +12,17 @@
 #include <QVBoxLayout>
 
 TakeoffConfigDialog::TakeoffConfigDialog(double dockLat, double dockLon,
+                                           double dockAlt,
                                            QWidget* parent)
     : QDialog(parent)
     , mDockLat(dockLat)
     , mDockLon(dockLon)
+    , mDockAlt(dockAlt)
 {
     setWindowTitle(QString::fromUtf8("一键起飞参数配置"));
     setModal(true);
     setMinimumWidth(420);
-    setMaximumHeight(520);
+    setMaximumHeight(560);
 
     setupUi();
 }
@@ -48,6 +51,25 @@ void TakeoffConfigDialog::setupUi() {
             "padding: 6px 10px; background: #fce8e6; border-radius: 4px;");
     }
     mainLayout->addWidget(mDockInfoLabel);
+
+    // --- 机场椭球高参考 ---
+    mDockAltLabel = new QLabel(this);
+    mDockAltLabel->setWordWrap(true);
+    if (mDockAlt != 0.0) {
+        mDockAltLabel->setText(
+            QString::fromUtf8("机场椭球高: %1 米 (WGS84)")
+                .arg(mDockAlt, 0, 'f', 1));
+        mDockAltLabel->setStyleSheet(
+            "color: #5f6368; font-size: 12px; padding: 2px 10px;"
+            "background: #f8f9fa; border-radius: 4px;");
+    } else {
+        mDockAltLabel->setText(
+            QString::fromUtf8("⚠ 未能获取机场椭球高度"));
+        mDockAltLabel->setStyleSheet(
+            "color: #d93025; font-size: 12px; padding: 2px 10px;"
+            "background: #fce8e6; border-radius: 4px;");
+    }
+    mainLayout->addWidget(mDockAltLabel);
 
     // --- 目标位置 ---
     auto* posGroup = new QGroupBox(QString::fromUtf8("目标位置"), this);
@@ -88,9 +110,44 @@ void TakeoffConfigDialog::setupUi() {
                                  0.000001, 6, mDockLon));
 
     mTargetHeight = new QDoubleSpinBox(this);
-    posLayout->addLayout(makeRow(QString::fromUtf8("目标点高度:"), mTargetHeight,
-                                 QString::fromUtf8("米 (椭球高WGS84)"), 2.0, 1500.0,
-                                 1.0, 1, 50.0));
+    mTargetHeight->setRange(2.0, 1500.0);
+    mTargetHeight->setDecimals(1);
+    mTargetHeight->setSingleStep(1.0);
+    mTargetHeight->setValue(50.0);
+    mTargetHeight->setMinimumWidth(160);
+
+    mHeightTypeCombo = new QComboBox(this);
+    mHeightTypeCombo->addItem(QString::fromUtf8("相对高度 (ALT)"), QStringLiteral("relative"));
+    mHeightTypeCombo->addItem(QString::fromUtf8("椭球高 (WGS84)"), QStringLiteral("ellipsoid"));
+    mHeightTypeCombo->setCurrentIndex(0);
+    mHeightTypeCombo->setStyleSheet(
+        "QComboBox { border: 1px solid #dadce0; border-radius: 4px;"
+        "padding: 3px 6px; font-size: 12px; background: #fff; }");
+
+    auto* heightUnitLabel = new QLabel(QString::fromUtf8("米 (相对机场)"), this);
+    heightUnitLabel->setStyleSheet("font-size: 12px; color: #666; padding-left: 4px;");
+
+    connect(mHeightTypeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, [heightUnitLabel, this](int idx) {
+        if (mHeightTypeCombo->itemData(idx).toString() == "relative") {
+            heightUnitLabel->setText(QString::fromUtf8("米 (相对机场)"));
+        } else {
+            heightUnitLabel->setText(QString::fromUtf8("米 (椭球高WGS84)"));
+        }
+    });
+
+    {
+        auto* row = new QHBoxLayout;
+        auto* lbl = new QLabel(QString::fromUtf8("目标点高度:"), this);
+        lbl->setFixedWidth(120);
+        lbl->setStyleSheet("font-size: 13px; color: #333;");
+        row->addWidget(lbl);
+        row->addWidget(mTargetHeight);
+        row->addWidget(heightUnitLabel);
+        row->addWidget(mHeightTypeCombo);
+        row->addStretch();
+        posLayout->addLayout(row);
+    }
 
     mainLayout->addWidget(posGroup);
 
@@ -162,6 +219,15 @@ bool TakeoffConfigDialog::validateInputs() {
         mTargetLat->setFocus();
         return false;
     }
+
+    if (mHeightTypeCombo->currentData().toString() == "relative"
+            && mDockAlt == 0.0) {
+        QMessageBox::warning(this, QString::fromUtf8("参数校验"),
+            QString::fromUtf8("未能获取机场椭球高度，无法使用相对高度模式。\n"
+                              "请将高度类型切换为\"椭球高 (WGS84)\"后手动输入椭球高度。"));
+        return false;
+    }
+
     return true;
 }
 
@@ -169,7 +235,12 @@ QJsonObject TakeoffConfigDialog::takeoffPayload() const {
     QJsonObject data;
     data[QStringLiteral("target_latitude")] = mTargetLat->value();
     data[QStringLiteral("target_longitude")] = mTargetLon->value();
-    data[QStringLiteral("target_height")] = mTargetHeight->value();
+
+    double targetHeight = mTargetHeight->value();
+    if (mHeightTypeCombo->currentData().toString() == "relative") {
+        targetHeight = mDockAlt + targetHeight;
+    }
+    data[QStringLiteral("target_height")] = targetHeight;
 
     data[QStringLiteral("security_takeoff_height")] = mSafeTakeoffHeight->value();
     data[QStringLiteral("rth_mode")] = 1;

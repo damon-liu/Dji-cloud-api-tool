@@ -7,13 +7,14 @@
 class QDoubleSpinBox;
 class QSpinBox;
 class QCheckBox;
+class QComboBox;
 class QLabel;
 class QPushButton;
 
 class TakeoffConfigDialog : public QDialog {
     Q_OBJECT
 public:
-    explicit TakeoffConfigDialog(double dockLat, double dockLon,
+    explicit TakeoffConfigDialog(double dockLat, double dockLon, double dockAlt,
                                   QWidget* parent = nullptr);
 
     QJsonObject takeoffPayload() const;
@@ -25,11 +26,14 @@ private:
 
     double mDockLat;
     double mDockLon;
+    double mDockAlt;
 
     QLabel*         mDockInfoLabel = nullptr;
+    QLabel*         mDockAltLabel = nullptr;
     QDoubleSpinBox* mTargetLat = nullptr;
     QDoubleSpinBox* mTargetLon = nullptr;
     QDoubleSpinBox* mTargetHeight = nullptr;
+    QComboBox*      mHeightTypeCombo = nullptr;
     QDoubleSpinBox* mSafeTakeoffHeight = nullptr;
     QDoubleSpinBox* mRthAltitude = nullptr;
 

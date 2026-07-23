@@ -19,7 +19,7 @@ public:
     void clearDevice();
     void setConnected(bool connected);
     void setAvailableDocks(const QVector<DeviceInfo>& docks, const QString& currentSn,
-                           double dockLat, double dockLon);
+                           double dockLat, double dockLon, double dockAlt);
     QString currentGatewaySn() const { return mGatewaySn; }
 
 public slots:

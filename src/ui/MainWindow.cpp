@@ -813,6 +813,7 @@ void MainWindow::refreshDockControlList(const QString& currentSn) {
     QVector<DeviceInfo> onlineDocks;
     double dockLat = 0.0;
     double dockLon = 0.0;
+    double dockAlt = 0.0;
 
     for (auto* d : allDevs) {
         if (d->type == DeviceType::Dock && d->online)
@@ -840,11 +841,12 @@ void MainWindow::refreshDockControlList(const QString& currentSn) {
         if (osd && osd->valid) {
             dockLat = osd->latitude;
             dockLon = osd->longitude;
+            dockAlt = osd->altitude;
         }
     }
 
-    mDockControlPanel->setAvailableDocks(onlineDocks, currentSn, dockLat, dockLon);
-    mFlightControlPanel->setAvailableDocks(onlineDocks, currentSn, dockLat, dockLon);
+    mDockControlPanel->setAvailableDocks(onlineDocks, currentSn, dockLat, dockLon, dockAlt);
+    mFlightControlPanel->setAvailableDocks(onlineDocks, currentSn, dockLat, dockLon, dockAlt);
 }
 
 // ——— 设备选择 ———
@@ -993,7 +995,8 @@ void MainWindow::onOsdUpdated(const QString& sn, const QString& topic, const QSt
         const DockOsd* flightDockOsd = mDevMgr->latestDockOsd(flightGwSn);
         if (flightDockOsd && flightDockOsd->valid) {
             mFlightControlPanel->updateDockPosition(
-                flightDockOsd->latitude, flightDockOsd->longitude);
+                flightDockOsd->latitude, flightDockOsd->longitude,
+                flightDockOsd->altitude);
         }
     }
 

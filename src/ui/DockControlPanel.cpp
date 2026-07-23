@@ -276,7 +276,9 @@ void DockControlPanel::setConnected(bool connected) {
 
 void DockControlPanel::setAvailableDocks(const QVector<DeviceInfo>& docks,
                                          const QString& currentSn,
-                                         double dockLat, double dockLon) {
+                                         double dockLat, double dockLon,
+                                         double dockAlt) {
+    Q_UNUSED(dockAlt)
     mAvailableDocks = docks;
     mDockLat = dockLat;
     mDockLon = dockLon;

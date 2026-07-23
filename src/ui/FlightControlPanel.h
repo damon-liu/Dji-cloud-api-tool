@@ -18,9 +18,9 @@ public:
     void setDevice(const QString& displayName, const QString& gatewaySn, bool online);
     void clearDevice();
     void setConnected(bool connected);
-    void updateDockPosition(double lat, double lon);
+    void updateDockPosition(double lat, double lon, double alt);
     void setAvailableDocks(const QVector<DeviceInfo>& docks, const QString& currentSn,
-                           double dockLat, double dockLon);
+                           double dockLat, double dockLon, double dockAlt);
     QString currentGatewaySn() const { return mGatewaySn; }
 
 public slots:
@@ -74,6 +74,7 @@ private:
     QString mGatewaySn;
     double  mDockLat = 0.0;
     double  mDockLon = 0.0;
+    double  mDockAlt = 0.0;
     bool    mConnected = false;
     bool    mOnline = false;
     bool    mPending = false;

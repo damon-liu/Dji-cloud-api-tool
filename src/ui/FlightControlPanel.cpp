@@ -273,7 +273,7 @@ void FlightControlPanel::setupUi() {
                 QString::fromUtf8("请先获取飞行控制权后再执行一键起飞"));
             return;
         }
-        TakeoffConfigDialog dlg(mDockLat, mDockLon, this);
+        TakeoffConfigDialog dlg(mDockLat, mDockLon, mDockAlt, this);
         if (dlg.exec() == QDialog::Accepted)
             requestCommand(DockCommandType::Takeoff, dlg.takeoffPayload());
     });
@@ -436,17 +436,20 @@ void FlightControlPanel::setConnected(bool connected) {
     updateButtonStates();
 }
 
-void FlightControlPanel::updateDockPosition(double lat, double lon) {
+void FlightControlPanel::updateDockPosition(double lat, double lon, double alt) {
     mDockLat = lat;
     mDockLon = lon;
+    mDockAlt = alt;
 }
 
 void FlightControlPanel::setAvailableDocks(const QVector<DeviceInfo>& docks,
                                            const QString& currentSn,
-                                           double dockLat, double dockLon) {
+                                           double dockLat, double dockLon,
+                                           double dockAlt) {
     mAvailableDocks = docks;
     mDockLat = dockLat;
     mDockLon = dockLon;
+    mDockAlt = dockAlt;
 
     mUpdatingCombo = true;
     mDockCombo->clear();
