@@ -3,6 +3,7 @@
 #include <QJsonObject>
 #include <QDateTime>
 #include <QDebug>
+#include <QRegularExpression>
 
 static const QStringList DEFAULT_DOCK_TOPICS = {
     "thing/product/{sn}/state",
@@ -448,6 +449,16 @@ void DeviceManager::onTopicsChanged(const QStringList& add, const QStringList& r
     mMqttManager->replaceSubscriptions(add, remove);
 }
 
+// 从原始 JSON payload 中提取数值字段的原始字符串，保留 OSD 上报的原始小数位数
+static QString extractJsonNumberString(const QByteArray& payload, const QString& key) {
+    QRegularExpression re(
+        QString(R"("%1"\s*:\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?))").arg(key));
+    QRegularExpressionMatch m = re.match(QString::fromUtf8(payload));
+    if (m.hasMatch())
+        return m.captured(1);
+    return QString();
+}
+
 void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payload) {
     QJsonDocument doc = QJsonDocument::fromJson(payload);
     if (!doc.isObject()) {
@@ -494,10 +505,26 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
         if (info.type == DeviceType::Aircraft) {
             AircraftOsd osd = mAircraftOsdCache.value(sn);
             osd.parse(data);
+            // 从原始 payload 提取坐标原始字符串，保留 OSD 上报小数位数
+            if (osd.latitudeStr.isEmpty())
+                osd.latitudeStr = extractJsonNumberString(payload, QStringLiteral("latitude"));
+            if (osd.longitudeStr.isEmpty())
+                osd.longitudeStr = extractJsonNumberString(payload, QStringLiteral("longitude"));
+            if (osd.altitudeStr.isEmpty())
+                osd.altitudeStr = extractJsonNumberString(payload, QStringLiteral("altitude"));
             mAircraftOsdCache[sn] = osd;
         } else if (info.type == DeviceType::Dock) {
             DockOsd osd = mDockOsdCache.value(sn);
             osd.parse(data);
+            // 从原始 payload 提取坐标原始字符串，保留 OSD 上报小数位数
+            if (osd.latitudeStr.isEmpty())
+                osd.latitudeStr = extractJsonNumberString(payload, QStringLiteral("latitude"));
+            if (osd.longitudeStr.isEmpty())
+                osd.longitudeStr = extractJsonNumberString(payload, QStringLiteral("longitude"));
+            if (osd.altitudeStr.isEmpty())
+                osd.altitudeStr = extractJsonNumberString(payload, QStringLiteral("altitude"));
+            if (osd.heightStr.isEmpty())
+                osd.heightStr = extractJsonNumberString(payload, QStringLiteral("height"));
             mDockOsdCache[sn] = osd;
 
             // 自动检测库内飞机：从 OSD 的 sub_device.device_sn 提取飞机 SN，

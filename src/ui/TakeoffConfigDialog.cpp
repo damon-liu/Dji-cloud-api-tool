@@ -3,6 +3,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDoubleSpinBox>
+#include <QFrame>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -10,14 +11,21 @@
 #include <QPushButton>
 #include <QUuid>
 #include <QVBoxLayout>
+#include <cmath>
 
 TakeoffConfigDialog::TakeoffConfigDialog(double dockLat, double dockLon,
                                            double dockAlt,
+                                           const QString& dockLatStr,
+                                           const QString& dockLonStr,
+                                           const QString& dockAltStr,
                                            QWidget* parent)
     : QDialog(parent)
     , mDockLat(dockLat)
     , mDockLon(dockLon)
     , mDockAlt(dockAlt)
+    , mDockLatStr(dockLatStr)
+    , mDockLonStr(dockLonStr)
+    , mDockAltStr(dockAltStr)
 {
     setWindowTitle(QString::fromUtf8("一键起飞参数配置"));
     setModal(true);
@@ -32,44 +40,76 @@ void TakeoffConfigDialog::setupUi() {
     mainLayout->setContentsMargins(20, 16, 20, 16);
     mainLayout->setSpacing(14);
 
-    // --- 机场当前位置提示 ---
-    mDockInfoLabel = new QLabel(this);
-    mDockInfoLabel->setWordWrap(true);
-    if (mDockLat != 0.0 || mDockLon != 0.0) {
-        mDockInfoLabel->setText(
-            QString::fromUtf8("机场当前坐标: %1, %2")
-                .arg(mDockLat, 0, 'f', 7)
-                .arg(mDockLon, 0, 'f', 7));
-        mDockInfoLabel->setStyleSheet(
-            "color: #1a73e8; font-size: 13px; font-weight: bold;"
-            "padding: 6px 10px; background: #e8f0fe; border-radius: 4px;");
-    } else {
-        mDockInfoLabel->setText(
-            QString::fromUtf8("⚠ 未能获取机场坐标，请手动输入目标位置"));
-        mDockInfoLabel->setStyleSheet(
-            "color: #d93025; font-size: 13px; font-weight: bold;"
-            "padding: 6px 10px; background: #fce8e6; border-radius: 4px;");
-    }
-    mainLayout->addWidget(mDockInfoLabel);
+    // --- 机场当前位置 + 椭球高（卡片式单行） ---
+    auto* dockInfoCard = new QFrame(this);
+    dockInfoCard->setStyleSheet(
+        "QFrame#dockInfoCard {"
+        "background: qlineargradient(x1:0,y1:0,x2:1,y2:0,"
+        "  stop:0 #e8f0fe, stop:0.04 #1a73e8, stop:0.04 #e8f0fe, stop:1 #f8f9fa);"
+        "border: 1px solid #c4d7f0; border-radius: 6px;"
+        "padding: 4px 0px; }");
+    dockInfoCard->setObjectName("dockInfoCard");
 
-    // --- 机场椭球高参考 ---
-    mDockAltLabel = new QLabel(this);
-    mDockAltLabel->setWordWrap(true);
-    if (mDockAlt != 0.0) {
-        mDockAltLabel->setText(
-            QString::fromUtf8("机场椭球高: %1 米 (WGS84)")
-                .arg(mDockAlt, 0, 'f', 1));
-        mDockAltLabel->setStyleSheet(
-            "color: #5f6368; font-size: 12px; padding: 2px 10px;"
-            "background: #f8f9fa; border-radius: 4px;");
+    auto* dockInfoRow = new QHBoxLayout(dockInfoCard);
+    dockInfoRow->setContentsMargins(14, 8, 12, 8);
+    dockInfoRow->setSpacing(16);
+
+    if (mDockLat != 0.0 || mDockLon != 0.0) {
+        // 优先使用 OSD 原始字符串保留小数位数，fallback 到 double 格式化
+        QString latText = !mDockLatStr.isEmpty() ? mDockLatStr
+                                                  : QString::number(mDockLat, 'f', 7);
+        QString lonText = !mDockLonStr.isEmpty() ? mDockLonStr
+                                                  : QString::number(mDockLon, 'f', 7);
+
+        // 坐标部分
+        auto* coordLabel = new QLabel(this);
+        coordLabel->setText(
+            QString::fromUtf8("<span style='font-weight:bold;color:#1a73e8;'>"
+                              "机场坐标</span>"
+                              "<span style='color:#202124;'> %1, %2</span>")
+                .arg(latText, lonText));
+        coordLabel->setStyleSheet("font-size: 13px; border:none; background:transparent;");
+        dockInfoRow->addWidget(coordLabel);
+
+        // 分隔线
+        auto* sep = new QFrame(this);
+        sep->setFrameShape(QFrame::VLine);
+        sep->setStyleSheet("border: none; background: #c4d7f0; min-width: 1px; max-width: 1px;");
+        dockInfoRow->addWidget(sep);
+
+        // 椭球高部分（固定 2 位小数）
+        auto* altLabel = new QLabel(this);
+        altLabel->setText(
+            QString::fromUtf8("<span style='font-weight:bold;color:#1a73e8;'>"
+                              "椭球高</span>"
+                              "<span style='color:#202124;'> %1 m</span>")
+                .arg(mDockAlt, 0, 'f', 2));
+        altLabel->setStyleSheet("font-size: 13px; border:none; background:transparent;");
+        dockInfoRow->addWidget(altLabel);
     } else {
-        mDockAltLabel->setText(
-            QString::fromUtf8("⚠ 未能获取机场椭球高度"));
-        mDockAltLabel->setStyleSheet(
-            "color: #d93025; font-size: 12px; padding: 2px 10px;"
-            "background: #fce8e6; border-radius: 4px;");
+        auto* warnLabel = new QLabel(this);
+        warnLabel->setText(
+            QString::fromUtf8("<span style='color:#d93025;font-weight:bold;'>⚠ 未能获取机场坐标</span>"
+                              "<span style='color:#5f6368;'> — 请手动输入目标位置</span>"));
+        warnLabel->setStyleSheet("font-size: 13px; border:none; background:transparent;");
+        dockInfoRow->addWidget(warnLabel);
+
+        auto* sep = new QFrame(this);
+        sep->setFrameShape(QFrame::VLine);
+        sep->setStyleSheet("border: none; background: #dadce0; min-width: 1px; max-width: 1px;");
+        dockInfoRow->addWidget(sep);
+
+        auto* altLabel = new QLabel(this);
+        altLabel->setText(
+            QString::fromUtf8("<span style='font-weight:bold;color:#1a73e8;'>"
+                              "椭球高</span>"
+                              "<span style='color:#d93025;'> ⚠ 无数据</span>"));
+        altLabel->setStyleSheet("font-size: 13px; border:none; background:transparent;");
+        dockInfoRow->addWidget(altLabel);
     }
-    mainLayout->addWidget(mDockAltLabel);
+
+    dockInfoRow->addStretch();
+    mainLayout->addWidget(dockInfoCard);
 
     // --- 目标位置 ---
     auto* posGroup = new QGroupBox(QString::fromUtf8("目标位置"), this);
@@ -99,21 +139,31 @@ void TakeoffConfigDialog::setupUi() {
         return row;
     };
 
+    // 从 OSD 原始字符串中获取小数位数，确保目标经纬度精度与上报一致
+    auto decimalPlaces = [](const QString& s) -> int {
+        int dot = s.lastIndexOf('.');
+        return (dot >= 0) ? s.length() - dot - 1 : 0;
+    };
+    int latDecimals = qMax(decimalPlaces(mDockLatStr), 6);
+    int lonDecimals = qMax(decimalPlaces(mDockLonStr), 6);
+    double latStep = std::pow(10.0, -latDecimals);
+    double lonStep = std::pow(10.0, -lonDecimals);
+
     mTargetLat = new QDoubleSpinBox(this);
     posLayout->addLayout(makeRow(QString::fromUtf8("目标纬度:"), mTargetLat,
                                  QString::fromUtf8("°"), -90.0, 90.0,
-                                 0.000001, 6, mDockLat));
+                                 latStep, latDecimals, mDockLat));
 
     mTargetLon = new QDoubleSpinBox(this);
     posLayout->addLayout(makeRow(QString::fromUtf8("目标经度:"), mTargetLon,
                                  QString::fromUtf8("°"), -180.0, 180.0,
-                                 0.000001, 6, mDockLon));
+                                 lonStep, lonDecimals, mDockLon));
 
     mTargetHeight = new QDoubleSpinBox(this);
     mTargetHeight->setRange(2.0, 1500.0);
     mTargetHeight->setDecimals(1);
     mTargetHeight->setSingleStep(1.0);
-    mTargetHeight->setValue(50.0);
+    mTargetHeight->setValue(70.0);
     mTargetHeight->setMinimumWidth(160);
 
     mHeightTypeCombo = new QComboBox(this);
@@ -159,7 +209,7 @@ void TakeoffConfigDialog::setupUi() {
     mSafeTakeoffHeight = new QDoubleSpinBox(this);
     flightLayout->addLayout(makeRow(QString::fromUtf8("安全起飞高度:"), mSafeTakeoffHeight,
                                     QString::fromUtf8("米"), 1.0, 500.0,
-                                    1.0, 1, 50.0));
+                                    1.0, 1, 70.0));
 
     mRthAltitude = new QDoubleSpinBox(this);
     flightLayout->addLayout(makeRow(QString::fromUtf8("返航高度:"), mRthAltitude,

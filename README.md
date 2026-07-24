@@ -12,33 +12,37 @@
 
 前往 [Releases](https://github.com/damon-liu/Dji-cloud-api-tool/releases) 页面下载最新版本：
 
-- **`DjiCloudApiTool-v1.0.1.zip`** — 完整包（exe + Qt 运行库 + 配置模板），解压即用
+- **`DjiCloudApiTool-v1.0.3.zip`** — 完整包（exe + Qt 运行库 + 配置模板），解压即用
 
-> 无需安装 Qt 或其他依赖，Windows 10/11 x64 下直接运行。首次启动自动生成 `config.json`。
+> 无需安装 Qt 或其他依赖，Windows 10/11 x64 下直接运行。首次启动自动生成 `config.json` 在 `config/` 子目录下。
 
-## ✨ 功能
+## ✨ 核心功能
 
-- **MQTT 连接管理** — 支持 SSL/TLS，可配置 Broker 地址/端口/账号密码，连接状态实时显示
-- **多环境配置切换** — 支持多个 Connection 配置，一键切换生产/测试环境，互不干扰
-- **设备树形管理** — 机场 + 无人机层级展示，支持新增/删除/重命名，在线状态实时指示
-- **机场飞机自动发现** — 连接机场后自动识别并添加关联的无人机（从机场 OSD 中提取）
-- **OSD 遥测面板** — 机场信息与飞机信息并排显示，刷新间隔可调（1s/2s/5s/10s）
-- **JSON 字段自动翻译** — 英文字段自动翻译为中文，按分组展示，点击字段名即可复制原始 key
-- **原始 JSON 面板** — 按 Topic 过滤 MQTT 报文，支持暂停滚动、一键复制、清除历史记录
-- **Topic 订阅管理** — 每个设备独立管理 Topic，支持新增/删除/启用/禁用/拖拽排序；添加机场自动创建 7 个常用 Topic
-- **Topic 下发** — 预设常用下发 Topic，自动匹配参数模板（从 `topic-send-construct.md` 解析），支持 JSON 编辑、发送历史、双击恢复
-- **📦 抓包导出** — 一键抓包，数据实时写入 `captures/` 文件夹，停止后弹窗显示路径和记录条数
-- **自动重连** — 指数退避（1s → 2s → 4s → … → 最长 30s），恢复后自动刷新
-- **断线保护** — 断线自动暂停面板刷新，手动暂停优先级更高，不打断数据查看
-- **免安装绿色运行** — 单 zip 包，解压即用，零依赖
+- **多环境一键切换**：支持多个 Connection 配置，生产/测试环境互不干扰
+- **设备树形管理**：机场 + 无人机层级展示，在线状态实时指示，支持新增/删除/重命名
+- **机场飞机自动订阅**：连接机场后自动识别并添加关联的无人机
+- **设备 OSD 面板**：机场信息与飞机信息并排显示，刷新间隔可调，鼠标悬停显示字段 key、点击可复制
+- **Topic 订阅管理**：每个设备独立管理 Topic，自动订阅大疆机场 7 个常用 Topic，支持新增/删除/启用/禁用/拖拽排序
+- **上报JSON管理**：按设备 Topic 过滤报文，支持暂停滚动、一键复制、清除历史
+- **上报JSON抓包导出**：一键抓包，数据实时写入 `captures/` 文件夹，停止后弹窗显示路径和记录条数
+- **上报JSON 字段自动翻译**：根据大疆上云官网自动翻译 Topic 上报 json 参数 key，按分组展示，支持网格和列表分组查看
+- **Topic 下发**：自动预设常用下发 Topic，每个 Topic 提供官方下发参数 JSON 模板
+- **Topic 下发记录**：自动记录每次下发与响应，成功/失败一目了然
+- **控制中心-机场控制**：集成远程调试、飞机电源、机场舱盖、飞机充电、机场维护、强制关舱门等快捷控制，实时显示发送及响应消息记录
+- **控制中心-飞行控制**：支持飞行控制权限抢夺/释放、一键起飞/返航/取消返航/紧急停机等飞行指令；
+- **控制中心-负载控制**：支持负载控制权限抢夺/释放、拍照/录像/云台回中等负载控制；支持多机场下拉切换
+- **控制中心-运维模式**：支持机场重启、强制关舱门、补光灯等运维操作
+- **视频直播**：飞机/机场双窗口独立直播，支持镜头切换（红外/变焦/广角）、视频源切换（内外视频）、5档清晰度调节【下版本实现】
+- **自动重连**：指数退避（1s → 2s → … → 最长 30s），恢复后自动刷新
+- **断线保护**：断线自动暂停面板刷新，手动暂停优先级更高，不打断数据查看
 
-> 🔜 v1.1 预告：JSON 解析优化、暗色模式支持、批量设备管理。详见 [用户指南](docs/user-guide.md)。
+> 🔜 v1.1 预告：视频直播功能实现、暗色模式支持、批量设备管理。详见 [用户指南](docs/guide/user-guide.md)。
 
 ## 🚶 快速开始
 
 ### Windows
 
-从 [Releases](https://github.com/damon-liu/Dji-cloud-api-tool/releases/latest) 下载 `DjiCloudApiTool-v1.0.1.zip`，解压后双击 `DjiCloudApi.exe` 即可运行。
+从 [Releases](https://github.com/damon-liu/Dji-cloud-api-tool/releases/latest) 下载 `DjiCloudApiTool-v1.0.3.zip`，解压后双击 `DjiCloudApi.exe` 即可运行。
 
 **三步上手：**
 
@@ -46,7 +50,7 @@
 2. **添加设备** — 点击「＋」→ 选择 Dock（机场）或 Pilot（无人机）→ 输入设备 SN 和名称
 3. **连接监控** — 点击「● 连接」，OSD 面板和 JSON 面板开始实时刷新
 
-详细教程见 [📖 用户使用指南](docs/user-guide.md)。
+详细教程见 [📖 用户使用指南](docs/guide/user-guide.md)。
 
 ### Linux
 
@@ -65,7 +69,7 @@ docker run --rm dji-cloud-api:latest
 
 ## ⚙️ 配置文件
 
-应用启动后自动在可执行文件同目录生成 `config.json`：
+应用启动后自动在可执行文件同目录 `config/` 子目录下生成 `config.json`：
 
 ```json
 {
@@ -179,9 +183,14 @@ MQTT 消息 → MqttClientManager::messageReceived
 │   ├── topic_mappings.json       # 翻译映射表
 │   └── Dockerfile                # Docker 镜像构建
 ├── docs/
-│   ├── user-guide.md             # 小白使用指南
-│   ├── prd.md                    # 产品需求文档
-│   └── RELEASE-v1.0.md           # Release 发布说明
+│   ├── guide/
+│   │   └── user-guide.md           # 用户使用指南
+│   ├── releases/
+│   │   ├── RELEASE-v1.0.md         # v1.0 发布说明
+│   │   ├── RELEASE-v1.0.1.md       # v1.0.1 发布说明
+│   │   ├── RELEASE-v1.0.2.md       # v1.0.2 发布说明
+│   │   └── RELEASE-v1.0.3.md       # v1.0.3 发布说明
+│   └── product/
 ├── package.sh                    # 一键打包脚本（编译 → 部署 → 清除凭证 → 打包）
 ├── CMakeLists.txt                # CMake 构建配置
 └── CLAUDE.md                     # AI 辅助开发指引
@@ -229,7 +238,7 @@ cmake --build build_mingw
 cmake --build build_mingw --target deploy
 
 # === 一键打包（编译 + 部署 DLL + 清除凭证 + 打包 zip） ===
-bash package.sh v1.0.1
+bash package.sh v1.0.3
 
 # === 原生 Linux ===
 cmake -B build -DCMAKE_BUILD_TYPE=Release

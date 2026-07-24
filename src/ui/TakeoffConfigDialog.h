@@ -15,6 +15,9 @@ class TakeoffConfigDialog : public QDialog {
     Q_OBJECT
 public:
     explicit TakeoffConfigDialog(double dockLat, double dockLon, double dockAlt,
+                                  const QString& dockLatStr,
+                                  const QString& dockLonStr,
+                                  const QString& dockAltStr,
                                   QWidget* parent = nullptr);
 
     QJsonObject takeoffPayload() const;
@@ -28,8 +31,11 @@ private:
     double mDockLon;
     double mDockAlt;
 
-    QLabel*         mDockInfoLabel = nullptr;
-    QLabel*         mDockAltLabel = nullptr;
+    // 原始字符串（保留 OSD 上报的小数位数）
+    QString mDockLatStr;
+    QString mDockLonStr;
+    QString mDockAltStr;
+
     QDoubleSpinBox* mTargetLat = nullptr;
     QDoubleSpinBox* mTargetLon = nullptr;
     QDoubleSpinBox* mTargetHeight = nullptr;

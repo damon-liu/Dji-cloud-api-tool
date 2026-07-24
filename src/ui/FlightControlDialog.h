@@ -21,8 +21,8 @@ public:
                        | Qt::WindowMaximizeButtonHint);
         setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, false);  // 允许拖拽调整大小
         setSizeGripEnabled(true);
-        setMinimumSize(560, 440);
-        resize(720, 560);
+        setMinimumSize(680, 500);
+        resize(800, 620);
 
         auto* layout = new QVBoxLayout(this);
         layout->setContentsMargins(0, 0, 0, 0);

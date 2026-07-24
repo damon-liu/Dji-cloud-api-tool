@@ -14,6 +14,11 @@ struct OsdBase {
     double   altitude  = 0.0;  // 海拔高度 (m)
     bool     valid     = false;
 
+    // 原始字符串（保留 OSD 上报的原始小数位数，避免 toDouble() 丢失尾随零）
+    QString  latitudeStr;
+    QString  longitudeStr;
+    QString  altitudeStr;
+
     virtual ~OsdBase() = default;
 
     // 解析公共字段
@@ -117,6 +122,7 @@ struct DockOsd : public OsdBase {
     int     gps_number             = 0;    // GPS搜星数
     int     rtk_number             = 0;    // RTK搜星数
     double  height                 = 0.0;  // 椭球高度 m
+    QString heightStr;                              // 椭球高度原始字符串
 
     void parse(const QJsonObject& data) {
         parseCommon(data);

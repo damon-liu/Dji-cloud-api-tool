@@ -231,6 +231,7 @@ void FlightControlPanel::setupUi() {
     auto* historyLayout = new QVBoxLayout(historyGroup);
     mHistoryEdit = new QPlainTextEdit(historyGroup);
     mHistoryEdit->setReadOnly(true);
+    mHistoryEdit->setMinimumHeight(180);
     mHistoryEdit->setPlaceholderText(QString::fromUtf8("暂无下发记录"));
     historyLayout->addWidget(mHistoryEdit);
     mainLayout->addWidget(historyGroup, 1);
@@ -273,7 +274,8 @@ void FlightControlPanel::setupUi() {
                 QString::fromUtf8("请先获取飞行控制权后再执行一键起飞"));
             return;
         }
-        TakeoffConfigDialog dlg(mDockLat, mDockLon, mDockAlt, this);
+        TakeoffConfigDialog dlg(mDockLat, mDockLon, mDockAlt,
+                                   mDockLatStr, mDockLonStr, mDockAltStr, this);
         if (dlg.exec() == QDialog::Accepted)
             requestCommand(DockCommandType::Takeoff, dlg.takeoffPayload());
     });
@@ -436,20 +438,31 @@ void FlightControlPanel::setConnected(bool connected) {
     updateButtonStates();
 }
 
-void FlightControlPanel::updateDockPosition(double lat, double lon, double alt) {
+void FlightControlPanel::updateDockPosition(double lat, double lon, double alt,
+                                            const QString& latStr, const QString& lonStr,
+                                            const QString& altStr) {
     mDockLat = lat;
     mDockLon = lon;
     mDockAlt = alt;
+    mDockLatStr = latStr;
+    mDockLonStr = lonStr;
+    mDockAltStr = altStr;
 }
 
 void FlightControlPanel::setAvailableDocks(const QVector<DeviceInfo>& docks,
                                            const QString& currentSn,
                                            double dockLat, double dockLon,
-                                           double dockAlt) {
+                                           double dockAlt,
+                                           const QString& dockLatStr,
+                                           const QString& dockLonStr,
+                                           const QString& dockAltStr) {
     mAvailableDocks = docks;
     mDockLat = dockLat;
     mDockLon = dockLon;
     mDockAlt = dockAlt;
+    mDockLatStr = dockLatStr;
+    mDockLonStr = dockLonStr;
+    mDockAltStr = dockAltStr;
 
     mUpdatingCombo = true;
     mDockCombo->clear();
