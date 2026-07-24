@@ -56,11 +56,11 @@
 
 ## 二、下载与安装
 
-去 GitHub 下载最新版本，下载 `DjiCloudApiTool-v1.0.3.zip`，解压后双击运行 `DjiCloudApi.exe`，**不需要安装**。
+去 下载最新版本，下载 `DjiCloudApiTool-v1.0.3.zip`，解压后双击运行 `DjiCloudApi.exe`，**不需要安装**。
 
-👉 https://github.com/damon-liu/Dji-cloud-api-tool/releases/tag/v1.0.3
+👉 https://gitee.com/damon123-liu/Dji-cloud-api-tool/releases/tag/v1.0.3
 
-![image-20260710155056204](C:\Users\lhx\AppData\Roaming\Typora\typora-user-images\image-20260710155056204.png)
+
 
 ---
 
@@ -72,7 +72,7 @@
 
 **①** 点击左上角「⚙ 配置」按钮会弹出一个配置窗口：
 
-![image-20260710170652328](C:\Users\lhx\AppData\Roaming\Typora\typora-user-images\image-20260710170652328.png)
+![输入图片说明](image-20260710113140164.png)
 
 **②** 填写Broker参数
 
@@ -97,7 +97,7 @@
 
 连上服务器后，需添加设备。
 
-![image-20260710161318247](C:\Users\lhx\AppData\Roaming\Typora\typora-user-images\image-20260710161318247.png)
+
 
 **①** 点击左侧「＋」按钮
 
