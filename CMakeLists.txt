@@ -38,6 +38,8 @@ set(SOURCES
     src/ui/DockControlPanel.cpp
     src/ui/FlightControlPanel.cpp
     src/ui/MaintenancePanel.cpp
+    src/ui/VideoStreamWindow.cpp
+    src/ui/TakeoffConfigDialog.cpp
 )
 
 set(HEADERS
@@ -57,15 +59,17 @@ set(HEADERS
     src/ui/TopicListWidget.h
     src/core/TopicMapping.h
     src/ui/TopicParsePanel.h
+    src/ui/FlowLayout.h
     src/core/DockCommand.h
     src/core/DockCommandExecutor.h
     src/ui/DockControlPanel.h
     src/ui/DockControlDialog.h
-    src/ui/TakeoffDialog.h
     src/ui/FlightControlPanel.h
     src/ui/FlightControlDialog.h
     src/ui/MaintenancePanel.h
     src/ui/MaintenanceDialog.h
+    src/ui/VideoStreamWindow.h
+    src/ui/TakeoffConfigDialog.h
 )
 
 add_executable(DjiCloudApi ${SOURCES} ${HEADERS})
@@ -83,17 +87,19 @@ target_link_libraries(DjiCloudApi
     Qt6::Mqtt
 )
 
-# 复制默认配置文件到构建目录
-configure_file(
-    ${CMAKE_SOURCE_DIR}/src/resources/config.json
-    ${CMAKE_BINARY_DIR}/config.json
-    COPYONLY
-)
+# 仅在文件不存在时复制默认配置文件，保留用户已有的连接信息
+if(NOT EXISTS ${CMAKE_BINARY_DIR}/config.json)
+    configure_file(
+        ${CMAKE_SOURCE_DIR}/src/resources/config.json
+        ${CMAKE_BINARY_DIR}/config.json
+        COPYONLY
+    )
+endif()
 
 # 复制 topic 映射配置文件到构建目录
 configure_file(
     ${CMAKE_SOURCE_DIR}/config/topic_mappings.json
-    ${CMAKE_BINARY_DIR}/topic_mappings.json
+    ${CMAKE_BINARY_DIR}/config/topic_mappings.json
     COPYONLY
 )
 
@@ -115,11 +121,8 @@ if(WIN32)
             --no-translations
             "$<TARGET_FILE:DjiCloudApi>"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_SOURCE_DIR}/src/resources/config.json"
-            "${CMAKE_BINARY_DIR}/config.json"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_SOURCE_DIR}/config/topic_mappings.json"
-            "${CMAKE_BINARY_DIR}/topic_mappings.json"
+            "${CMAKE_BINARY_DIR}/config/topic_mappings.json"
         # 强制清除 deploy/ 目录中的真实凭证，防止打包泄露
         COMMAND ${CMAKE_COMMAND} -E copy
             "${CMAKE_SOURCE_DIR}/deploy/config.example.json"

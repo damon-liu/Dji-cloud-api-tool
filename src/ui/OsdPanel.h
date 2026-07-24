@@ -41,8 +41,6 @@ private:
     void showAircraftOsd(const AircraftOsd& osd);
     void showDockOsd(const DockOsd& osd);
     void setFieldValue(QLabel* label, const QString& value);
-    void setDockRow(int row, const QString& label, QLabel*& valLabel);
-    void setAirRow(int row, const QString& label, QLabel*& valLabel);
 
     // 布局
     QVBoxLayout*  mMainLayout;
@@ -54,6 +52,7 @@ private:
 
     // 机场字段
     QLabel* mDockLatLon;
+    QLabel* mDockHeight;
     QLabel* mDockCover;
     QLabel* mDockDroneIn;
     QLabel* mDockInsideTemp;
@@ -69,7 +68,7 @@ private:
     QLabel* mAirHeight;
     QLabel* mAirHomeDist;
     QLabel* mAirWind;
-    QLabel* mAirGps;
+    QLabel* mAirRtk;
 
     // 定时刷新
     DeviceManager* mDevMgr = nullptr;

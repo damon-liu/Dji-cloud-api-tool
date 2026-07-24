@@ -1,10 +1,15 @@
 #include "TopicParsePanel.h"
 #include "DeviceManager.h"
+#include <QFormLayout>
 #include <QFrame>
+#include <QGroupBox>
+#include <QGridLayout>
 #include <QPointer>
 #include <QClipboard>
 #include <QApplication>
 #include <QMouseEvent>
+#include <QResizeEvent>
+#include <QToolTip>
 
 // Helper: convert QJsonValue to display string
 static QString valToString(const QJsonValue& val) {
@@ -72,6 +77,15 @@ void TopicParsePanel::setupUi() {
             mRefreshTimer->start(mIntervalMs);
     });
 
+    mViewModeBtn = new QPushButton("☰ 列表");
+    mViewModeBtn->setCursor(Qt::PointingHandCursor);
+    mViewModeBtn->setFixedWidth(80);
+    mViewModeBtn->setStyleSheet(
+        "QPushButton { border: 1px solid #dadce0; border-radius: 4px; padding: 4px 12px; "
+        "font-size: 12px; background: #fff; color: #5f6368; }"
+        "QPushButton:hover { background: #f1f3f4; }");
+    connect(mViewModeBtn, &QPushButton::clicked, this, &TopicParsePanel::toggleViewMode);
+
     mPauseBtn = new QPushButton("⏸ 暂停");
     mPauseBtn->setCursor(Qt::PointingHandCursor);
     mPauseBtn->setFixedWidth(80);
@@ -81,6 +95,7 @@ void TopicParsePanel::setupUi() {
         "QPushButton:hover { background: #f1f3f4; }");
     connect(mPauseBtn, &QPushButton::clicked, this, &TopicParsePanel::togglePause);
 
+    header->addWidget(mViewModeBtn);
     header->addWidget(intervalLabel);
     header->addWidget(mIntervalCombo);
     header->addWidget(mPauseBtn);
@@ -96,6 +111,7 @@ void TopicParsePanel::setupUi() {
     mScrollArea = new QScrollArea;
     mScrollArea->setWidgetResizable(true);
     mScrollArea->setFrameShape(QFrame::NoFrame);
+    mScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     mScrollArea->setStyleSheet("QScrollArea { background: transparent; border: none; }");
 
     mContentWidget = new QWidget;
@@ -108,9 +124,10 @@ void TopicParsePanel::setupUi() {
     mainLayout->addWidget(mScrollArea, 1);
 }
 
-void TopicParsePanel::setTopic(const QString& deviceSn, const QString& topic) {
-    mDeviceSn = deviceSn;
-    mTopic    = topic;
+void TopicParsePanel::setTopic(const QString& deviceSn, const QString& topic, const QString& deviceType) {
+    mDeviceSn   = deviceSn;
+    mTopic      = topic;
+    mDeviceType = deviceType;
     mPrevValues.clear();
     mLastJson.clear();
     mTopicLabel->setText(topic.isEmpty() ? "" : topic);
@@ -126,27 +143,37 @@ void TopicParsePanel::setTopic(const QString& deviceSn, const QString& topic) {
 }
 
 bool TopicParsePanel::eventFilter(QObject* obj, QEvent* event) {
-    if (event->type() == QEvent::MouseButtonPress) {
-        QLabel* label = qobject_cast<QLabel*>(obj);
-        if (label) {
-            QString key = label->property("copyKey").toString();
-            if (!key.isEmpty()) {
-                QApplication::clipboard()->setText(key);
-                // 短暂显示已复制提示
-                QString orig = label->text();
-                label->setText("已复制: " + key);
-                label->setStyleSheet("color: #1a73e8; font-size: 11px;");
-                QPointer<QLabel> weakLabel(label);
-                QTimer::singleShot(1500, this, [weakLabel, orig]() {
-                    if (weakLabel) {
-                        weakLabel->setText(orig);
-                        weakLabel->setStyleSheet("color: #5f6368; font-size: 11px;");
-                    }
-                });
-                return true;
-            }
-        }
+    QLabel* label = qobject_cast<QLabel*>(obj);
+    if (!label)
+        return QWidget::eventFilter(obj, event);
+
+    QString key = label->property("copyKey").toString();
+
+    if (event->type() == QEvent::Enter && !key.isEmpty()) {
+        QToolTip::showText(QCursor::pos(), key, label, QRect(), 3600000);
+        return true;
     }
+
+    if (event->type() == QEvent::Leave) {
+        QToolTip::hideText();
+        return true;
+    }
+
+    if (event->type() == QEvent::MouseButtonPress && !key.isEmpty()) {
+        QApplication::clipboard()->setText(key);
+        QString orig = label->text();
+        label->setText("已复制: " + key);
+        label->setStyleSheet("color: #1a73e8; font-size: 11px;");
+        QPointer<QLabel> weakLabel(label);
+        QTimer::singleShot(1500, this, [weakLabel, orig]() {
+            if (weakLabel) {
+                weakLabel->setText(orig);
+                weakLabel->setStyleSheet("color: #5f6368; font-size: 11px;");
+            }
+        });
+        return true;
+    }
+
     return QWidget::eventFilter(obj, event);
 }
 
@@ -154,7 +181,7 @@ void TopicParsePanel::clear() {
     QLayoutItem* item;
     while ((item = mContentLayout->takeAt(0)) != nullptr) {
         if (item->widget()) {
-            item->widget()->deleteLater();
+            delete item->widget();  // 立即删除，避免 deleteLater 延迟导致切换时新旧控件共存
         }
         delete item;
     }
@@ -205,6 +232,14 @@ void TopicParsePanel::togglePause() {
     }
 }
 
+void TopicParsePanel::toggleViewMode() {
+    mCardMode = !mCardMode;
+    mViewModeBtn->setText(mCardMode ? "☰ 列表" : "⊞ 网格");
+    mLastJson.clear();  // 强制重绘，切换卡片/列表模式
+    if (!mPaused)
+        refresh();
+}
+
 QMap<QString, QString> TopicParsePanel::flattenJson(const QJsonObject& obj, const QString& prefix) const {
     QMap<QString, QString> result;
     for (auto it = obj.begin(); it != obj.end(); ++it) {
@@ -235,10 +270,11 @@ void TopicParsePanel::renderGroups(const QJsonObject& data) {
 
     TopicMappingConfig cfg;
     if (mMapping)
-        cfg = mMapping->mappingForTopic(mTopic);
+        cfg = mMapping->mappingForTopic(mTopic, mDeviceType);
 
     QSet<QString> renderedKeys;
     QMap<QString, QString> newValues;
+    QMap<QString, QLabel*> valueLabels;  // key → value label (for highlighting)
 
     // 在清空前保存旧值（用于变化检测）
     QMap<QString, QString> prevValues = mPrevValues;
@@ -254,51 +290,149 @@ void TopicParsePanel::renderGroups(const QJsonObject& data) {
         return;
     }
 
-    // 按分组渲染
-    for (const auto& group : cfg.groups) {
-        auto* groupBox = new QGroupBox(group.label);
+    // ---- 辅助：解析字段的显示名称和值 ----
+    auto resolveField = [&](const QString& key, QString& zhName, QString& displayValue) -> bool {
+        if (!flatData.contains(key))
+            return false;
+        FieldMapping fm = cfg.fields.value(key);
+        zhName = fm.zh.isEmpty() ? key : fm.zh;
+        QString rawValue = flatData.value(key);
+        if (!fm.values.isEmpty() && fm.values.contains(rawValue))
+            displayValue = fm.values[rawValue];
+        else
+            displayValue = rawValue;
+        if (!fm.unit.isEmpty())
+            displayValue += " " + fm.unit;
+        return true;
+    };
 
-        auto* formLayout = new QFormLayout(groupBox);
-        formLayout->setSpacing(2);
-        formLayout->setContentsMargins(4, 4, 4, 4);
+    // ---- 辅助：创建带复制功能的标签 ----
+    auto makeCopyLabel = [&](const QString& text, const QString& copyKey,
+                             const QString& styleSheet) -> QLabel* {
+        auto* label = new QLabel(text);
+        label->setStyleSheet(styleSheet);
+        label->setCursor(Qt::PointingHandCursor);
+        label->installEventFilter(this);
+        label->setProperty("copyKey", copyKey);
+        return label;
+    };
 
-        bool groupHasContent = false;
+    // ---- 辅助：网格模式渲染，QGridLayout 固定 3 列，卡片等宽 ----
+    auto renderCards = [&](QWidget* container, const QList<QStringList>& rows,
+                           const QStringList& extraKeys = {}) {
+        // 收集所有有效 key
+        QStringList allKeys;
+        for (const auto& rowKeys : rows)
+            for (const auto& key : rowKeys)
+                if (flatData.contains(key) && !renderedKeys.contains(key))
+                    allKeys.append(key);
+        for (const auto& key : extraKeys)
+            if (flatData.contains(key) && !renderedKeys.contains(key))
+                allKeys.append(key);
 
-        for (const auto& key : group.keys) {
-            // 跳过 JSON 中不存在的字段，只显示有数据的
-            if (!flatData.contains(key))
-                continue;
+        if (allKeys.isEmpty()) return false;
 
-            FieldMapping fm = cfg.fields.value(key);
-            QString zhName = fm.zh.isEmpty() ? key : fm.zh;
+        const int maxPerRow = 3;
+        // 根据容器可用宽度计算统一卡片宽度（仅用于限制最大宽度）
+        int viewportW = mScrollArea->viewport()->width();
+        int cardW = (viewportW - 24) / maxPerRow;  // 含各种 margin
 
-            QString rawValue = flatData.value(key);
-            QString displayValue;
+        auto* grid = new QGridLayout(container);
+        grid->setSpacing(6);
+        grid->setContentsMargins(4, 4, 4, 4);
 
-            if (!fm.values.isEmpty() && fm.values.contains(rawValue)) {
-                displayValue = fm.values[rawValue];
-            } else {
-                displayValue = rawValue;
-            }
+        int total = allKeys.size();
+        int rowsCount = (total + maxPerRow - 1) / maxPerRow;
 
-            if (!fm.unit.isEmpty())
-                displayValue += " " + fm.unit;
+        // 创建占位行确定行高（除最后一行外）
+        for (int i = 0; i < allKeys.size(); ++i) {
+            const QString& key = allKeys[i];
+            QString zhName, displayValue;
+            if (!resolveField(key, zhName, displayValue)) continue;
 
-            auto* nameLabel = new QLabel(zhName);
-            nameLabel->setStyleSheet("color: #5f6368; font-size: 11px;");
-            nameLabel->setCursor(Qt::PointingHandCursor);
-            nameLabel->setToolTip("点击复制: " + key);
-            nameLabel->installEventFilter(this);
-            nameLabel->setProperty("copyKey", key);
+            int r = i / maxPerRow;
+            int c = i % maxPerRow;
 
-            auto* valueLabel = new QLabel(displayValue);
-            valueLabel->setStyleSheet("font-size: 11px; font-weight: 500;");
+            auto* card = new QFrame;
+            card->setStyleSheet(
+                "QFrame { background: #f8f9fa; border: none; border-radius: 4px; }");
+            card->setMinimumWidth(100);
+            card->setMaximumWidth(qMax(cardW, 100));
 
-            formLayout->addRow(nameLabel, valueLabel);
+            auto* cl = new QVBoxLayout(card);
+            cl->setContentsMargins(8, 4, 8, 4);
+            cl->setSpacing(2);
+            cl->addWidget(makeCopyLabel(zhName, key,
+                                        "color: #5f6368; font-size: 11px;"));
+            auto* valLabel = makeCopyLabel(displayValue, key,
+                                           "font-size: 11px; font-weight: 500;");
+            cl->addWidget(valLabel);
+            valueLabels[key] = valLabel;
+
+            grid->addWidget(card, r, c);
             renderedKeys.insert(key);
             newValues[key] = displayValue;
-            groupHasContent = true;
         }
+
+        // 3 列等比例拉伸，确保所有卡片等宽
+        for (int c = 0; c < maxPerRow; ++c)
+            grid->setColumnStretch(c, 1);
+
+        // 如果最后一行不满，在空单元格填充占位以保持等宽
+        int remainder = total % maxPerRow;
+        if (remainder > 0) {
+            int lastRow = rowsCount - 1;
+            for (int c = remainder; c < maxPerRow; ++c) {
+                auto* spacer = new QWidget;
+                spacer->setFixedHeight(0);
+                grid->addWidget(spacer, lastRow, c);
+            }
+        }
+
+        return true;
+    };
+
+    // ---- 辅助：列表模式渲染一组字段为单列 QFormLayout ----
+    auto renderList = [&](QWidget* container, const QList<QStringList>& rows,
+                          const QStringList& extraKeys = {}) {
+        auto* form = new QFormLayout(container);
+        form->setHorizontalSpacing(15);
+        form->setVerticalSpacing(6);
+        form->setContentsMargins(4, 4, 4, 4);
+        bool any = false;
+
+        auto addRow = [&](const QString& key) {
+            QString zhName, displayValue;
+            if (!resolveField(key, zhName, displayValue)) return;
+            form->addRow(makeCopyLabel(zhName, key,
+                                       "color: #5f6368; font-size: 11px;"),
+                         makeCopyLabel(displayValue, key,
+                                       "font-size: 11px; font-weight: 500;"));
+            renderedKeys.insert(key);
+            newValues[key] = displayValue;
+            valueLabels[key] = qobject_cast<QLabel*>(
+                form->itemAt(form->rowCount() - 1, QFormLayout::FieldRole)->widget());
+            any = true;
+        };
+
+        for (const auto& rowKeys : rows)
+            for (const auto& key : rowKeys)
+                addRow(key);
+        for (const auto& key : extraKeys)
+            addRow(key);
+
+        return any;
+    };
+
+    // ---- 按分组渲染 ----
+    for (const auto& group : cfg.groups) {
+        auto* groupBox = new QGroupBox(group.label);
+        bool groupHasContent;
+
+        if (mCardMode)
+            groupHasContent = renderCards(groupBox, group.rows);
+        else
+            groupHasContent = renderList(groupBox, group.rows);
 
         if (groupHasContent) {
             mContentLayout->insertWidget(mContentLayout->count() - 1, groupBox);
@@ -307,7 +441,7 @@ void TopicParsePanel::renderGroups(const QJsonObject& data) {
         }
     }
 
-    // 未映射字段
+    // ---- 未映射字段 ----
     QStringList unmappedKeys;
     for (auto it = flatData.begin(); it != flatData.end(); ++it) {
         if (!renderedKeys.contains(it.key()))
@@ -316,56 +450,30 @@ void TopicParsePanel::renderGroups(const QJsonObject& data) {
 
     if (!unmappedKeys.isEmpty()) {
         auto* unmappedGroup = new QGroupBox("其他字段");
+        bool hasContent;
+        // 未映射字段无 row 分组 → 每个 key 独立（单元素行列表）
+        QList<QStringList> singleRows;
+        for (const auto& key : unmappedKeys)
+            singleRows.append(QStringList{key});
 
-        auto* unmappedLayout = new QFormLayout(unmappedGroup);
-        unmappedLayout->setSpacing(2);
-        unmappedLayout->setContentsMargins(4, 4, 4, 4);
+        if (mCardMode)
+            hasContent = renderCards(unmappedGroup, singleRows);
+        else
+            hasContent = renderList(unmappedGroup, singleRows);
 
-        for (const auto& key : unmappedKeys) {
-            auto* keyLabel = new QLabel(key);
-            keyLabel->setStyleSheet("color: #5f6368; font-size: 11px;");
-            keyLabel->setCursor(Qt::PointingHandCursor);
-            keyLabel->setToolTip("点击复制: " + key);
-            keyLabel->installEventFilter(this);
-            keyLabel->setProperty("copyKey", key);
-
-            auto* valLabel = new QLabel(flatData[key]);
-            valLabel->setStyleSheet("font-size: 11px; font-weight: 500;");
-
-            unmappedLayout->addRow(keyLabel, valLabel);
-            newValues[key] = flatData[key];
+        if (hasContent) {
+            mContentLayout->insertWidget(mContentLayout->count() - 1, unmappedGroup);
+        } else {
+            delete unmappedGroup;
         }
-
-        mContentLayout->insertWidget(mContentLayout->count() - 1, unmappedGroup);
     }
 
-    // 值变化高亮
+    // 值变化高亮（通过 key → valueLabel 映射直接定位）
     for (auto it = newValues.begin(); it != newValues.end(); ++it) {
         QString oldVal = prevValues.value(it.key());
         bool changed = !oldVal.isEmpty() && oldVal != it.value();
-        if (changed) {
-            for (int i = 0; i < mContentLayout->count(); ++i) {
-                QLayoutItem* item = mContentLayout->itemAt(i);
-                if (!item || !item->widget()) continue;
-                QGroupBox* gb = qobject_cast<QGroupBox*>(item->widget());
-                if (!gb) continue;
-                QFormLayout* fl = qobject_cast<QFormLayout*>(gb->layout());
-                if (!fl) continue;
-                for (int r = 0; r < fl->rowCount(); ++r) {
-                    QLayoutItem* labelItem = fl->itemAt(r, QFormLayout::LabelRole);
-                    QLayoutItem* fieldItem = fl->itemAt(r, QFormLayout::FieldRole);
-                    if (!labelItem || !fieldItem) continue;
-                    QLabel* nameLbl = qobject_cast<QLabel*>(labelItem->widget());
-                    QLabel* valLbl  = qobject_cast<QLabel*>(fieldItem->widget());
-                    if (!nameLbl || !valLbl) continue;
-                    for (auto fit = cfg.fields.begin(); fit != cfg.fields.end(); ++fit) {
-                        if (fit.value().zh == nameLbl->text() && fit.key() == it.key()) {
-                            setFieldValue(valLbl, it.value(), true);
-                            break;
-                        }
-                    }
-                }
-            }
+        if (changed && valueLabels.contains(it.key())) {
+            setFieldValue(valueLabels[it.key()], it.value(), true);
         }
     }
 
@@ -399,5 +507,15 @@ void TopicParsePanel::resume() {
             mRefreshTimer->start(mIntervalMs);
             refresh();
         }
+    }
+}
+
+void TopicParsePanel::resizeEvent(QResizeEvent* event) {
+    QWidget::resizeEvent(event);
+    // 缩放时用缓存数据重新布局，确保卡片宽度跟随面板变化
+    if (!mLastJson.isEmpty() && !mPaused) {
+        QJsonDocument doc = QJsonDocument::fromJson(mLastJson.toUtf8());
+        if (doc.isObject())
+            renderGroups(doc.object());
     }
 }

@@ -1,9 +1,9 @@
 #include "DeviceManager.h"
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QJsonArray>
 #include <QDateTime>
 #include <QDebug>
+#include <QRegularExpression>
 
 static const QStringList DEFAULT_DOCK_TOPICS = {
     "thing/product/{sn}/state",
@@ -196,6 +196,10 @@ QVector<DeviceInfo*> DeviceManager::topLevelDevices() {
 
 QStringList DeviceManager::topicsForDevice(const QString& sn) const {
     return mTopicManager->topicsForDevice(sn);
+}
+
+QString DeviceManager::deviceForTopic(const QString& topic) const {
+    return mTopicManager->deviceForTopic(topic);
 }
 
 void DeviceManager::addTopic(const QString& deviceSn, const QString& topic) {
@@ -445,6 +449,16 @@ void DeviceManager::onTopicsChanged(const QStringList& add, const QStringList& r
     mMqttManager->replaceSubscriptions(add, remove);
 }
 
+// 从原始 JSON payload 中提取数值字段的原始字符串，保留 OSD 上报的原始小数位数
+static QString extractJsonNumberString(const QByteArray& payload, const QString& key) {
+    QRegularExpression re(
+        QString(R"("%1"\s*:\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?))").arg(key));
+    QRegularExpressionMatch m = re.match(QString::fromUtf8(payload));
+    if (m.hasMatch())
+        return m.captured(1);
+    return QString();
+}
+
 void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payload) {
     QJsonDocument doc = QJsonDocument::fromJson(payload);
     if (!doc.isObject()) {
@@ -484,14 +498,33 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
         }
     }
 
-    // 解析 OSD 数据
+    // 解析 OSD 数据 — 字段级合并：从已有缓存拷贝，再 parse 当前消息的数据，
+    // 确保 DJI 分消息推送的字段子集不会互相覆盖
     DeviceInfo& info = mDevices[sn];
     if (topic.contains("/osd")) {
         if (info.type == DeviceType::Aircraft) {
-            AircraftOsd osd = AircraftOsd::fromJson(data);
+            AircraftOsd osd = mAircraftOsdCache.value(sn);
+            osd.parse(data);
+            // 从原始 payload 提取坐标原始字符串，保留 OSD 上报小数位数
+            if (osd.latitudeStr.isEmpty())
+                osd.latitudeStr = extractJsonNumberString(payload, QStringLiteral("latitude"));
+            if (osd.longitudeStr.isEmpty())
+                osd.longitudeStr = extractJsonNumberString(payload, QStringLiteral("longitude"));
+            if (osd.altitudeStr.isEmpty())
+                osd.altitudeStr = extractJsonNumberString(payload, QStringLiteral("altitude"));
             mAircraftOsdCache[sn] = osd;
         } else if (info.type == DeviceType::Dock) {
-            DockOsd osd = DockOsd::fromJson(data);
+            DockOsd osd = mDockOsdCache.value(sn);
+            osd.parse(data);
+            // 从原始 payload 提取坐标原始字符串，保留 OSD 上报小数位数
+            if (osd.latitudeStr.isEmpty())
+                osd.latitudeStr = extractJsonNumberString(payload, QStringLiteral("latitude"));
+            if (osd.longitudeStr.isEmpty())
+                osd.longitudeStr = extractJsonNumberString(payload, QStringLiteral("longitude"));
+            if (osd.altitudeStr.isEmpty())
+                osd.altitudeStr = extractJsonNumberString(payload, QStringLiteral("altitude"));
+            if (osd.heightStr.isEmpty())
+                osd.heightStr = extractJsonNumberString(payload, QStringLiteral("height"));
             mDockOsdCache[sn] = osd;
 
             // 自动检测库内飞机：从 OSD 的 sub_device.device_sn 提取飞机 SN，
@@ -517,58 +550,6 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
                     qDebug() << "DeviceManager: auto-detected child aircraft"
                              << detectedSn << "for dock" << sn;
                 }
-            }
-
-            // 将机场 OSD 中的飞行器相关字段映射到子飞机缓存，
-            // 使选中子飞机时 OSD 面板有数据可显示
-            QString childSn;
-            for (auto it = mDevices.begin(); it != mDevices.end(); ++it) {
-                if (it->parentSn == sn && it->type == DeviceType::Aircraft) {
-                    childSn = it->sn;
-                    break;
-                }
-            }
-            if (!childSn.isEmpty()) {
-                const QJsonObject& merged = mMergedOsdData[sn][topic];
-                AircraftOsd airOsd;
-                airOsd.parseCommon(merged);
-                airOsd.mode_code    = merged.value("mode_code").toInt(-1);
-                airOsd.height       = merged.value("height").toDouble();
-                airOsd.heading      = merged.value("heading").toDouble();
-                airOsd.wind_speed   = merged.value("wind_speed").toDouble();
-
-                QJsonObject ps = merged.value("position_state").toObject();
-                airOsd.gps_number = ps.value("gps_number").toInt();
-
-                QJsonObject dcs = merged.value("drone_charge_state").toObject();
-                airOsd.battery_percent = dcs.value("capacity_percent").toInt(-1);
-
-                QJsonObject dbmi = merged.value("drone_battery_maintenance_info").toObject();
-                QJsonArray batteries = dbmi.value("batteries").toArray();
-                if (!batteries.isEmpty()) {
-                    QJsonObject batt = batteries[0].toObject();
-                    airOsd.battery_voltage     = batt.value("voltage").toDouble();
-                    airOsd.battery_temperature = batt.value("temperature").toDouble();
-                }
-
-                mAircraftOsdCache[childSn] = airOsd;
-                qDebug() << "DeviceManager: mapped child aircraft OSD for" << childSn
-                         << "| lat:" << airOsd.latitude << "lon:" << airOsd.longitude
-                         << "| battery:" << airOsd.battery_percent << "%"
-                         << "| battTemp:" << airOsd.battery_temperature
-                         << "| merged keys:" << merged.keys();
-
-                // 生成子飞机的合成 JSON（用于原始 JSON 面板展示）
-                QJsonObject synthRoot;
-                synthRoot["gateway"] = sn;
-                synthRoot["timestamp"] = root.value("timestamp");
-                synthRoot["data"] = merged;
-                QJsonDocument synthDoc(synthRoot);
-                QString synthJson = QString::fromUtf8(synthDoc.toJson(QJsonDocument::Indented));
-                QString childTopic = QString("thing/product/%1/osd").arg(childSn);
-                mRawJsonCache[childSn][childTopic] = synthJson;
-
-                emit deviceOsdUpdated(childSn, childTopic, synthJson);
             }
         }
     }

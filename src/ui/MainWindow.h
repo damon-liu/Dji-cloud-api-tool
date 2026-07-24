@@ -18,11 +18,15 @@
 #include "FlightControlDialog.h"
 #include "MaintenanceDialog.h"
 #include "DeviceManager.h"
+#include "VideoStreamWindow.h"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
     explicit MainWindow(DeviceManager* devMgr, QWidget* parent = nullptr);
+
+protected:
+    void closeEvent(QCloseEvent* event) override;
 
 private slots:
     void onDeviceSelected(const QString& sn);
@@ -40,6 +44,8 @@ private:
     void connectSignals();
     void refreshTopicList(const QString& sn);
     void refreshDockControlList(const QString& currentSn);
+    void showVideoWindows();
+    void hideVideoWindows();
 
     DeviceManager*     mDevMgr;
     DeviceTreeWidget*  mDeviceTree;
@@ -54,6 +60,7 @@ private:
     FlightControlDialog* mFlightCtrlDialog = nullptr;
     MaintenancePanel*    mMaintenancePanel = nullptr;      // 指向运维模式对话框内的面板
     MaintenanceDialog*   mMaintenanceDialog = nullptr;
+    QList<VideoStreamWindow*> mVideoWindows;
     QLabel*            mStatusLabel;
     QLabel*            mDeviceCountLabel;
     QLabel*            mVersionLabel;

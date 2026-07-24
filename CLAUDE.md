@@ -1,104 +1,129 @@
 # CLAUDE.md
 
-本文件为 Claude Code（claude.ai/code）在此仓库中工作时提供指导。
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 项目概述
+> Keep this file in sync with `AGENTS.md`.
 
-DJI Cloud API MQTT监控客户端 — 基于 Qt 6 C++ 的桌面应用，连接 MQTT Broker，订阅 DJI 无人机/机场的遥测主题，以树形结构实时展示 OSD（机载系统数据）。v1.0 仅支持监控；指令下发功能计划在 v1.1 实现。
-
-## 构建命令
-
-### Windows（MinGW + Qt 6）
+## Build
 
 ```bash
-# 配置
+# Windows (MinGW) — Debug
 cmake -B build_mingw -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug
-
-# 构建
 cmake --build build_mingw
 
-# 部署 Qt DLL（可选）
+# Windows — deploy Qt DLLs for distribution
 cmake --build build_mingw --target deploy
-```
 
-### 从 Windows 交叉编译到 Linux（通过 Zig）
+# One-click release packaging (build + deploy + strip credentials + zip)
+# Requires bash: Git Bash, WSL, or MSYS2
+bash package.sh v1.0.3
 
-```bash
+# Linux (native)
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+
+# Windows → Linux cross-compile (Zig) — NOTE: cmake/toolchains/linux-x64.cmake
+# is NOT in the repo; you must supply it externally.
 export ZIG_PATH=/path/to/zig/zig.exe
 cmake -B build_linux -G "MinGW Makefiles" \
       -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/linux-x64.cmake \
-      -DZIG_PATH="$ZIG_PATH" \
-      -DCMAKE_BUILD_TYPE=Release
+      -DZIG_PATH="$ZIG_PATH" -DCMAKE_BUILD_TYPE=Release
 cmake --build build_linux
-# 产物：build_linux/main
 ```
 
-### 原生 Linux
+- C++17, Qt 6 (Core, Widgets, Mqtt), CMake ≥ 3.10
+- Binary: `DjiCloudApi.exe` (Windows), `main` (Linux cross-compile)
+- `cmake/toolchains/linux-x64.cmake` is **not committed** — the Zig cross-compile path needs it externally
+- CMake copies `config/topic_mappings.json` → build dir on **every** build
+- CMake copies `src/resources/config.json` → build dir `config.json` **only on first build** (preserves credentials)
+- `package.sh` replaces `config.json` with `deploy/config.example.json` to strip credentials before zipping
+- Build output goes to `build_mingw/`; `deploy/` holds pre-built distribution artifacts (exe is committed, DLLs are gitignored)
+- No lint, typecheck, or test commands exist in this project
 
-```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build
+## Config file resolution
+
+At runtime (see `src/main.cpp`):
+1. `<exe_dir>/config/config.json` (primary — `config/` subdir is auto-created on startup)
+2. `./config.json` (CWD-relative fallback for backward compat)
+
+The CMake template `src/resources/config.json` is copied to the build root. At runtime the app may move/create it inside `config/`. When editing config, check both locations.
+
+## Architecture
+
+Three-layer, single-threaded — Qt signals/slots for async I/O:
+
+```
+UI Layer      src/ui/     — MainWindow, DeviceTreeWidget, OsdPanel, TopicParsePanel,
+                            RawJsonPanel, PublishPanel, ConfigDialog, TopicListWidget,
+                            DockControlPanel, FlightControlPanel, MaintenancePanel
+Core Layer    src/core/   — DeviceManager (central dispatcher), ConfigStore, TopicManager,
+                            TopicMapping, DeviceInfo/OsdData structs,
+                            DockCommand/DockCommandExecutor (command system)
+MQTT Layer    src/mqtt/   — MqttClientManager (QMqttClient wrapper, exponential backoff reconnect)
 ```
 
-### Docker
+**Data flow:** MQTT message → `MqttClientManager::messageReceived` → `DeviceManager::parseAndRoute()` → `TopicManager` matches topic to device SN → parses DJI-format JSON `{"tid":..., "data":...}` → caches OSD, emits `deviceOsdUpdated(sn, rawJson)` → UI panels reactively update.
 
-```bash
-cp build_linux/main deploy/main
-docker build -t dji-cloud-api:latest -f deploy/Dockerfile .
-docker run --rm dji-cloud-api:latest
-```
+**Thread model:** Everything runs on the Qt main thread. `QMqttClient` is async — no worker threads.
 
-## 架构
+**UI language:** All labels, field names, enum values are Chinese (UTF-8). Compiler flags enforce UTF-8 encoding: `/utf-8` (MSVC), `-fexec-charset=UTF-8` (GCC/MinGW).
 
-三层设计，单线程运行，通过 Qt 信号/槽实现异步 I/O：
+### Key classes
 
-```
-UI 层 (src/ui/)          — MainWindow、DeviceTreeWidget、OsdPanel、RawJsonPanel、ConfigDialog、TopicEditDialog
-核心层 (src/core/)        — DeviceManager（中心调度器）、ConfigStore、TopicManager、DeviceInfo/OsdData 数据结构
-通信层 (src/mqtt/)        — MqttClientManager（QMqttClient 封装，指数退避自动重连）
-```
+| Class | Role |
+|---|---|
+| `DeviceManager` | Central dispatcher. Owns ConfigStore, TopicManager, MqttClientManager. Device CRUD, message routing, OSD caching (field-level merge via `mMergedOsdData`), profile switching. |
+| `ConfigStore` | JSON config persistence with multi-profile support. Each profile has independent MQTT config + devices + topics. **Auto-saves on every mutation** — do not batch writes without considering this. |
+| `TopicManager` | Topic ↔ device SN bidirectional mapping. Manages enabled/disabled state per topic, emits `topicsChanged` to trigger MQTT re-subscribe. |
+| `MqttClientManager` | `QMqttClient` wrapper. Exponential backoff reconnect (base 1s, max 30s). Dedup subscription management. Tracks pending publishes via messageId→topic map. |
+| `TopicMapping` | Loads `config/topic_mappings.json` — maps MQTT topic patterns to Chinese field names, units, enum translations, and group layouts. Topic keys prefixed with `dock/` or `aircraft/` for device-type-specific mappings. |
+| `DockCommandExecutor` | Serial command executor. Publishes to `services` topic → subscribes `services_reply` → matches by `tid` → 10s timeout. Only one pending command at a time. |
+| `MainWindow` | Top-level window (1280×760). Toolbar with config/connect/disconnect. Horizontal splitter: left = device tree + topic list (vertical split), right = OSD + TopicParse + RawJson + Publish (tabbed/stacked). Dock/Flight/Maintenance control panels open as separate dialogs from the "功能中心" toolbar menu. |
 
-**数据流：** MQTT 消息 → `MqttClientManager::messageReceived` → `DeviceManager::parseAndRoute()` 通过 `TopicManager` 将主题匹配到设备，解析 DJI 格式 JSON（`{"tid":..., "data":...}`），缓存 OSD，发出 `deviceOsdUpdated(sn, rawJson)` → UI 面板在用户选择设备时响应式更新。
+### Device hierarchy
 
-**线程模型：** 一切运行在 Qt 主线程。`QMqttClient` 是异步的——无需工作线程。
+`DeviceInfo` has `parentSn` — dock devices are top-level, aircraft can be children of a dock (`isChild()`). Tree renders as two-level hierarchy. Child aircraft are auto-discovered from dock OSD messages (`DeviceManager::checkAndAddChildAircraft`).
 
-### 关键类
+### OSD field-level merge
 
-| 类                           | 职责                                                                                                            |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `DeviceManager`            | 中心调度器——持有 ConfigStore、TopicManager、MqttClientManager；设备增删改查；消息路由；OSD 缓存               |
-| `ConfigStore`              | JSON 配置持久化（`config.json`）。处理设备列表中机场→子飞机的拆分/合并逻辑                                   |
-| `TopicManager`             | 主题到设备 SN 的映射及反向索引；发出 `topicsChanged` 信号触发 MQTT 重新订阅                                   |
-| `MqttClientManager`        | `QMqttClient` 封装；指数退避自动重连（基数 1s，上限 30s）；去重订阅管理                                       |
-| `DeviceInfo` / `OsdData` | 纯头文件数据结构。`AircraftOsd` 和 `DockOsd` 继承 `OsdBase`；各自包含 `parse()` 方法从 QJsonObject 解析 |
-| `MainWindow`               | 顶层窗口（1280×760），水平分割器：左侧设备树，右侧选项卡详情。内联 Qt 样式表实现 Material 风格外观             |
-| `ConfigDialog`             | MQTT 连接配置对话框，含测试按钮，创建临时 QMqttClient 验证连通性（5 秒超时）                                    |
-| `PublishPanel`             | v1.1 占位界面——发送按钮当前禁用                                                                               |
+DJI sends OSD fields split across multiple MQTT messages. `DeviceManager` uses `mMergedOsdData` to merge fields incrementally — the latest value for each field key wins. The UI sees the merged result.
 
-### 配置文件格式（`config.json`）
+### Offline detection & JSON history
 
-位于可执行文件同目录（或工作目录）。首次运行自动创建默认配置：
+- Offline timeout: **5 seconds** (`OFFLINE_TIMEOUT_MS=5000`) — no message received → device marked offline
+- JSON history: **500 entries** per device per topic (`MAX_JSON_HISTORY=500`)
 
-```json
-{
-    "mqtt": { "host": "...", "port": 8883, "username": "admin", "password": "" },
-    "devices": [
-        { "type": "dock", "sn": "dock_001", "aircraft_sn": "drone_001",
-          "topics": ["thing/product/dock_001/osd", "thing/product/drone_001/osd"] }
-    ]
-}
-```
+### Profile switching
 
-主题字符串支持 `{sn}` 占位符，运行时会替换为设备 SN。
+`DeviceManager::switchToProfile()` disconnects → clears **all** runtime state (devices, OSD caches, JSON history, topics) → loads new profile → reconnects if was connected. ConfigStore auto-saves on profile switch.
 
-## 关键约定
+### Topic subscription pattern
 
-- **C++17** 必须；CMake ≥ 3.10
-- Qt 6 模块：Core、Widgets、Mqtt（不依赖外部 MQTT 库）
-- 源码编码：UTF-8（MSVC 通过 `/utf-8`、GCC/Clang 通过 `-fexec-charset=UTF-8` 强制）
-- CMake `AUTOMOC`、`AUTORCC`、`AUTOUIC` 已开启——无需手动调用 MOC/UIC
-- 有业务逻辑的 UI 面板使用 `.cpp` 文件；简单的只读面板（`RawJsonPanel`、`PublishPanel`）采用纯头文件内联实现
-- `PublishPanel` 的发送功能明确推迟到 v1.1——不要在未更新版本计划的情况下去实现它
-- 交叉编译工具链（`cmake/toolchains/linux-x64.cmake`）使用 Zig 作为 C/C++ 编译器，目标平台 `x86_64-linux-gnu.2.39`
-- Git 提交信息使用中文
-- 每次推送前需编译项目，并运行 `bash package.sh v1.0` 自动完成：编译 → 部署 Qt DLL → **清除 deploy/config.json 凭证** → 打包 zip → 同步 exe 到 deploy/。严禁跳过凭证清除步骤
+Topics stored with `{sn}` placeholder in config; `TopicManager` resolves at runtime. Each device has its own topic list. Topics individually enable/disable. Disabled topics tracked separately and automatically unsubscribed.
+
+### DJI MQTT topic convention
+
+Common prefixes (replace `{sn}` with device serial):
+- `thing/product/{sn}/osd` — telemetry/OSD data
+- `thing/product/{sn}/state` — device state
+- `thing/product/{sn}/services` — command requests (publish)
+- `thing/product/{sn}/services_reply` — command responses (subscribe)
+- `sys/product/{sn}/status` — system status
+
+## Configuration files
+
+- **`config.json`** — Multi-profile MQTT config + devices. Auto-generated on first run from `src/resources/config.json` template. Contains credentials — **never commit** (gitignored).
+- **`config/topic_mappings.json`** — JSON field → Chinese translations. Topic keys use `{sn}` placeholder and optional `dock/`/`aircraft/` prefix. Copied to build dir on every build.
+- **`deploy/config.example.json`** — Template with placeholder values, used during packaging.
+- **`deploy/DjiCloudApi.exe`** + **`deploy/*.dll`** — Pre-built distribution binaries. DLLs are gitignored; the exe is committed.
+
+## Unusual patterns
+
+- `RawJsonPanel` is **header-only** (`RawJsonPanel.h` ~276 lines, no `.cpp`). Packet capture writes to `<exe_dir>/captures/`.
+- `FlowLayout.h` is a standalone Qt layout helper, no `.cpp`.
+- `DockControlDialog` / `FlightControlDialog` / `MaintenanceDialog` are thin dialog wrappers that embed their respective `*Panel` widget.
+- Maintenance panel features are mostly "coming soon" stubs.
+
+## No tests
+
+This project has no automated test suite. All verification is manual.

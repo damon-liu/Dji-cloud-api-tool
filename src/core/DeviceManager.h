@@ -36,6 +36,8 @@ public:
 
     // Topic 管理
     QStringList topicsForDevice(const QString& sn) const;
+    // 根据 topic 反查所属设备 SN
+    QString deviceForTopic(const QString& topic) const;
     void addTopic(const QString& deviceSn, const QString& topic);
     void removeTopic(const QString& deviceSn, const QString& topic);
     void updateTopic(const QString& deviceSn, const QString& oldTopic, const QString& newTopic);
