@@ -17,6 +17,14 @@ deploy/DjiCloudApi.exe
 # 配置文件（含MQTT密码等敏感信息 — 绝不允许提交）
 config.json
 deploy/config.json
+deploy/.gitee_token
+# docs — 仅保留用户指南，其余开发文档不入库
+docs/articles/
+docs/product/
+docs/releases/
+docs/research/
+docs/superpowers/
+docs/*.py
 docs/wechat_config.json
 
 # deploy 目录中的 Qt 运行时（本地通过 windeployqt 生成，不提交）
