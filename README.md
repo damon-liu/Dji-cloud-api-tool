@@ -132,7 +132,7 @@ docker run --rm dji-cloud-api:latest
 
 ## 📸 界面截图
 
-![image-20260710165818685](https://damon-siyuan.oss-cn-wuhan-lr.aliyuncs.com/markdown/image-20260710165818685.png)
+![输入图片说明](docs/guide/img_v3_0213s_b73b7dde-8feb-4a0f-92b9-bebbf5c0f7fg.jpg)
 
 ## 🏗 架构
 
