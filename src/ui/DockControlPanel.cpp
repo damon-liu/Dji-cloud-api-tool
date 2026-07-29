@@ -166,14 +166,31 @@ void DockControlPanel::setupUi() {
 
     mainLayout->addWidget(debugGroup);
 
-    // --- history ---
-    auto* historyGroup = new QGroupBox(QString::fromUtf8("下发记录"), this);
-    auto* historyLayout = new QVBoxLayout(historyGroup);
-    mHistoryEdit = new QPlainTextEdit(historyGroup);
+    // --- history（默认收起，▶/◢ 按钮切换） ---
+    mHistoryEdit = new QPlainTextEdit(this);
     mHistoryEdit->setReadOnly(true);
     mHistoryEdit->setPlaceholderText(QString::fromUtf8("暂无下发记录"));
-    historyLayout->addWidget(mHistoryEdit);
-    mainLayout->addWidget(historyGroup, 1);
+    mHistoryEdit->setVisible(false);
+    mainLayout->addWidget(mHistoryEdit);
+
+    // stretch 吸收多余空间，确保 toggle 按钮固定在底部
+    mainLayout->addStretch();
+
+    mToggleHistoryBtn = new QPushButton(QString::fromUtf8("▶ 下发记录"), this);
+    mToggleHistoryBtn->setCheckable(true);
+    mToggleHistoryBtn->setCursor(Qt::PointingHandCursor);
+    mToggleHistoryBtn->setStyleSheet(
+        "QPushButton { border: none; background: #f1f3f4; color: #5f6368;"
+        "font-size: 13px; font-weight: bold; padding: 4px 8px; border-radius: 4px; }"
+        "QPushButton:hover { background: #e8eaed; }");
+    mainLayout->addWidget(mToggleHistoryBtn);
+
+    connect(mToggleHistoryBtn, &QPushButton::toggled, this, [this](bool checked) {
+        mHistoryEdit->setVisible(checked);
+        mToggleHistoryBtn->setText(checked
+            ? QString::fromUtf8("◢ 下发记录")
+            : QString::fromUtf8("▶ 下发记录"));
+    });
 
     const QList<QPushButton*> buttons = {
         mDebugOpenBtn, mDebugCloseBtn, mDroneOpenBtn, mDroneCloseBtn,

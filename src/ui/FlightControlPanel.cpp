@@ -11,6 +11,7 @@
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QScrollArea>
 #include <QSizePolicy>
 #include <QTextCursor>
 #include <QTime>
@@ -69,10 +70,20 @@ void FlightControlPanel::setupUi() {
 
     mainLayout->addLayout(topRow);
 
+    // ===== 可滚动内容区 =====
+    auto* scrollArea = new QScrollArea(this);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+
+    auto* scrollContent = new QWidget(scrollArea);
+    auto* contentLayout = new QVBoxLayout(scrollContent);
+    contentLayout->setContentsMargins(0, 0, 0, 0);
+    contentLayout->setSpacing(8);
+
     // ===================================================
     // 飞行控制
     // ===================================================
-    auto* flightGroup = new QGroupBox(QString::fromUtf8("飞行控制"), this);
+    auto* flightGroup = new QGroupBox(QString::fromUtf8("飞行控制"), scrollContent);
     auto* flightLayout = new QVBoxLayout(flightGroup);
     flightLayout->setSpacing(8);
 
@@ -158,12 +169,12 @@ void FlightControlPanel::setupUi() {
 
     flightLayout->addLayout(flightSubRow);
 
-    mainLayout->addWidget(flightGroup);
+    contentLayout->addWidget(flightGroup);
 
     // ===================================================
     // 负载控制
     // ===================================================
-    auto* payloadGroup = new QGroupBox(QString::fromUtf8("负载控制"), this);
+    auto* payloadGroup = new QGroupBox(QString::fromUtf8("负载控制"), scrollContent);
     auto* payloadLayout = new QVBoxLayout(payloadGroup);
     payloadLayout->setSpacing(8);
 
@@ -222,21 +233,38 @@ void FlightControlPanel::setupUi() {
 
     payloadLayout->addLayout(payloadSubRow);
 
-    mainLayout->addWidget(payloadGroup);
+    contentLayout->addWidget(payloadGroup);
+    contentLayout->addStretch();
+
+    scrollArea->setWidget(scrollContent);
+    mainLayout->addWidget(scrollArea, 1);
 
     // ===================================================
-    // 下发记录
+    // 下发记录（默认收起，▶/◢ 按钮切换，固定在底部）
     // ===================================================
-    auto* historyGroup = new QGroupBox(QString::fromUtf8("下发记录"), this);
-    auto* historyLayout = new QVBoxLayout(historyGroup);
-    mHistoryEdit = new QPlainTextEdit(historyGroup);
+    mHistoryEdit = new QPlainTextEdit(this);
     mHistoryEdit->setReadOnly(true);
-    mHistoryEdit->setMinimumHeight(180);
+    mHistoryEdit->setMinimumHeight(100);
+    mHistoryEdit->setMaximumHeight(180);
     mHistoryEdit->setPlaceholderText(QString::fromUtf8("暂无下发记录"));
-    historyLayout->addWidget(mHistoryEdit);
-    mainLayout->addWidget(historyGroup, 1);
+    mHistoryEdit->setVisible(false);
+    mainLayout->addWidget(mHistoryEdit);
 
-    // 设置最小宽度，防止负载控制子栏被压缩
+    mToggleHistoryBtn = new QPushButton(QString::fromUtf8("▶ 下发记录"), this);
+    mToggleHistoryBtn->setCheckable(true);
+    mToggleHistoryBtn->setCursor(Qt::PointingHandCursor);
+    mToggleHistoryBtn->setStyleSheet(
+        "QPushButton { border: none; background: #f1f3f4; color: #5f6368;"
+        "font-size: 13px; font-weight: bold; padding: 4px 8px; border-radius: 4px; }"
+        "QPushButton:hover { background: #e8eaed; }");
+    mainLayout->addWidget(mToggleHistoryBtn);
+
+    connect(mToggleHistoryBtn, &QPushButton::toggled, this, [this](bool checked) {
+        mHistoryEdit->setVisible(checked);
+        mToggleHistoryBtn->setText(checked
+            ? QString::fromUtf8("◢ 下发记录")
+            : QString::fromUtf8("▶ 下发记录"));
+    });
     setMinimumWidth(520);
 
     // --- 默认按钮统一样式（对齐 DockControlPanel） ---

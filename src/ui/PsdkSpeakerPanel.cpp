@@ -155,10 +155,24 @@ void PsdkSpeakerPanel::setupUi() {
     mVolumeLabel->setStyleSheet("font-weight: bold; color: #1a73e8; font-size: 14px;");
     volRow->addWidget(mVolumeLabel);
     volLayout->addLayout(volRow);
+    // 300ms debounce 定时器：键盘/滚轮操作 slider 不会触发 sliderReleased，
+    // 用定时器兜底确保最终值总能下发
+    mVolumeDebounceTimer = new QTimer(this);
+    mVolumeDebounceTimer->setSingleShot(true);
+    mVolumeDebounceTimer->setInterval(300);
+    connect(mVolumeDebounceTimer, &QTimer::timeout, this, [this]() {
+        QJsonObject data;
+        data["psdk_index"] = mPsdkIndexCombo->currentText().toInt();
+        data["play_volume"] = mVolumeSlider->value();
+        requestCommand(DockCommandType::SpeakerVolumeSet, data);
+    });
     connect(mVolumeSlider, &QSlider::valueChanged, this, [this](int v) {
         mVolumeLabel->setText(QString::number(v));
+        mVolumeDebounceTimer->start();
     });
     connect(mVolumeSlider, &QSlider::sliderReleased, this, [this]() {
+        // 鼠标拖拽/点击松开时立即下发，停止定时器避免重复
+        mVolumeDebounceTimer->stop();
         QJsonObject data;
         data["psdk_index"] = mPsdkIndexCombo->currentText().toInt();
         data["play_volume"] = mVolumeSlider->value();
@@ -432,16 +446,30 @@ void PsdkSpeakerPanel::setupUi() {
     scrollArea->setWidget(scrollContent);
     mainLayout->addWidget(scrollArea, 1);
 
-    // ===== 下发记录（固定在底部，不参与滚动） =====
-    auto* historyGroup = new QGroupBox(QString::fromUtf8("下发记录"), this);
-    auto* historyLayout = new QVBoxLayout(historyGroup);
-    mHistoryEdit = new QPlainTextEdit(historyGroup);
+    // ===== 下发记录（默认收起，▶/◢ 按钮切换） =====
+    mHistoryEdit = new QPlainTextEdit(this);
     mHistoryEdit->setReadOnly(true);
     mHistoryEdit->setMinimumHeight(100);
     mHistoryEdit->setMaximumHeight(180);
     mHistoryEdit->setPlaceholderText(QString::fromUtf8("暂无下发记录"));
-    historyLayout->addWidget(mHistoryEdit);
-    mainLayout->addWidget(historyGroup);
+    mHistoryEdit->setVisible(false);  // 默认收起
+    mainLayout->addWidget(mHistoryEdit);
+
+    mToggleHistoryBtn = new QPushButton(QString::fromUtf8("▶ 下发记录"), this);
+    mToggleHistoryBtn->setCheckable(true);
+    mToggleHistoryBtn->setCursor(Qt::PointingHandCursor);
+    mToggleHistoryBtn->setStyleSheet(
+        "QPushButton { border: none; background: #f1f3f4; color: #5f6368;"
+        "font-size: 13px; font-weight: bold; padding: 4px 8px; border-radius: 4px; }"
+        "QPushButton:hover { background: #e8eaed; }");
+    mainLayout->addWidget(mToggleHistoryBtn);
+
+    connect(mToggleHistoryBtn, &QPushButton::toggled, this, [this](bool checked) {
+        mHistoryEdit->setVisible(checked);
+        mToggleHistoryBtn->setText(checked
+            ? QString::fromUtf8("◢ 下发记录")
+            : QString::fromUtf8("▶ 下发记录"));
+    });
 
     // 按钮最小高度
     mStopBtn->setMinimumHeight(34);
@@ -483,6 +511,8 @@ void PsdkSpeakerPanel::clearDevice() {
     mGatewaySn.clear();
     mOnline = false;
     mPending = false;
+    mStepProgress.clear();
+    mCurrentProgressMethod.clear();
     mProgressLabel->setText(QString::fromUtf8("等待指令..."));
     mProgressLabel->setStyleSheet("color: #80868b; font-size: 13px; padding: 4px 0;");
     mOnlineLabel->setText(QString());
@@ -495,6 +525,8 @@ void PsdkSpeakerPanel::setConnected(bool connected) {
     mConnected = connected;
     if (!connected) {
         mPending = false;
+        mStepProgress.clear();
+        mCurrentProgressMethod.clear();
         mProgressLabel->setText(QString::fromUtf8("等待指令..."));
         mProgressLabel->setStyleSheet("color: #80868b; font-size: 13px; padding: 4px 0;");
         setStatus(QString::fromUtf8("MQTT 未连接"), true);
@@ -567,6 +599,14 @@ void PsdkSpeakerPanel::onCommandStateChanged(const DockCommandResult& result) {
             || result.state == DockCommandState::WaitingReply) {
         mPending = true;
         setStatus(QString::fromUtf8("%1：%2").arg(action, result.message));
+        // 新的播放指令开始时清空进度步骤
+        if (result.state == DockCommandState::Publishing
+            && (result.type == DockCommandType::SpeakerTtsPlay
+                || result.type == DockCommandType::SpeakerAudioPlay)) {
+            mStepProgress.clear();
+            mCurrentProgressMethod.clear();
+            mProgressLabel->clear();
+        }
         updateButtonStates();
         return;
     }
@@ -585,35 +625,98 @@ void PsdkSpeakerPanel::onSpeakerProgress(const SpeakerProgress& progress) {
     if (!mGatewaySn.isEmpty() && progress.gatewaySn != mGatewaySn)
         return;
 
-    QString stepName;
-    if (progress.stepKey == QStringLiteral("change_work_mode"))
-        stepName = QString::fromUtf8("切换工作模式");
-    else if (progress.stepKey == QStringLiteral("upload"))
-        stepName = QString::fromUtf8("上传音频到PSDK");
-    else if (progress.stepKey == QStringLiteral("download"))
-        stepName = QString::fromUtf8("下载音频文件");
-    else if (progress.stepKey == QStringLiteral("encoding"))
-        stepName = QString::fromUtf8("编码PCM为Opus");
-    else if (progress.stepKey == QStringLiteral("play"))
-        stepName = QString::fromUtf8("播放中");
-    else
-        stepName = progress.stepKey;
+    // 步骤管线定义
+    struct StepDef { QString key; QString label; };
+    const bool isTts = progress.method.contains("tts");
+    const QVector<StepDef> pipeline = isTts
+        ? QVector<StepDef>{
+            {QStringLiteral("change_work_mode"), QString::fromUtf8("切换工作模式")},
+            {QStringLiteral("upload"),           QString::fromUtf8("上传音频到PSDK")},
+            {QStringLiteral("encoding"),         QString::fromUtf8("编码PCM为Opus")},
+            {QStringLiteral("play"),             QString::fromUtf8("播放中")}}
+        : QVector<StepDef>{
+            {QStringLiteral("change_work_mode"), QString::fromUtf8("切换工作模式")},
+            {QStringLiteral("download"),         QString::fromUtf8("下载音频文件")},
+            {QStringLiteral("encoding"),         QString::fromUtf8("编码PCM为Opus")},
+            {QStringLiteral("play"),             QString::fromUtf8("播放中")}};
 
-    QString typeName = progress.method.contains("tts")
-        ? QString::fromUtf8("TTS") : QString::fromUtf8("音频");
+    mCurrentProgressMethod = progress.method;
 
-    mProgressLabel->setText(QString::fromUtf8("[%1] %2 — %3%\n%4")
-        .arg(typeName, stepName)
-        .arg(progress.percent)
-        .arg(progress.status == QStringLiteral("ok")
-            ? QString::fromUtf8("✅ 完成")
-            : QString::fromUtf8("⏳ 处理中")));
-
-    if (progress.status == QStringLiteral("ok")) {
-        mProgressLabel->setStyleSheet("color: #1e8e3e; font-size: 13px; padding: 4px 0;");
-    } else {
-        mProgressLabel->setStyleSheet("color: #1a73e8; font-size: 13px; padding: 4px 0;");
+    // 找到当前 stepKey 在管线中的位置
+    int currentIdx = -1;
+    for (int i = 0; i < pipeline.size(); ++i) {
+        if (pipeline[i].key == progress.stepKey) {
+            currentIdx = i;
+            break;
+        }
     }
+    if (currentIdx < 0) {
+        // 未知步骤，回退到简单显示
+        mProgressLabel->setText(QString::fromUtf8("[%1] %2 — %3%")
+            .arg(isTts ? QString::fromUtf8("TTS") : QString::fromUtf8("音频"),
+                 progress.stepKey)
+            .arg(progress.percent));
+        return;
+    }
+
+    // 更新所有步骤状态
+    for (int i = 0; i < pipeline.size(); ++i) {
+        if (i < currentIdx) {
+            // 已过的步骤标记为完成
+            mStepProgress[pipeline[i].key] = 100;
+        } else if (i == currentIdx) {
+            // 当前步骤
+            mStepProgress[pipeline[i].key] = (progress.status == QStringLiteral("ok")) ? 100 : progress.percent;
+        } else {
+            // 未到达的步骤
+            mStepProgress[pipeline[i].key] = -1;
+        }
+    }
+
+    renderProgress();
+
+    // 只有最终步骤 "play" 完成才复位 pending / 更新状态
+    if (progress.stepKey == QStringLiteral("play") && progress.status == QStringLiteral("ok")) {
+        mPending = false;
+        setStatus(QString::fromUtf8("喊话播放完成"));
+        updateButtonStates();
+    }
+}
+
+void PsdkSpeakerPanel::renderProgress() {
+    // 根据 mCurrentProgressMethod 选择管线
+    const bool isTts = mCurrentProgressMethod.contains("tts");
+    const QVector<QPair<QString, QString>> pipeline = isTts
+        ? QVector<QPair<QString, QString>>{
+            {QStringLiteral("change_work_mode"), QString::fromUtf8("切换工作模式")},
+            {QStringLiteral("upload"),           QString::fromUtf8("上传音频到PSDK")},
+            {QStringLiteral("encoding"),         QString::fromUtf8("编码PCM为Opus")},
+            {QStringLiteral("play"),             QString::fromUtf8("播放中")}}
+        : QVector<QPair<QString, QString>>{
+            {QStringLiteral("change_work_mode"), QString::fromUtf8("切换工作模式")},
+            {QStringLiteral("download"),         QString::fromUtf8("下载音频文件")},
+            {QStringLiteral("encoding"),         QString::fromUtf8("编码PCM为Opus")},
+            {QStringLiteral("play"),             QString::fromUtf8("播放中")}};
+
+    QStringList lines;
+    for (const auto& step : pipeline) {
+        int pct = mStepProgress.value(step.first, -1);
+        QString line;
+        if (pct == 100) {
+            // 已完成
+            line = QString::fromUtf8("<span style='color:#1e8e3e;'>✓ %1</span>").arg(step.second);
+        } else if (pct >= 0) {
+            // 进行中
+            line = QString::fromUtf8("<span style='color:#1a73e8;'>◉ %1  %2%</span>").arg(step.second).arg(pct);
+        } else {
+            // 未开始
+            line = QString::fromUtf8("<span style='color:#80868b;'>◻ %1</span>").arg(step.second);
+        }
+        lines.append(line);
+    }
+
+    mProgressLabel->setText(lines.join("<br>"));
+    mProgressLabel->setStyleSheet("font-size: 13px; padding: 4px 0;");
 }
 
 void PsdkSpeakerPanel::updateButtonStates() {

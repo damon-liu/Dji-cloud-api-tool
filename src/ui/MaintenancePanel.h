@@ -80,6 +80,7 @@ private:
 
     // --- 下发记录 ---
     QPlainTextEdit* mHistoryEdit = nullptr;
+    QPushButton*    mToggleHistoryBtn = nullptr;
 };
 
 #endif // MAINTENANCEPANEL_H

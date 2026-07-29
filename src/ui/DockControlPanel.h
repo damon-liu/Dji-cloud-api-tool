@@ -61,6 +61,7 @@ private:
     QPushButton*  mRebootBtn = nullptr;
 
     QPlainTextEdit* mHistoryEdit = nullptr;
+    QPushButton*    mToggleHistoryBtn = nullptr;
 
     // --- data ---
     QVector<DeviceInfo> mAvailableDocks;

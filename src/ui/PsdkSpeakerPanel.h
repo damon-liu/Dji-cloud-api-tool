@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <QComboBox>
+#include <QMap>
 #include "DockCommand.h"
 #include "DeviceInfo.h"
 
@@ -11,6 +12,7 @@ class QPushButton;
 class QPlainTextEdit;
 class QSlider;
 class QLineEdit;
+class QTimer;
 
 // PSDK 喊话器控制面板：内嵌于 PsdkSpeakerDialog，提供完整的喊话器控制 UI
 class PsdkSpeakerPanel : public QWidget {
@@ -39,6 +41,7 @@ private:
     void updateButtonStates();
     void setStatus(const QString& text, bool error = false);
     void appendHistory(const DockCommandResult& result);
+    void renderProgress();
     QString computeMd5(const QString& text) const;
 
     // --- top row ---
@@ -52,6 +55,7 @@ private:
     // --- speaker control ---
     QSlider*      mVolumeSlider = nullptr;
     QLabel*       mVolumeLabel = nullptr;
+    QTimer*       mVolumeDebounceTimer = nullptr;
     QComboBox*    mModeCombo = nullptr;
     QPushButton*  mStopBtn = nullptr;
     QPushButton*  mReplayBtn = nullptr;
@@ -72,9 +76,12 @@ private:
 
     // --- progress ---
     QLabel*       mProgressLabel = nullptr;
+    QMap<QString, int> mStepProgress;   // stepKey → percent (-1=未开始, 0-99=进行中, 100=已完成)
+    QString       mCurrentProgressMethod; // 当前进度对应的 method（区分 TTS/音频）
 
     // --- history ---
     QPlainTextEdit* mHistoryEdit = nullptr;
+    QPushButton*    mToggleHistoryBtn = nullptr;
 
     // --- data ---
     QVector<DeviceInfo> mAvailableDocks;
