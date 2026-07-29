@@ -116,7 +116,6 @@ DockCommandRequest DockCommandBuilder::build(const QString& gatewaySn, DockComma
     request.payload[QStringLiteral("tid")] = request.tid;
     request.payload[QStringLiteral("bid")] = request.bid;
     request.payload[QStringLiteral("timestamp")] = QDateTime::currentMSecsSinceEpoch();
-    request.payload[QStringLiteral("gateway")] = request.gatewaySn;
     request.payload[QStringLiteral("method")] = request.method;
     request.payload[QStringLiteral("data")] = data.isEmpty() ? QJsonObject{} : data;
     return request;
