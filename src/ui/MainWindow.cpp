@@ -333,6 +333,12 @@ void MainWindow::setupToolBar() {
         menu->addAction("📺 视频直播", this, [this]() {
             showVideoWindows();
         });
+        menu->addAction("📢 PSDK功能", this, [this]() {
+            if (!mPsdkSpeakerDialog) return;
+            mPsdkSpeakerDialog->show();
+            mPsdkSpeakerDialog->raise();
+            mPsdkSpeakerDialog->activateWindow();
+        });
         featureBtn->setMenu(menu);
     }
     toolbar->addWidget(featureBtn);
@@ -530,6 +536,11 @@ void MainWindow::setupLayout() {
     // 运维模式独立窗口（功能中心菜单打开）
     mMaintenanceDialog = new MaintenanceDialog(this);
     mMaintenancePanel = mMaintenanceDialog->panel();
+
+    // PSDK喊话器独立窗口（功能中心菜单打开）
+    mPsdkSpeakerDialog = new PsdkSpeakerDialog(this);
+    mPsdkSpeakerPanel = mPsdkSpeakerDialog->panel();
+    mPsdkSpeakerPanel->setConnected(mDevMgr->isConnected());
 }
 
 // ——— 状态栏 ———
@@ -545,7 +556,7 @@ void MainWindow::setupStatusBar() {
     auto* versionLayout = new QHBoxLayout(versionContainer);
     versionLayout->setContentsMargins(0, 0, 0, 0);
     versionLayout->setAlignment(Qt::AlignCenter);
-    mVersionLabel = new QLabel("v1.0.3 · github.com/damon-liu/Dji-cloud-api-tool");
+    mVersionLabel = new QLabel("v1.0.4 · github.com/damon-liu/Dji-cloud-api-tool");
     mVersionLabel->setStyleSheet(
         "color: #80868b; font-size: 11px; letter-spacing: 0.5px;");
     versionLayout->addWidget(mVersionLabel);
@@ -623,6 +634,7 @@ void MainWindow::connectSignals() {
         mPublishPanel->setConnected(true);
         mDockControlPanel->setConnected(true);
         mFlightControlPanel->setConnected(true);
+        mPsdkSpeakerPanel->setConnected(true);
         updateStatusBar();
 
         // 连接成功后自动选中首个设备（优先机场，方便查看控制面板）
@@ -657,6 +669,7 @@ void MainWindow::connectSignals() {
         mPublishPanel->setConnected(false);
         mDockControlPanel->setConnected(false);
         mFlightControlPanel->setConnected(false);
+        mPsdkSpeakerPanel->setConnected(false);
         mUserDeselected = false;
         hideVideoWindows();
     });
@@ -780,6 +793,14 @@ void MainWindow::connectSignals() {
     connect(mDevMgr, &DeviceManager::dockCommandStateChanged,
             mFlightControlPanel, &FlightControlPanel::onCommandStateChanged);
 
+    // PsdkSpeakerPanel ↔ DeviceManager
+    connect(mPsdkSpeakerPanel, &PsdkSpeakerPanel::commandRequested,
+            mDevMgr, &DeviceManager::executeDockCommand);
+    connect(mDevMgr, &DeviceManager::dockCommandStateChanged,
+            mPsdkSpeakerPanel, &PsdkSpeakerPanel::onCommandStateChanged);
+    connect(mDevMgr, &DeviceManager::speakerProgressUpdated,
+            mPsdkSpeakerPanel, &PsdkSpeakerPanel::onSpeakerProgress);
+
     // è®¾å¤å¨çº¿ç¶æåå â å·æ°æºåºåè¡¨
     connect(mDevMgr, &DeviceManager::deviceOnlineChanged,
             this, [this](const QString& sn, bool online) {
@@ -850,6 +871,7 @@ void MainWindow::refreshDockControlList(const QString& currentSn) {
     mDockControlPanel->setAvailableDocks(onlineDocks, currentSn, dockLat, dockLon, dockAlt);
     mFlightControlPanel->setAvailableDocks(onlineDocks, currentSn, dockLat, dockLon, dockAlt,
                                            dockLatStr, dockLonStr, dockAltStr);
+    mPsdkSpeakerPanel->setAvailableDocks(onlineDocks, currentSn, dockLat, dockLon);
 }
 
 // ——— 设备选择 ———
@@ -863,6 +885,7 @@ void MainWindow::onDeviceSelected(const QString& sn) {
         mPublishPanel->setTopics({});
         mDockControlPanel->clearDevice();
         mFlightControlPanel->clearDevice();
+        mPsdkSpeakerPanel->clearDevice();
         mTopicListWidget->clearTopics();
         mTopicParsePanel->clear();
         mDeleteDeviceBtn->setEnabled(false);

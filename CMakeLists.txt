@@ -40,6 +40,7 @@ set(SOURCES
     src/ui/MaintenancePanel.cpp
     src/ui/VideoStreamWindow.cpp
     src/ui/TakeoffConfigDialog.cpp
+    src/ui/PsdkSpeakerPanel.cpp
 )
 
 set(HEADERS
@@ -70,6 +71,8 @@ set(HEADERS
     src/ui/MaintenanceDialog.h
     src/ui/VideoStreamWindow.h
     src/ui/TakeoffConfigDialog.h
+    src/ui/PsdkSpeakerPanel.h
+    src/ui/PsdkSpeakerDialog.h
 )
 
 add_executable(DjiCloudApi ${SOURCES} ${HEADERS})

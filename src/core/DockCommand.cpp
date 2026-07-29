@@ -31,6 +31,12 @@ QString DockCommandBuilder::method(DockCommandType type) {
     case DockCommandType::CameraRecordStart:      return QStringLiteral("camera_recording_start");
     case DockCommandType::CameraRecordStop:       return QStringLiteral("camera_recording_stop");
     case DockCommandType::GimbalReset:            return QStringLiteral("gimbal_reset");
+    case DockCommandType::SpeakerTtsPlay:   return QStringLiteral("speaker_tts_play_start");
+    case DockCommandType::SpeakerAudioPlay: return QStringLiteral("speaker_audio_play_start");
+    case DockCommandType::SpeakerVolumeSet: return QStringLiteral("speaker_play_volume_set");
+    case DockCommandType::SpeakerModeSet:   return QStringLiteral("speaker_play_mode_set");
+    case DockCommandType::SpeakerStop:      return QStringLiteral("speaker_play_stop");
+    case DockCommandType::SpeakerReplay:    return QStringLiteral("speaker_replay");
     }
     return {};
 }
@@ -61,11 +67,26 @@ QString DockCommandBuilder::displayName(DockCommandType type) {
     case DockCommandType::CameraRecordStart:      return QString::fromUtf8("开始录像");
     case DockCommandType::CameraRecordStop:       return QString::fromUtf8("结束录像");
     case DockCommandType::GimbalReset:            return QString::fromUtf8("云台复位");
+    case DockCommandType::SpeakerTtsPlay:   return QString::fromUtf8("TTS文本喊话");
+    case DockCommandType::SpeakerAudioPlay: return QString::fromUtf8("音频文件喊话");
+    case DockCommandType::SpeakerVolumeSet: return QString::fromUtf8("设置音量");
+    case DockCommandType::SpeakerModeSet:   return QString::fromUtf8("设置播放模式");
+    case DockCommandType::SpeakerStop:      return QString::fromUtf8("停止播放");
+    case DockCommandType::SpeakerReplay:    return QString::fromUtf8("重新播放");
     }
     return {};
 }
 
 bool DockCommandBuilder::requiresDebugMode(DockCommandType type) {
+    // 喊话器指令不需要调试模式（通过 PSDK 通信）
+    if (type == DockCommandType::SpeakerTtsPlay
+        || type == DockCommandType::SpeakerAudioPlay
+        || type == DockCommandType::SpeakerVolumeSet
+        || type == DockCommandType::SpeakerModeSet
+        || type == DockCommandType::SpeakerStop
+        || type == DockCommandType::SpeakerReplay)
+        return false;
+
     return type != DockCommandType::DebugModeOpen
         && type != DockCommandType::DebugModeClose
         && type != DockCommandType::Takeoff

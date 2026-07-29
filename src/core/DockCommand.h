@@ -30,7 +30,14 @@ enum class DockCommandType {
     CameraPhotoTake,       // 拍照 camera_photo_take
     CameraRecordStart,     // 开始录像 camera_recording_start
     CameraRecordStop,      // 结束录像 camera_recording_stop
-    GimbalReset            // 云台回中/向下 gimbal_reset
+    GimbalReset,           // 云台回中/向下 gimbal_reset
+    // 喊话器控制（PSDK）
+    SpeakerTtsPlay,      // TTS 文本喊话 speaker_tts_play_start
+    SpeakerAudioPlay,    // 音频文件喊话 speaker_audio_play_start
+    SpeakerVolumeSet,    // 设置音量 speaker_play_volume_set
+    SpeakerModeSet,      // 设置播放模式 speaker_play_mode_set
+    SpeakerStop,         // 停止播放 speaker_play_stop
+    SpeakerReplay        // 重新播放 speaker_replay
 };
 
 enum class DockCommandState {
@@ -69,6 +76,17 @@ struct DockCommandResult {
     QString replyJson;     // 响应报文（缩进格式化），无回复时为空
 };
 
+// 喊话器播放进度（上行 events 事件专用）
+struct SpeakerProgress {
+    QString gatewaySn;     // 机场 SN
+    int     psdkIndex = 0; // PSDK 负载设备索引
+    QString status;        // "in_progress" | "ok"
+    int     percent = 0;   // 进度百分比 0–100
+    QString stepKey;       // 当前步骤：change_work_mode / upload / download / encoding / play
+    QString md5;           // 文件 MD5
+    QString method;        // speaker_tts_play_start_progress | speaker_audio_play_start_progress
+};
+
 class DockCommandBuilder {
 public:
     static DockCommandRequest build(const QString& gatewaySn, DockCommandType type,
@@ -81,5 +99,6 @@ public:
 
 Q_DECLARE_METATYPE(DockCommandType)
 Q_DECLARE_METATYPE(DockCommandResult)
+Q_DECLARE_METATYPE(SpeakerProgress)
 
 #endif // DOCKCOMMAND_H

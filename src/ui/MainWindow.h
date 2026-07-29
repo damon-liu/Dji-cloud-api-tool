@@ -17,6 +17,7 @@
 #include "DockControlDialog.h"
 #include "FlightControlDialog.h"
 #include "MaintenanceDialog.h"
+#include "PsdkSpeakerDialog.h"
 #include "DeviceManager.h"
 #include "VideoStreamWindow.h"
 
@@ -61,6 +62,8 @@ private:
     MaintenancePanel*    mMaintenancePanel = nullptr;      // 指向运维模式对话框内的面板
     MaintenanceDialog*   mMaintenanceDialog = nullptr;
     QList<VideoStreamWindow*> mVideoWindows;
+    PsdkSpeakerPanel*    mPsdkSpeakerPanel = nullptr;       // 指向PSDK喊话器对话框内的面板
+    PsdkSpeakerDialog*   mPsdkSpeakerDialog = nullptr;
     QLabel*            mStatusLabel;
     QLabel*            mDeviceCountLabel;
     QLabel*            mVersionLabel;

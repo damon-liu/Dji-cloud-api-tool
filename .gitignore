@@ -18,14 +18,7 @@ deploy/DjiCloudApi.exe
 config.json
 deploy/config.json
 deploy/.gitee_token
-# docs — 仅保留用户指南，其余开发文档不入库
-docs/articles/
-docs/product/
-docs/releases/
-docs/research/
-docs/superpowers/
-docs/*.py
-docs/wechat_config.json
+docs/
 
 # deploy 目录中的 Qt 运行时（本地通过 windeployqt 生成，不提交）
 deploy/*.dll

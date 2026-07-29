@@ -99,6 +99,7 @@ signals:
     void profileListChanged();
     void publishResult(const QString& topic, bool success, const QString& message);
     void dockCommandStateChanged(const DockCommandResult& result);
+    void speakerProgressUpdated(const SpeakerProgress& progress);
 
 private slots:
     void onPublishCompleted(const QString& topic, bool success, const QString& message);

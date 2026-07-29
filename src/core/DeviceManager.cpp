@@ -501,6 +501,25 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
     // 解析 OSD 数据 — 字段级合并：从已有缓存拷贝，再 parse 当前消息的数据，
     // 确保 DJI 分消息推送的字段子集不会互相覆盖
     DeviceInfo& info = mDevices[sn];
+
+    // 解析 PSDK 喊话器事件（上行 progress 通知）
+    QString method = root.value("method").toString();
+    if (method == QStringLiteral("speaker_tts_play_start_progress")
+        || method == QStringLiteral("speaker_audio_play_start_progress")) {
+        QJsonObject output = data.value("output").toObject();
+        if (!output.isEmpty()) {
+            SpeakerProgress progress;
+            progress.gatewaySn = sn;
+            progress.method    = method;
+            progress.psdkIndex = output.value("psdk_index").toInt();
+            progress.status    = output.value("status").toString();
+            progress.md5       = output.value("md5").toString();
+            QJsonObject progObj = output.value("progress").toObject();
+            progress.percent   = progObj.value("percent").toInt();
+            progress.stepKey   = progObj.value("step_key").toString();
+            emit speakerProgressUpdated(progress);
+        }
+    }
     if (topic.contains("/osd")) {
         if (info.type == DeviceType::Aircraft) {
             AircraftOsd osd = mAircraftOsdCache.value(sn);
