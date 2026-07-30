@@ -70,6 +70,30 @@ void PsdkSpeakerPanel::setupUi() {
     });
     topRow->addWidget(mDockCombo);
 
+    topRow->addSpacing(16);
+
+    // PSDK 负载索引：选择 E-Port 物理挂载位置
+    auto* psdkIndexLabel = new QLabel(QString::fromUtf8("负载索引:"), this);
+    psdkIndexLabel->setStyleSheet("color: #5f6368; font-size: 12px;");
+    topRow->addWidget(psdkIndexLabel);
+
+    mPsdkIndexCombo = new QComboBox(this);
+    mPsdkIndexCombo->addItems({"0", "1", "2", "3"});
+    mPsdkIndexCombo->setCurrentIndex(2);
+    mPsdkIndexCombo->setFixedWidth(56);
+    mPsdkIndexCombo->setStyleSheet(
+        "QComboBox { border: 1px solid #dadce0; border-radius: 3px; padding: 2px 6px;"
+        "font-size: 12px; background: #fff; }"
+        "QComboBox:hover { border-color: #1a73e8; }");
+    topRow->addWidget(mPsdkIndexCombo);
+
+    // auto* psdkHint = new QLabel(
+    //     QString::fromUtf8("挂载位置"), this);
+    // psdkHint->setStyleSheet("color: #9aa0a6; font-size: 11px;");
+    // topRow->addWidget(psdkHint);
+
+    topRow->addSpacing(16);
+
     mOnlineLabel = new QLabel(this);
     topRow->addWidget(mOnlineLabel);
 
@@ -96,37 +120,6 @@ void PsdkSpeakerPanel::setupUi() {
     auto* ctrlGroup = new QGroupBox(QString::fromUtf8("喊话器控制"), scrollContent);
     auto* ctrlOuterLayout = new QVBoxLayout(ctrlGroup);
     ctrlOuterLayout->setSpacing(8);
-
-    // 负载索引行
-    auto* psdkIndexRow = new QHBoxLayout;
-    auto* psdkIndexLabel = new QLabel(QString::fromUtf8("负载索引:"), ctrlGroup);
-    psdkIndexLabel->setStyleSheet("font-weight: bold; color: #333; font-size: 13px;");
-    psdkIndexLabel->setFixedWidth(72);
-    psdkIndexLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    psdkIndexRow->addWidget(psdkIndexLabel);
-
-    mPsdkIndexCombo = new QComboBox(ctrlGroup);
-    mPsdkIndexCombo->addItems({"0", "1", "2", "3"});
-    mPsdkIndexCombo->setCurrentIndex(2);
-    mPsdkIndexCombo->setFixedWidth(80);
-    mPsdkIndexCombo->setStyleSheet(
-        "QComboBox { border: 1px solid #dadce0; border-radius: 4px; padding: 4px 8px;"
-        "font-size: 13px; background: #fff; }"
-        "QComboBox:hover { border-color: #1a73e8; }");
-    psdkIndexRow->addWidget(mPsdkIndexCombo);
-    psdkIndexRow->addSpacing(12);
-    auto* psdkHint = new QLabel(
-        QString::fromUtf8("喊话器在飞机 E-Port 上的物理挂载位置，通常为 2"), ctrlGroup);
-    psdkHint->setStyleSheet("color: #5f6368; font-size: 12px;");
-    psdkIndexRow->addWidget(psdkHint);
-    psdkIndexRow->addStretch();
-    ctrlOuterLayout->addLayout(psdkIndexRow);
-
-    // 分隔线
-    auto* ctrlSep = new QFrame(ctrlGroup);
-    ctrlSep->setFrameShape(QFrame::HLine);
-    ctrlSep->setFrameShadow(QFrame::Sunken);
-    ctrlOuterLayout->addWidget(ctrlSep);
 
     // 2×2 控制卡片网格
     auto* ctrlGrid = new QGridLayout;
@@ -260,6 +253,7 @@ void PsdkSpeakerPanel::setupUi() {
     ctrlGrid->setColumnStretch(0, 1);
     ctrlGrid->setColumnStretch(1, 1);
     ctrlOuterLayout->addLayout(ctrlGrid);
+
     contentLayout->addWidget(ctrlGroup);
 
     // --- TTS 文本喊话 ---
@@ -290,8 +284,8 @@ void PsdkSpeakerPanel::setupUi() {
 
     mTtsTextEdit = new QPlainTextEdit(ttsGroup);
     mTtsTextEdit->setPlaceholderText(QString::fromUtf8("输入 TTS 喊话文本内容（最大 1000 字符）..."));
-    mTtsTextEdit->setMinimumHeight(40);
-    mTtsTextEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    mTtsTextEdit->setFixedHeight(80);
+    mTtsTextEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     mTtsTextEdit->setStyleSheet(
         "QPlainTextEdit { border: 1px solid #dadce0; border-radius: 4px; padding: 8px 10px;"
         "font-size: 13px; background: #fff; color: #202124; line-height: 1.5; }"
