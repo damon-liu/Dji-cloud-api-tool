@@ -377,8 +377,8 @@ void DeviceManager::switchToProfile(const QString& name) {
     mJsonHistory.clear();
     mTopicManager->clear();
 
-    // 切换到新 profile（ConfigStore 内部自动 save 当前状态）
-    mConfigStore->setCurrentProfile(name);
+    // 切换到新 profile（抑制信号，设备加载完后再通知 UI）
+    mConfigStore->setCurrentProfile(name, false);
 
     // 重新加载设备
     for (const auto& info : mConfigStore->devices()) {
@@ -398,6 +398,9 @@ void DeviceManager::switchToProfile(const QString& name) {
     qDebug() << "DeviceManager: switched to profile" << name
              << "with" << mDevices.size() << "devices";
 
+    // 设备加载完毕，通知 UI 刷新
+    emit profileSwitched(name);
+
     if (wasConnected)
         connectBroker();
 }
@@ -409,8 +412,42 @@ bool DeviceManager::addProfile(const QString& name, const MqttConfig& mqtt) {
 }
 
 bool DeviceManager::removeProfile(const QString& name) {
-    bool ok = mConfigStore->removeProfile(name);
-    if (ok) emit profileListChanged();
+    bool wasCurrent = (mConfigStore->currentProfileName() == name);
+    // 抑制 ConfigStore 的 profileSwitched 信号，等设备重载完后再发
+    bool ok = mConfigStore->removeProfile(name, false);
+    if (ok) {
+        if (wasCurrent) {
+            // 清空运行时状态并重新加载新当前 profile 的设备
+            mDevices.clear();
+            mAircraftOsdCache.clear();
+            mDockOsdCache.clear();
+            mRawJsonCache.clear();
+            mJsonHistory.clear();
+            mTopicManager->clear();
+
+            for (const auto& info : mConfigStore->devices()) {
+                mDevices[info.sn] = info;
+                QStringList topics = mConfigStore->topicsForDevice(info.sn);
+                mTopicManager->setDeviceTopics(info.sn, topics);
+
+                QStringList disabled = mConfigStore->disabledTopicsForDevice(info.sn);
+                if (!disabled.isEmpty()) {
+                    mTopicManager->setDisabledTopicsForDevice(
+                        info.sn,
+                        QSet<QString>(disabled.begin(), disabled.end()));
+                    mTopicManager->unsubscribeTopics(disabled);
+                }
+            }
+
+            qDebug() << "DeviceManager: profile" << name
+                     << "removed, switched to" << mConfigStore->currentProfileName()
+                     << "with" << mDevices.size() << "devices";
+        }
+
+        emit profileListChanged();
+        if (wasCurrent)
+            emit profileSwitched(mConfigStore->currentProfileName());
+    }
     return ok;
 }
 

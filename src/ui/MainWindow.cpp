@@ -323,12 +323,6 @@ void MainWindow::setupToolBar() {
             mFlightCtrlDialog->raise();
             mFlightCtrlDialog->activateWindow();
         });
-        menu->addAction("🔧 运维模式", this, [this]() {
-            if (!mMaintenanceDialog) return;
-            mMaintenanceDialog->show();
-            mMaintenanceDialog->raise();
-            mMaintenanceDialog->activateWindow();
-        });
         menu->addSeparator();
         menu->addAction("📺 视频直播", this, [this]() {
             showVideoWindows();
@@ -338,6 +332,12 @@ void MainWindow::setupToolBar() {
             mPsdkSpeakerDialog->show();
             mPsdkSpeakerDialog->raise();
             mPsdkSpeakerDialog->activateWindow();
+        });
+        menu->addAction("🔧 运维工具", this, [this]() {
+            if (!mMaintenanceDialog) return;
+            mMaintenanceDialog->show();
+            mMaintenanceDialog->raise();
+            mMaintenanceDialog->activateWindow();
         });
         featureBtn->setMenu(menu);
     }
@@ -351,9 +351,12 @@ void MainWindow::setupToolBar() {
     helpBtn->setCursor(Qt::PointingHandCursor);
     {
         auto* menu = new QMenu(helpBtn);
-        menu->addAction("🛠️ DJI-CLOUD-API-TOOL地址", this, []() {
+        menu->addAction("🛠️ GitHub项目地址", this, []() {
             QDesktopServices::openUrl(QUrl("https://github.com/damon-liu/Dji-cloud-api-tool"));
         });
+        // menu->addAction("🛠️ Gitee项目地址", this, []() {
+        //     QDesktopServices::openUrl(QUrl("https://gitee.com/damon123-liu/Dji-cloud-api-tool"));
+        // });
         menu->addSeparator();
         menu->addAction("📖 大疆上云 API 文档", this, []() {
             QDesktopServices::openUrl(QUrl("https://developer.dji.com/doc/cloud-api-tutorial/cn/api-reference/dock-to-cloud/mqtt/dock/dock3/properties.html"));

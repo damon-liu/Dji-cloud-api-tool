@@ -75,7 +75,9 @@ set(HEADERS
     src/ui/PsdkSpeakerDialog.h
 )
 
-add_executable(DjiCloudApi ${SOURCES} ${HEADERS})
+add_executable(DjiCloudApi ${SOURCES} ${HEADERS}
+    src/resources/app_icon.rc
+)
 
 target_include_directories(DjiCloudApi PRIVATE
     src

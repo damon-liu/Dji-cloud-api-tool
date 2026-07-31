@@ -8,6 +8,15 @@
 #include <QInputDialog>
 #include <QLabel>
 
+// QSpinBox 子类：值为 0 时显示空白，不显示数字
+class PortSpinBox : public QSpinBox {
+public:
+    using QSpinBox::QSpinBox;
+    QString textFromValue(int value) const override {
+        return (value == 0) ? QString() : QSpinBox::textFromValue(value);
+    }
+};
+
 ConfigDialog::ConfigDialog(DeviceManager* devMgr, QWidget* parent)
     : QDialog(parent)
     , mDevMgr(devMgr)
@@ -56,8 +65,8 @@ ConfigDialog::ConfigDialog(DeviceManager* devMgr, QWidget* parent)
     // ——— MQTT 参数 ———
     auto* form = new QFormLayout;
     mHostEdit = new QLineEdit(this);
-    mPortSpin = new QSpinBox(this);
-    mPortSpin->setRange(1, 65535);
+    mPortSpin = new PortSpinBox(this);
+    mPortSpin->setRange(0, 65535);
     mUsernameEdit = new QLineEdit(this);
     mPasswordEdit = new QLineEdit(this);
     mPasswordEdit->setEchoMode(QLineEdit::Password);
@@ -169,14 +178,32 @@ void ConfigDialog::onAddProfile() {
         QLineEdit::Normal, "", &ok);
     if (!ok || name.trimmed().isEmpty()) return;
 
-    MqttConfig cfg;  // 使用默认或复制当前
+    MqttConfig cfg;
+    cfg.host.clear();
+    cfg.port = 0;
+    cfg.username.clear();
+    cfg.password.clear();
+    cfg.clientId.clear();
     if (!mDevMgr->addProfile(name.trimmed(), cfg)) {
         QMessageBox::warning(this, QString::fromUtf8("\xe9\x94\x99\xe8\xaf\xaf"),
             QString::fromUtf8("\xe8\xaf\xa5\xe5\x90\x8d\xe7\xa7\xb0\xe5\xb7\xb2\xe5\xad\x98\xe5\x9c\xa8"));
         return;
     }
+
+    // 保存当前编辑到旧 profile 再切换
+    if (!mSelectedProfile.isEmpty())
+        mDevMgr->setMqttConfigForProfile(mSelectedProfile, getConfig());
+
     refreshProfileList();
+    // 先更新 mSelectedProfile，防止 setCurrentText 触发 onProfileSelected 时重复处理
+    mSelectedProfile = name.trimmed();
     mProfileCombo->setCurrentText(name.trimmed());
+    // 显式加载新 profile 到 UI，不依赖信号链
+    loadProfile(name.trimmed());
+
+    // 立即切换到新 profile
+    if (name.trimmed() != mDevMgr->currentProfileName())
+        mDevMgr->switchToProfile(name.trimmed());
 }
 
 void ConfigDialog::onRenameProfile() {

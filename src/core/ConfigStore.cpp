@@ -285,12 +285,13 @@ QString ConfigStore::currentProfileName() const {
     return mCurrentProfile;
 }
 
-bool ConfigStore::setCurrentProfile(const QString& name) {
+bool ConfigStore::setCurrentProfile(const QString& name, bool emitSignal) {
     if (!mProfiles.contains(name)) return false;
     if (mCurrentProfile == name) return true;
     save(mConfigPath);
     mCurrentProfile = name;
-    emit profileSwitched(name);
+    if (emitSignal)
+        emit profileSwitched(name);
     return true;
 }
 
@@ -302,12 +303,13 @@ bool ConfigStore::addProfile(const QString& name, const MqttConfig& mqtt) {
     return true;
 }
 
-bool ConfigStore::removeProfile(const QString& name) {
+bool ConfigStore::removeProfile(const QString& name, bool emitSignal) {
     if (!mProfiles.contains(name) || mProfiles.size() <= 1) return false;
     mProfiles.remove(name);
     if (mCurrentProfile == name) {
         mCurrentProfile = mProfiles.firstKey();
-        emit profileSwitched(mCurrentProfile);
+        if (emitSignal)
+            emit profileSwitched(mCurrentProfile);
     }
     save(mConfigPath);
     return true;

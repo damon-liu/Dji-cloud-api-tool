@@ -23,7 +23,8 @@ struct OsdBase {
 
     // 解析公共字段
     void parseCommon(const QJsonObject& data) {
-        timestamp = data.value("timestamp").toVariant().toLongLong();
+        if (data.contains("timestamp"))
+            timestamp = data["timestamp"].toVariant().toLongLong();
         if (data.contains("longitude"))
             longitude = data["longitude"].toDouble();
         if (data.contains("latitude"))
@@ -61,16 +62,26 @@ struct AircraftOsd : public OsdBase {
             QJsonObject batt = data["battery"].toObject();
             battery_percent = batt.value("capacity_percent").toInt(-1);
         }
-        battery_voltage    = data.value("battery_voltage").toDouble();
-        speed_horizontal   = data.value("speed_horizontal").toDouble();
-        speed_vertical     = data.value("speed_vertical").toDouble();
-        heading            = data.value("heading").toDouble();
-        pitch              = data.value("pitch").toDouble();
-        roll               = data.value("roll").toDouble();
-        yaw                = data.value("yaw").toDouble();
-        home_distance      = data.value("home_distance").toDouble();
-        flight_time_sec    = data.value("flight_time_sec").toInt();
-        rc_signal_strength = data.value("rc_signal_strength").toInt();
+        if (data.contains("battery_voltage"))
+            battery_voltage    = data["battery_voltage"].toDouble();
+        if (data.contains("speed_horizontal"))
+            speed_horizontal   = data["speed_horizontal"].toDouble();
+        if (data.contains("speed_vertical"))
+            speed_vertical     = data["speed_vertical"].toDouble();
+        if (data.contains("heading"))
+            heading            = data["heading"].toDouble();
+        if (data.contains("pitch"))
+            pitch              = data["pitch"].toDouble();
+        if (data.contains("roll"))
+            roll               = data["roll"].toDouble();
+        if (data.contains("yaw"))
+            yaw                = data["yaw"].toDouble();
+        if (data.contains("home_distance"))
+            home_distance      = data["home_distance"].toDouble();
+        if (data.contains("flight_time_sec"))
+            flight_time_sec    = data["flight_time_sec"].toInt();
+        if (data.contains("rc_signal_strength"))
+            rc_signal_strength = data["rc_signal_strength"].toInt();
         if (data.contains("mode_code"))
             mode_code = data["mode_code"].toInt();
         // 电池温度从 battery.batteries[0].temperature 取值
@@ -126,11 +137,16 @@ struct DockOsd : public OsdBase {
 
     void parse(const QJsonObject& data) {
         parseCommon(data);
-        cover_state            = data.value("cover_state").toVariant().toInt();  // int 0/1
-        drone_in_dock          = data.value("drone_in_dock").toVariant().toInt() != 0;
-        working_voltage        = data.value("working_voltage").toDouble();
-        working_current        = data.value("working_current").toDouble();
-        backup_battery_voltage = data.value("backup_battery_voltage").toDouble();
+        if (data.contains("cover_state"))
+            cover_state            = data["cover_state"].toVariant().toInt();  // int 0/1
+        if (data.contains("drone_in_dock"))
+            drone_in_dock          = data["drone_in_dock"].toVariant().toInt() != 0;
+        if (data.contains("working_voltage"))
+            working_voltage        = data["working_voltage"].toDouble();
+        if (data.contains("working_current"))
+            working_current        = data["working_current"].toDouble();
+        if (data.contains("backup_battery_voltage"))
+            backup_battery_voltage = data["backup_battery_voltage"].toDouble();
 
         if (data.contains("wind_speed"))
             wind_speed = data["wind_speed"].toDouble();

@@ -41,9 +41,9 @@ public:
     // —— Profile 管理 ——
     QStringList profileNames() const;
     QString currentProfileName() const;
-    bool setCurrentProfile(const QString& name);   // 切换到指定 profile（内存中）
+    bool setCurrentProfile(const QString& name, bool emitSignal = true);   // 切换到指定 profile（内存中）
     bool addProfile(const QString& name, const MqttConfig& mqtt);
-    bool removeProfile(const QString& name);
+    bool removeProfile(const QString& name, bool emitSignal = true);
     bool renameProfile(const QString& oldName, const QString& newName);
 
     // —— 当前 Profile 的 MQTT / 设备操作 ——
