@@ -3,6 +3,7 @@
 #include "TopicEditDialog.h"
 #include <QAction>
 #include <QCloseEvent>
+#include <QDialog>
 #include <QMessageBox>
 #include <QApplication>
 #include <QVBoxLayout>
@@ -315,37 +316,27 @@ void MainWindow::setupToolBar() {
     featureBtn->setCursor(Qt::PointingHandCursor);
     {
         auto* menu = new QMenu(featureBtn);
-        menu->addAction("🎮 远程调试", this, [this]() {
-            if (!mDockCtrlDialog) return;
-            mDockCtrlDialog->show();
-            mDockCtrlDialog->raise();
-            mDockCtrlDialog->activateWindow();
-        });
-        menu->addAction("🛫 飞行控制", this, [this]() {
-            if (!mFlightCtrlDialog) return;
-            mFlightCtrlDialog->show();
-            mFlightCtrlDialog->raise();
-            mFlightCtrlDialog->activateWindow();
-        });
-        menu->addSeparator();
-        menu->addAction("📺 视频直播", this, [this]() {
-            showVideoWindows();
-        });
-        menu->addAction("📢 PSDK功能", this, [this]() {
-            if (!mPsdkSpeakerDialog) return;
-            mPsdkSpeakerDialog->show();
-            mPsdkSpeakerDialog->raise();
-            mPsdkSpeakerDialog->activateWindow();
-        });
-        menu->addAction("🔧 运维工具", this, [this]() {
-            if (!mMaintenanceDialog) return;
-            mMaintenanceDialog->show();
-            mMaintenanceDialog->raise();
-            mMaintenanceDialog->activateWindow();
-        });
+        menu->addAction("🎮 远程调试", this, [this]() { showFunctionInTab(1); });
+        menu->addAction("🛫 飞行控制", this, [this]() { showFunctionInTab(2); });
+        menu->addAction("📢 PSDK功能", this, [this]() { showFunctionInTab(3); });
+        menu->addAction("🔧 运维工具", this, [this]() { showFunctionInTab(4); });
         featureBtn->setMenu(menu);
     }
     toolbar->addWidget(featureBtn);
+
+    // 视频直播按钮（功能中心右侧）
+    auto* videoBtn = new QToolButton(this);
+    videoBtn->setText("📺 视频直播");
+    videoBtn->setObjectName("helpBtn");  // 复用帮助按钮样式
+    videoBtn->setPopupMode(QToolButton::InstantPopup);
+    videoBtn->setCursor(Qt::PointingHandCursor);
+    {
+        auto* menu = new QMenu(videoBtn);
+        menu->addAction("📺 打开视频直播", this, [this]() { showVideoWindows(); });
+        menu->addAction("✕ 关闭视频直播", this, [this]() { hideVideoWindows(); });
+        videoBtn->setMenu(menu);
+    }
+    toolbar->addWidget(videoBtn);
 
     // 帮助按钮（配置按钮右侧）
     auto* helpBtn = new QToolButton(this);
@@ -504,8 +495,6 @@ void MainWindow::setupLayout() {
     verticalSplitter->addWidget(mPublishPanel);
     verticalSplitter->setStretchFactor(1, 0);
 
-    rightLayout->addWidget(verticalSplitter, 1);
-
     mTogglePublishBtn = new QPushButton("▶ Topic 下发", this);
     mTogglePublishBtn->setObjectName("publishToggle");
     mTogglePublishBtn->setCheckable(true);
@@ -515,7 +504,57 @@ void MainWindow::setupLayout() {
         mTogglePublishBtn->setText(checked ? "◢ Topic 下发" : "▶ Topic 下发");
     });
 
-    rightLayout->addWidget(mTogglePublishBtn);
+    // === 标签页（方案E：监控 + 功能面板 → 标签页嵌入 + 可弹出）===
+    mRightTabWidget = new QTabWidget(this);
+    mRightTabWidget->setDocumentMode(true);
+    mRightTabWidget->setTabsClosable(false);
+
+    // 角落按钮：弹出当前标签页为独立窗口
+    auto* popOutBtn = new QToolButton(this);
+    popOutBtn->setText("⬈");
+    popOutBtn->setToolTip(QString::fromUtf8("弹出为独立窗口"));
+    popOutBtn->setAutoRaise(true);
+    popOutBtn->setStyleSheet("QToolButton { border: none; font-size: 14px; padding: 0 4px; }"
+                             "QToolButton:hover { background: #e0e0e0; border-radius: 3px; }");
+    connect(popOutBtn, &QToolButton::clicked, this, &MainWindow::popOutCurrentTab);
+    mRightTabWidget->setCornerWidget(popOutBtn, Qt::TopRightCorner);
+
+    // Tab 0: 监控（当前右侧全部内容）
+    auto* monitorTab = new QWidget();
+    auto* monitorTabLayout = new QVBoxLayout(monitorTab);
+    monitorTabLayout->setContentsMargins(0, 0, 0, 0);
+    monitorTabLayout->setSpacing(0);
+    monitorTabLayout->addWidget(verticalSplitter, 1);
+    monitorTabLayout->addWidget(mTogglePublishBtn);
+    mRightTabWidget->addTab(monitorTab, "📊 监控");
+
+    // 辅助：创建一个带 QScrollArea 包裹的标签页
+    auto createPanelTab = [this](QWidget* panel, const QString& title) {
+        auto* scroll = new QScrollArea();
+        scroll->setWidgetResizable(true);
+        scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        scroll->setFrameShape(QFrame::NoFrame);
+        scroll->setWidget(panel);
+        mRightTabWidget->addTab(scroll, title);
+    };
+
+    // Tab 1-4: 功能面板（直接创建，不再包装 Dialog）
+    mDockControlPanel = new DockControlPanel();
+    mDockControlPanel->setConnected(mDevMgr->isConnected());
+    createPanelTab(mDockControlPanel, "🎮 远程调试");
+
+    mFlightControlPanel = new FlightControlPanel();
+    mFlightControlPanel->setConnected(mDevMgr->isConnected());
+    createPanelTab(mFlightControlPanel, "🛫 飞行控制");
+
+    mPsdkSpeakerPanel = new PsdkSpeakerPanel();
+    mPsdkSpeakerPanel->setConnected(mDevMgr->isConnected());
+    createPanelTab(mPsdkSpeakerPanel, "📢 PSDK功能");
+
+    mMaintenancePanel = new MaintenancePanel();
+    createPanelTab(mMaintenancePanel, "🔧 运维工具");
+
+    rightLayout->addWidget(mRightTabWidget, 1);
 
     // === 主分割器 ===
     auto* mainSplitter = new QSplitter(Qt::Horizontal, this);
@@ -529,25 +568,6 @@ void MainWindow::setupLayout() {
     // 加载 publish 模板 + 初始连接状态
     mPublishPanel->loadTemplates(QApplication::applicationDirPath() + "/config/topic-send-construct/topic-send-construct.md");
     mPublishPanel->setConnected(mDevMgr->isConnected());
-
-    // 机场控制独立窗口（功能中心菜单打开）
-    mDockCtrlDialog = new DockControlDialog(this);
-    mDockControlPanel = mDockCtrlDialog->panel();
-    mDockControlPanel->setConnected(mDevMgr->isConnected());
-
-    // 飞行控制独立窗口（功能中心菜单打开）
-    mFlightCtrlDialog = new FlightControlDialog(this);
-    mFlightControlPanel = mFlightCtrlDialog->panel();
-    mFlightControlPanel->setConnected(mDevMgr->isConnected());
-
-    // 运维模式独立窗口（功能中心菜单打开）
-    mMaintenanceDialog = new MaintenanceDialog(this);
-    mMaintenancePanel = mMaintenanceDialog->panel();
-
-    // PSDK喊话器独立窗口（功能中心菜单打开）
-    mPsdkSpeakerDialog = new PsdkSpeakerDialog(this);
-    mPsdkSpeakerPanel = mPsdkSpeakerDialog->panel();
-    mPsdkSpeakerPanel->setConnected(mDevMgr->isConnected());
 
 }
 
@@ -1213,17 +1233,14 @@ void MainWindow::showVideoWindows() {
         mVideoWindows.append(dockWin);
     }
 
-    // 缩小至原来的 2/3，固定在屏幕右下角
+    // 缩小至原来的 2/3，右侧/底部与主界面对齐
     int videoW = 426;
     int videoH = 266;
     int gap = 20;
-    int bottomMargin = 40;
 
-    QScreen* screen = QGuiApplication::primaryScreen();
-    QRect screenGeo = screen ? screen->availableGeometry() : QRect(0, 0, 1920, 1080);
-
-    int x = screenGeo.right() - videoW - gap;
-    int y = screenGeo.bottom() - (2 * videoH + gap) - bottomMargin;
+    QRect mainGeo = geometry();
+    int x = mainGeo.right() - videoW;
+    int y = mainGeo.bottom() - 2 * videoH - gap;
 
     for (int i = 0; i < mVideoWindows.size(); ++i) {
         mVideoWindows[i]->resize(videoW, videoH);
@@ -1239,7 +1256,42 @@ void MainWindow::hideVideoWindows() {
     }
 }
 
+void MainWindow::repositionVideoWindows() {
+    if (mVideoWindows.isEmpty()) return;
+
+    int videoW = 426;
+    int videoH = 266;
+    int gap = 20;
+
+    QRect mainGeo = geometry();
+    int x = mainGeo.right() - videoW;
+    int y = mainGeo.bottom() - 2 * videoH - gap;
+
+    for (int i = 0; i < mVideoWindows.size(); ++i) {
+        mVideoWindows[i]->move(x, y + i * (videoH + gap));
+    }
+}
+
+void MainWindow::moveEvent(QMoveEvent* event) {
+    QMainWindow::moveEvent(event);
+    repositionVideoWindows();
+}
+
+void MainWindow::resizeEvent(QResizeEvent* event) {
+    QMainWindow::resizeEvent(event);
+    repositionVideoWindows();
+}
+
 void MainWindow::closeEvent(QCloseEvent* event) {
+    // 关闭所有弹出的功能面板窗口
+    for (auto it = mPoppedOutDialogs.begin(); it != mPoppedOutDialogs.end(); ++it) {
+        if (it.value()) {
+            it.value()->close();
+            it.value()->deleteLater();
+        }
+    }
+    mPoppedOutDialogs.clear();
+
     // 关闭所有视频直播窗口
     for (auto* win : mVideoWindows) {
         win->close();       // non-spontaneous → accept → 真正关闭
@@ -1255,4 +1307,131 @@ void MainWindow::closeEvent(QCloseEvent* event) {
 #endif
 
     event->accept();
+}
+
+// ——— 方案E：标签页 → 弹出/合并 ———
+
+static const int TAB_MONITOR  = 0;
+static const int TAB_DOCK     = 1;
+static const int TAB_FLIGHT   = 2;
+static const int TAB_PSDK     = 3;
+static const int TAB_MAINT    = 4;
+
+void MainWindow::showFunctionInTab(int tabIndex) {
+    // 找到对应 panel
+    QWidget* panel = nullptr;
+    switch (tabIndex) {
+        case TAB_DOCK:   panel = mDockControlPanel;   break;
+        case TAB_FLIGHT: panel = mFlightControlPanel; break;
+        case TAB_PSDK:   panel = mPsdkSpeakerPanel;   break;
+        case TAB_MAINT:  panel = mMaintenancePanel;   break;
+        default: return;
+    }
+
+    // 如果已弹出 → 激活独立窗口
+    if (mPoppedOutDialogs.contains(panel)) {
+        auto* dlg = mPoppedOutDialogs[panel];
+        if (dlg) {
+            dlg->show();
+            dlg->raise();
+            dlg->activateWindow();
+        }
+        return;
+    }
+
+    // 否则切到对应标签页
+    mRightTabWidget->setCurrentIndex(tabIndex);
+}
+
+void MainWindow::popOutCurrentTab() {
+    int idx = mRightTabWidget->currentIndex();
+    if (idx == TAB_MONITOR) return;  // 监控标签页不能弹出
+
+    // 找到标签页对应的 panel
+    QWidget* panel = nullptr;
+    switch (idx) {
+        case TAB_DOCK:   panel = mDockControlPanel;   break;
+        case TAB_FLIGHT: panel = mFlightControlPanel; break;
+        case TAB_PSDK:   panel = mPsdkSpeakerPanel;   break;
+        case TAB_MAINT:  panel = mMaintenancePanel;   break;
+        default: return;
+    }
+
+    if (mPoppedOutDialogs.contains(panel)) return;  // 已弹出
+
+    QString title = mRightTabWidget->tabText(idx);
+    // 从 QScrollArea 中取出 panel
+    auto* oldScroll = qobject_cast<QScrollArea*>(mRightTabWidget->widget(idx));
+    if (oldScroll) oldScroll->takeWidget();
+    mRightTabWidget->removeTab(idx);
+
+    // 创建独立窗口
+    auto* dlg = new QDialog(this);
+    dlg->setWindowTitle(title);
+    dlg->setWindowFlags(dlg->windowFlags() | Qt::WindowMaximizeButtonHint);
+    dlg->setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, false);
+    dlg->setSizeGripEnabled(true);
+    dlg->setMinimumSize(680, 500);
+    dlg->resize(800, 620);
+
+    auto* layout = new QVBoxLayout(dlg);
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    auto* scroll = new QScrollArea(dlg);
+    scroll->setWidgetResizable(true);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setWidget(panel);
+    layout->addWidget(scroll);
+
+    // 关闭时合并回标签页
+    connect(dlg, &QDialog::finished, this, [this, panel]() {
+        popInPanel(panel);
+    });
+
+    mPoppedOutDialogs[panel] = dlg;
+    dlg->show();
+}
+
+void MainWindow::popInPanel(QWidget* panel) {
+    if (!mPoppedOutDialogs.contains(panel)) return;
+
+    auto* dlg = mPoppedOutDialogs[panel];
+
+    // 确定 tabIndex
+    int tabIndex = -1;
+    if (panel == mDockControlPanel)      tabIndex = TAB_DOCK;
+    else if (panel == mFlightControlPanel) tabIndex = TAB_FLIGHT;
+    else if (panel == mPsdkSpeakerPanel)   tabIndex = TAB_PSDK;
+    else if (panel == mMaintenancePanel)   tabIndex = TAB_MAINT;
+
+    // 从 dialog 中取出 panel
+    if (dlg) {
+        auto* scroll = dlg->findChild<QScrollArea*>();
+        if (scroll) scroll->takeWidget();  // 释放 panel 所有权
+        dlg->hide();
+        dlg->deleteLater();
+    }
+
+    mPoppedOutDialogs.remove(panel);
+
+    if (tabIndex < 0) return;
+
+    // 重新创建标签页
+    auto* scroll = new QScrollArea();
+    scroll->setWidgetResizable(true);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setWidget(panel);
+
+    QString title;
+    switch (tabIndex) {
+        case TAB_DOCK:  title = "🎮 远程调试"; break;
+        case TAB_FLIGHT: title = "🛫 飞行控制"; break;
+        case TAB_PSDK:  title = "📢 PSDK功能"; break;
+        case TAB_MAINT: title = "🔧 运维工具"; break;
+    }
+
+    mRightTabWidget->insertTab(tabIndex, scroll, title);
+    mRightTabWidget->setCurrentIndex(tabIndex);
 }

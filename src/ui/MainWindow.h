@@ -5,19 +5,21 @@
 #include <QSplitter>
 #include <QStatusBar>
 #include <QToolBar>
+#include <QTabWidget>
 #include <QLabel>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QMap>
 #include "DeviceTreeWidget.h"
 #include "OsdPanel.h"
 #include "RawJsonPanel.h"
 #include "PublishPanel.h"
 #include "TopicListWidget.h"
 #include "TopicParsePanel.h"
-#include "DockControlDialog.h"
-#include "FlightControlDialog.h"
-#include "MaintenanceDialog.h"
-#include "PsdkSpeakerDialog.h"
+#include "DockControlPanel.h"
+#include "FlightControlPanel.h"
+#include "MaintenancePanel.h"
+#include "PsdkSpeakerPanel.h"
 #include "DeviceManager.h"
 #include "VideoStreamWindow.h"
 
@@ -31,6 +33,8 @@ public:
 
 protected:
     void closeEvent(QCloseEvent* event) override;
+    void moveEvent(QMoveEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
 private slots:
     void onDeviceSelected(const QString& sn);
@@ -50,6 +54,10 @@ private:
     void refreshDockControlList(const QString& currentSn);
     void showVideoWindows();
     void hideVideoWindows();
+    void repositionVideoWindows();
+    void showFunctionInTab(int tabIndex);
+    void popOutCurrentTab();
+    void popInPanel(QWidget* panel);
 
     DeviceManager*     mDevMgr;
     DeviceTreeWidget*  mDeviceTree;
@@ -58,18 +66,16 @@ private:
     PublishPanel*      mPublishPanel;
     QSplitter*         mRightSplitter;   // OSD | JSON (horizontal)
     QPushButton*       mTogglePublishBtn;
-    DockControlPanel*  mDockControlPanel = nullptr;   // 指向对话框内的面板
-    DockControlDialog* mDockCtrlDialog = nullptr;
-    FlightControlPanel*  mFlightControlPanel = nullptr;   // 指向飞行控制对话框内的面板
-    FlightControlDialog* mFlightCtrlDialog = nullptr;
-    MaintenancePanel*    mMaintenancePanel = nullptr;      // 指向运维模式对话框内的面板
-    MaintenanceDialog*   mMaintenanceDialog = nullptr;
+    QTabWidget*        mRightTabWidget = nullptr;   // 右侧标签页（方案E）
+    DockControlPanel*  mDockControlPanel = nullptr;
+    FlightControlPanel*  mFlightControlPanel = nullptr;
+    MaintenancePanel*  mMaintenancePanel = nullptr;
+    PsdkSpeakerPanel*  mPsdkSpeakerPanel = nullptr;
+    QMap<QWidget*, QWidget*> mPoppedOutDialogs;  // panel → dialog 映射（弹出状态追踪）
     QList<VideoStreamWindow*> mVideoWindows;
 #ifdef HAS_VLC
     libvlc_instance_t* mVlcInstance = nullptr;
 #endif
-    PsdkSpeakerPanel*    mPsdkSpeakerPanel = nullptr;       // 指向PSDK喊话器对话框内的面板
-    PsdkSpeakerDialog*   mPsdkSpeakerDialog = nullptr;
     QLabel*            mStatusLabel;
     QLabel*            mDeviceCountLabel;
     QLabel*            mVersionLabel;
