@@ -71,6 +71,10 @@ public:
     void setMqttConfig(const MqttConfig& cfg);
     void setMqttConfigForProfile(const QString& name, const MqttConfig& cfg);
 
+    // 视频直播流 URL 配置
+    StreamUrlConfig streamUrls() const;
+    void setStreamUrls(const StreamUrlConfig& urls);
+
     // 保存配置
     bool saveConfig(const QString& path);
 

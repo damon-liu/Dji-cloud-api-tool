@@ -308,6 +308,14 @@ void DeviceManager::setMqttConfigForProfile(const QString& name, const MqttConfi
     mConfigStore->setMqttConfigForProfile(name, cfg);
 }
 
+StreamUrlConfig DeviceManager::streamUrls() const {
+    return mConfigStore->streamUrls();
+}
+
+void DeviceManager::setStreamUrls(const StreamUrlConfig& urls) {
+    mConfigStore->setStreamUrls(urls);
+}
+
 bool DeviceManager::saveConfig(const QString& path) {
     // 同步设备列表和 topics 到 ConfigStore
     QVector<DeviceInfo> devs;

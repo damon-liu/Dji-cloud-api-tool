@@ -6,6 +6,24 @@
 #include <QFileInfo>
 #include <QDebug>
 
+namespace {
+
+QJsonObject streamUrlMapToJson(const QMap<QString, QString>& map) {
+    QJsonObject obj;
+    for (auto it = map.begin(); it != map.end(); ++it)
+        obj[it.key()] = it.value();
+    return obj;
+}
+
+QMap<QString, QString> streamUrlMapFromJson(const QJsonObject& obj) {
+    QMap<QString, QString> map;
+    for (auto it = obj.begin(); it != obj.end(); ++it)
+        map[it.key()] = it.value().toString();
+    return map;
+}
+
+} // namespace
+
 ConfigStore::ConfigStore(QObject* parent)
     : QObject(parent) {}
 
@@ -60,6 +78,11 @@ bool ConfigStore::load(const QString& filePath) {
             pd.mqtt.username = mqtt.value("username").toString();
             pd.mqtt.password = mqtt.value("password").toString();
             pd.mqtt.clientId = mqtt.value("client_id").toString();
+
+            // 读取 stream_urls（可选字段，缺失时为空）
+            QJsonObject streamObj = pObj.value("stream_urls").toObject();
+            pd.streamUrls.aircraft = streamUrlMapFromJson(streamObj.value("aircraft").toObject());
+            pd.streamUrls.dock = streamUrlMapFromJson(streamObj.value("dock").toObject());
 
             QJsonArray devs = pObj["devices"].toArray();
             for (const auto& dVal : devs) {
@@ -214,6 +237,13 @@ bool ConfigStore::save(const QString& filePath) {
         if (!pd.mqtt.clientId.isEmpty())
             mqtt["client_id"] = pd.mqtt.clientId;
         pObj["mqtt"] = mqtt;
+
+        // 写入 stream_urls
+        QJsonObject streamObj;
+        streamObj["aircraft"] = streamUrlMapToJson(pd.streamUrls.aircraft);
+        streamObj["dock"] = streamUrlMapToJson(pd.streamUrls.dock);
+        if (!pd.streamUrls.aircraft.isEmpty() || !pd.streamUrls.dock.isEmpty())
+            pObj["stream_urls"] = streamObj;
 
         QMap<QString, QJsonObject> dockMap;
         QVector<QJsonObject> pilotList;
@@ -382,4 +412,12 @@ void ConfigStore::setDisabledTopicsForDevice(const QString& sn, const QStringLis
         currentProfileData().disabledTopics.remove(sn);
     else
         currentProfileData().disabledTopics[sn] = QSet<QString>(topics.begin(), topics.end());
+}
+
+StreamUrlConfig ConfigStore::streamUrls() const {
+    return currentProfileData().streamUrls;
+}
+
+void ConfigStore::setStreamUrls(const StreamUrlConfig& urls) {
+    currentProfileData().streamUrls = urls;
 }

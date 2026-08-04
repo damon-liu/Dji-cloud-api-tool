@@ -18,6 +18,10 @@
 #include <QFile>
 #include "TopicMapping.h"
 
+#ifdef HAS_VLC
+#include <vlc/vlc.h>
+#endif
+
 // 内置默认 topic 映射 JSON（文件缺失时降级使用）
 static const char* TOPIC_MAPPINGS_BUILTIN = R"(
 {
@@ -311,7 +315,7 @@ void MainWindow::setupToolBar() {
     featureBtn->setCursor(Qt::PointingHandCursor);
     {
         auto* menu = new QMenu(featureBtn);
-        menu->addAction("🎮 机场控制", this, [this]() {
+        menu->addAction("🎮 远程调试", this, [this]() {
             if (!mDockCtrlDialog) return;
             mDockCtrlDialog->show();
             mDockCtrlDialog->raise();
@@ -544,6 +548,7 @@ void MainWindow::setupLayout() {
     mPsdkSpeakerDialog = new PsdkSpeakerDialog(this);
     mPsdkSpeakerPanel = mPsdkSpeakerDialog->panel();
     mPsdkSpeakerPanel->setConnected(mDevMgr->isConnected());
+
 }
 
 // ——— 状态栏 ———
@@ -1158,6 +1163,19 @@ void MainWindow::updateStatusBar() {
 }
 
 void MainWindow::showVideoWindows() {
+#ifdef HAS_VLC
+    if (!mVlcInstance) {
+        mVlcInstance = libvlc_new(0, nullptr);
+        if (!mVlcInstance) {
+            qWarning() << "MainWindow: libvlc_new failed";
+        } else {
+            qDebug() << "MainWindow: VLC initialized successfully (lazy)";
+        }
+    }
+#endif
+
+    StreamUrlConfig urls = mDevMgr->streamUrls();
+
     if (mVideoWindows.isEmpty()) {
         // 窗口0: 飞机 — 切换镜头：红外(默认)/变焦/广角
         auto* aircraftWin = new VideoStreamWindow(
@@ -1171,6 +1189,10 @@ void MainWindow::showVideoWindows() {
             },
             QString::fromUtf8("切换镜头"),
             nullptr);
+#ifdef HAS_VLC
+        aircraftWin->setVlcInstance(mVlcInstance);
+#endif
+        aircraftWin->setStreamUrls(urls.aircraft);
         mVideoWindows.append(aircraftWin);
 
         // 窗口1: 机场 — 切换视频：机场外(默认)/机场内
@@ -1184,28 +1206,24 @@ void MainWindow::showVideoWindows() {
             },
             QString::fromUtf8("切换视频"),
             nullptr);
+#ifdef HAS_VLC
+        dockWin->setVlcInstance(mVlcInstance);
+#endif
+        dockWin->setStreamUrls(urls.dock);
         mVideoWindows.append(dockWin);
     }
 
-    QRect mainGeo = geometry();
-    int videoW = 640;
-    int videoH = 400;
-    int gap = 30;
-    int totalHeight = 2 * videoH + 1 * gap;
-
-    int x = mainGeo.x() - videoW - gap;
-    int y = mainGeo.y() + (mainGeo.height() - totalHeight) / 2;
+    // 缩小至原来的 2/3，固定在屏幕右下角
+    int videoW = 426;
+    int videoH = 266;
+    int gap = 20;
+    int bottomMargin = 40;
 
     QScreen* screen = QGuiApplication::primaryScreen();
-    if (screen) {
-        QRect screenGeo = screen->availableGeometry();
-        if (x < screenGeo.x())
-            x = screenGeo.x();
-        if (y < screenGeo.y())
-            y = screenGeo.y();
-        if (y + totalHeight > screenGeo.y() + screenGeo.height())
-            y = screenGeo.y() + screenGeo.height() - totalHeight;
-    }
+    QRect screenGeo = screen ? screen->availableGeometry() : QRect(0, 0, 1920, 1080);
+
+    int x = screenGeo.right() - videoW - gap;
+    int y = screenGeo.bottom() - (2 * videoH + gap) - bottomMargin;
 
     for (int i = 0; i < mVideoWindows.size(); ++i) {
         mVideoWindows[i]->resize(videoW, videoH);
@@ -1228,5 +1246,13 @@ void MainWindow::closeEvent(QCloseEvent* event) {
         win->deleteLater();
     }
     mVideoWindows.clear();
+
+#ifdef HAS_VLC
+    if (mVlcInstance) {
+        libvlc_release(mVlcInstance);
+        mVlcInstance = nullptr;
+    }
+#endif
+
     event->accept();
 }

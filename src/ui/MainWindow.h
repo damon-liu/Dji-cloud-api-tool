@@ -21,6 +21,9 @@
 #include "DeviceManager.h"
 #include "VideoStreamWindow.h"
 
+// libVLC 前向声明（全局作用域，与 vlc/vlc.h 兼容）
+struct libvlc_instance_t;
+
 class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
@@ -62,6 +65,9 @@ private:
     MaintenancePanel*    mMaintenancePanel = nullptr;      // 指向运维模式对话框内的面板
     MaintenanceDialog*   mMaintenanceDialog = nullptr;
     QList<VideoStreamWindow*> mVideoWindows;
+#ifdef HAS_VLC
+    libvlc_instance_t* mVlcInstance = nullptr;
+#endif
     PsdkSpeakerPanel*    mPsdkSpeakerPanel = nullptr;       // 指向PSDK喊话器对话框内的面板
     PsdkSpeakerDialog*   mPsdkSpeakerDialog = nullptr;
     QLabel*            mStatusLabel;

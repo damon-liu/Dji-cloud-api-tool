@@ -75,9 +75,32 @@ set(HEADERS
     src/ui/PsdkSpeakerDialog.h
 )
 
-add_executable(DjiCloudApi ${SOURCES} ${HEADERS}
-    src/resources/app_icon.rc
+# 自动从 logo.jpg 生成 logo3.ico（jpg 更新时自动重新生成）
+set(LOGO_JPG  ${CMAKE_SOURCE_DIR}/src/resources/logo.jpg)
+set(LOGO_ICO  ${CMAKE_SOURCE_DIR}/src/resources/logo3.ico)
+find_program(PYTHON_EXECUTABLE python3 python
+    PATHS
+        "D:/software/Python/Python314"
+        "$ENV{LOCALAPPDATA}/Programs/Python"
+        "$ENV{LOCALAPPDATA}/Microsoft/WindowsApps"
 )
+if(PYTHON_EXECUTABLE)
+    add_custom_command(
+        OUTPUT ${LOGO_ICO}
+        COMMAND ${PYTHON_EXECUTABLE} -c
+                "from PIL import Image; img = Image.open('${LOGO_JPG}'); img.save('${LOGO_ICO}', format='ICO', sizes=[(s,s) for s in [16,32,48,64,94]])"
+        DEPENDS ${LOGO_JPG}
+        COMMENT "Generating logo3.ico from logo.jpg"
+    )
+    add_executable(DjiCloudApi ${SOURCES} ${HEADERS}
+        src/resources/app_icon.rc
+        ${LOGO_ICO}
+    )
+else()
+    add_executable(DjiCloudApi ${SOURCES} ${HEADERS}
+        src/resources/app_icon.rc
+    )
+endif()
 
 target_include_directories(DjiCloudApi PRIVATE
     src
@@ -85,6 +108,42 @@ target_include_directories(DjiCloudApi PRIVATE
     src/mqtt
     src/ui
 )
+
+# VLC SDK（可选 — 用户需安装 VLC 或下载 VLC SDK）
+# VLC SDK 根目录应包含: include/vlc/vlc.h, lib/libvlc.lib, lib/libvlccore.lib
+set(VLC_SDK_DIR "" CACHE PATH "VLC SDK root directory (optional, for video streaming)")
+if(VLC_SDK_DIR)
+    target_include_directories(DjiCloudApi PRIVATE "${VLC_SDK_DIR}/include")
+    target_link_directories(DjiCloudApi PRIVATE "${VLC_SDK_DIR}/lib")
+    target_link_libraries(DjiCloudApi libvlc libvlccore)
+    target_compile_definitions(DjiCloudApi PRIVATE HAS_VLC)
+
+    # VLC plugins 目录（RTMP/RTSP 等协议需要对应插件）
+    set(VLC_PLUGINS_DIR "${VLC_SDK_DIR}/plugins" CACHE PATH "VLC plugins directory")
+    if(VLC_PLUGINS_DIR)
+        target_compile_definitions(DjiCloudApi PRIVATE VLC_PLUGINS_DIR="${VLC_PLUGINS_DIR}")
+    endif()
+
+    # 构建后复制 VLC 运行时 DLL 和插件到构建目录
+    # VLC 从 libvlc.dll 所在目录的 plugins/ 子目录加载插件
+    add_custom_command(TARGET DjiCloudApi POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${VLC_SDK_DIR}/lib/libvlc.dll"
+            "$<TARGET_FILE_DIR:DjiCloudApi>/libvlc.dll"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${VLC_SDK_DIR}/lib/libvlccore.dll"
+            "$<TARGET_FILE_DIR:DjiCloudApi>/libvlccore.dll"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${VLC_PLUGINS_DIR}"
+            "$<TARGET_FILE_DIR:DjiCloudApi>/plugins"
+        COMMENT "Deploying VLC runtime DLLs and plugins"
+    )
+
+    message(STATUS "VLC SDK found: ${VLC_SDK_DIR} — video streaming enabled")
+    message(STATUS "  VLC plugins dir: ${VLC_PLUGINS_DIR}")
+else()
+    message(STATUS "VLC SDK not set — video streaming disabled (placeholder mode)")
+endif()
 
 target_link_libraries(DjiCloudApi
     Qt6::Core

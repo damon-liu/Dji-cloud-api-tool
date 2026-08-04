@@ -9,6 +9,12 @@
 #include <QSet>
 #include "DeviceInfo.h"
 
+// 视频直播流 URL 配置
+struct StreamUrlConfig {
+    QMap<QString, QString> aircraft;   // 飞机摄像头 -> URL ("红外相机" -> "rtmp://...")
+    QMap<QString, QString> dock;       // 机场视频源 -> URL ("机场外视频" -> "rtmp://...")
+};
+
 // MQTT 连接配置
 struct MqttConfig {
     QString host     = "192.168.1.100";
@@ -22,6 +28,7 @@ struct MqttConfig {
 struct ProfileData {
     QString                     name;
     MqttConfig                  mqtt;
+    StreamUrlConfig             streamUrls;     // 视频直播流 URL
     QVector<DeviceInfo>         devices;
     QMap<QString, QStringList>  deviceTopics;      // SN -> topics (有序)
     QMap<QString, QSet<QString>> disabledTopics;    // SN -> disabled topics
@@ -55,6 +62,9 @@ public:
     QVector<DeviceInfo> devices() const;
     void setDevices(const QVector<DeviceInfo>& devices);
     bool renameDevice(const QString& sn, const QString& newName);
+
+    StreamUrlConfig streamUrls() const;
+    void setStreamUrls(const StreamUrlConfig& urls);
 
     QStringList topicsForDevice(const QString& sn) const;
     void setTopicsForDevice(const QString& sn, const QStringList& topics);
