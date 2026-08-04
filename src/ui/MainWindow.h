@@ -33,8 +33,6 @@ public:
 
 protected:
     void closeEvent(QCloseEvent* event) override;
-    void moveEvent(QMoveEvent* event) override;
-    void resizeEvent(QResizeEvent* event) override;
 
 private slots:
     void onDeviceSelected(const QString& sn);
@@ -54,7 +52,6 @@ private:
     void refreshDockControlList(const QString& currentSn);
     void showVideoWindows();
     void hideVideoWindows();
-    void repositionVideoWindows();
     void showFunctionInTab(int tabIndex);
     void popOutCurrentTab();
     void popInPanel(QWidget* panel);
@@ -73,12 +70,13 @@ private:
     PsdkSpeakerPanel*  mPsdkSpeakerPanel = nullptr;
     QMap<QWidget*, QWidget*> mPoppedOutDialogs;  // panel → dialog 映射（弹出状态追踪）
     QList<VideoStreamWindow*> mVideoWindows;
+    QWidget*           mVideoPanel = nullptr;        // 视频面板容器（嵌入监控标签页）
+    QSplitter*         mVideoSplitter = nullptr;     // 两个视频窗口水平分割器
+    QPushButton*       mVideoToggleBtn = nullptr;    // 视频面板折叠/展开按钮
 #ifdef HAS_VLC
     libvlc_instance_t* mVlcInstance = nullptr;
 #endif
-    QLabel*            mStatusLabel;
-    QLabel*            mDeviceCountLabel;
-    QLabel*            mVersionLabel;
+    QLabel*            mDeviceTitleLabel;   // Devices列表 (N)
     QLabel*            mBrokerLabel;
 
     // Toolbar actions

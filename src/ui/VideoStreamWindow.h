@@ -51,7 +51,6 @@ private slots:
 
 private:
     void setupUi();
-    void updateTitle();
     void updateButtonStates();
     void updateQualityButtonText();
     void applySourceUrl(const QString& source);   // 切换视频源时更新 URL
@@ -65,9 +64,6 @@ private:
     QString     mCurrentQuality;
     bool        mStreaming = false;
     bool        mBuffering = false;
-
-    // 标题栏
-    QLabel*  mTitleLabel;
 
     // 视频区域
     QWidget* mVideoArea;

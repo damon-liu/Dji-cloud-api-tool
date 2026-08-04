@@ -332,8 +332,14 @@ void MainWindow::setupToolBar() {
     videoBtn->setCursor(Qt::PointingHandCursor);
     {
         auto* menu = new QMenu(videoBtn);
-        menu->addAction("📺 打开视频直播", this, [this]() { showVideoWindows(); });
-        menu->addAction("✕ 关闭视频直播", this, [this]() { hideVideoWindows(); });
+        menu->addAction("📺 打开视频直播", this, [this]() {
+            if (mVideoToggleBtn && !mVideoToggleBtn->isChecked())
+                mVideoToggleBtn->setChecked(true);
+        });
+        menu->addAction("✕ 关闭视频直播", this, [this]() {
+            if (mVideoToggleBtn && mVideoToggleBtn->isChecked())
+                mVideoToggleBtn->setChecked(false);
+        });
         videoBtn->setMenu(menu);
     }
     toolbar->addWidget(videoBtn);
@@ -349,12 +355,15 @@ void MainWindow::setupToolBar() {
         menu->addAction("🛠️ GitHub项目地址", this, []() {
             QDesktopServices::openUrl(QUrl("https://github.com/damon-liu/Dji-cloud-api-tool"));
         });
-        // menu->addAction("🛠️ Gitee项目地址", this, []() {
-        //     QDesktopServices::openUrl(QUrl("https://gitee.com/damon123-liu/Dji-cloud-api-tool"));
-        // });
-        menu->addSeparator();
         menu->addAction("📖 大疆上云 API 文档", this, []() {
             QDesktopServices::openUrl(QUrl("https://developer.dji.com/doc/cloud-api-tutorial/cn/api-reference/dock-to-cloud/mqtt/dock/dock3/properties.html"));
+        });
+        menu->addSeparator();
+        menu->addAction(QString::fromUtf8("📋 版本信息"), this, [this]() {
+            QMessageBox::about(this, QString::fromUtf8("版本信息"),
+                QString::fromUtf8("DJI-CLOUD-API 监控客户端\n\n"
+                                  "版本: v1.0.4\n"
+                                  "项目地址: github.com/damon-liu/Dji-cloud-api-tool"));
         });
         helpBtn->setMenu(menu);
     }
@@ -393,9 +402,9 @@ void MainWindow::setupLayout() {
     // 区域标题 + 操作按钮
     auto* titleRow = new QHBoxLayout;
     titleRow->setSpacing(4);
-    auto* treeTitle = new QLabel(QString::fromUtf8("Devices\xe5\x88\x97\xe8\xa1\xa8"));
-    treeTitle->setObjectName("sectionTitle");
-    titleRow->addWidget(treeTitle);
+    mDeviceTitleLabel = new QLabel(QString::fromUtf8("Devices\xe5\x88\x97\xe8\xa1\xa8 (0)"));
+    mDeviceTitleLabel->setObjectName("sectionTitle");
+    titleRow->addWidget(mDeviceTitleLabel);
     titleRow->addStretch();
 
     mAddDeviceBtn = new QPushButton("＋", this);
@@ -554,7 +563,50 @@ void MainWindow::setupLayout() {
     mMaintenancePanel = new MaintenancePanel();
     createPanelTab(mMaintenancePanel, "🔧 运维工具");
 
-    rightLayout->addWidget(mRightTabWidget, 1);
+    // === 右侧分割器：标签页 + 视频面板（可拖拽调节） ===
+    auto* rightContentSplitter = new QSplitter(Qt::Vertical, this);
+    rightContentSplitter->addWidget(mRightTabWidget);
+    rightContentSplitter->setChildrenCollapsible(false);
+
+    // 视频直播面板（标签页外，切换 tab 不消失）
+    mVideoPanel = new QWidget(this);
+    auto* videoPanelLayout = new QVBoxLayout(mVideoPanel);
+    videoPanelLayout->setContentsMargins(0, 0, 0, 0);
+    videoPanelLayout->setSpacing(4);
+
+    mVideoSplitter = new QSplitter(Qt::Horizontal, this);
+    mVideoSplitter->setChildrenCollapsible(false);
+    videoPanelLayout->addWidget(mVideoSplitter, 1);
+
+    mVideoPanel->setVisible(false);
+    mVideoPanel->setMinimumHeight(300);
+
+    rightContentSplitter->addWidget(mVideoPanel);
+
+    mVideoToggleBtn = new QPushButton(QString::fromUtf8("▶ 视频直播"), this);
+    mVideoToggleBtn->setObjectName("publishToggle");
+    mVideoToggleBtn->setCheckable(true);
+    mVideoToggleBtn->setCursor(Qt::PointingHandCursor);
+    connect(mVideoToggleBtn, &QPushButton::toggled, this,
+            [this, rightContentSplitter](bool checked) {
+        if (checked && mVideoWindows.isEmpty()) {
+            showVideoWindows();
+        }
+        mVideoPanel->setVisible(checked);
+        mVideoToggleBtn->setText(checked ? QString::fromUtf8("◢ 视频直播")
+                                         : QString::fromUtf8("▶ 视频直播"));
+
+        if (checked) {
+            // 展开时给视频面板分配 ~35% 垂直空间
+            int total = rightContentSplitter->height();
+            if (total > 0) {
+                rightContentSplitter->setSizes({total * 65 / 100, total * 35 / 100});
+            }
+        }
+    });
+
+    rightLayout->addWidget(rightContentSplitter, 1);
+    rightLayout->addWidget(mVideoToggleBtn);
 
     // === 主分割器 ===
     auto* mainSplitter = new QSplitter(Qt::Horizontal, this);
@@ -573,25 +625,7 @@ void MainWindow::setupLayout() {
 
 // ——— 状态栏 ———
 void MainWindow::setupStatusBar() {
-    mStatusLabel      = new QLabel("🔴 未连接");
-    mDeviceCountLabel = new QLabel("设备: 0");
-
-    mStatusLabel->setStyleSheet("font-weight: bold; padding: 0 8px;");
-    mDeviceCountLabel->setStyleSheet("padding: 0 8px;");
-
-    // 版本信息 — 真正居中
-    auto* versionContainer = new QWidget(this);
-    auto* versionLayout = new QHBoxLayout(versionContainer);
-    versionLayout->setContentsMargins(0, 0, 0, 0);
-    versionLayout->setAlignment(Qt::AlignCenter);
-    mVersionLabel = new QLabel("v1.0.4 · github.com/damon-liu/Dji-cloud-api-tool");
-    mVersionLabel->setStyleSheet(
-        "color: #80868b; font-size: 11px; letter-spacing: 0.5px;");
-    versionLayout->addWidget(mVersionLabel);
-
-    statusBar()->addWidget(mStatusLabel);
-    statusBar()->addWidget(versionContainer, 1);
-    statusBar()->addPermanentWidget(mDeviceCountLabel);
+    // 状态栏保留为空（连接状态已移至工具栏，设备数已移至 Devices 标题）
 }
 
 // ——— 信号连接 ———
@@ -651,9 +685,9 @@ void MainWindow::connectSignals() {
             this, &MainWindow::onOsdUpdated);
 
     connect(mDevMgr, &DeviceManager::brokerConnected, this, [this]() {
-        mStatusLabel->setText("🟢 已连接");
-        mBrokerLabel->setText(" " + mDevMgr->mqttConfig().host + ":" +
-            QString::number(mDevMgr->mqttConfig().port));
+        mBrokerLabel->setText(QString::fromUtf8("🟢 已连接 · %1:%2")
+            .arg(mDevMgr->mqttConfig().host)
+            .arg(mDevMgr->mqttConfig().port));
         mBrokerLabel->setStyleSheet("color: #2e7d32; font-size: 12px; padding: 0 12px;");
         mConnectAct->setEnabled(false);
         mDisconnectAct->setEnabled(true);
@@ -687,8 +721,7 @@ void MainWindow::connectSignals() {
         }
     });
     connect(mDevMgr, &DeviceManager::brokerDisconnected, this, [this]() {
-        mStatusLabel->setText("🔴 未连接");
-        mBrokerLabel->setText(" 未连接");
+        mBrokerLabel->setText(QString::fromUtf8("🔴 未连接"));
         mBrokerLabel->setStyleSheet("color: #9e9e9e; font-size: 12px; padding: 0 12px;");
         mConnectAct->setEnabled(true);
         mDisconnectAct->setEnabled(false);
@@ -1178,8 +1211,8 @@ void MainWindow::refreshTopicList(const QString& sn) {
 }
 
 void MainWindow::updateStatusBar() {
-    mDeviceCountLabel->setText("设备: " +
-        QString::number(mDevMgr->allDevices().size()));
+    mDeviceTitleLabel->setText(QString::fromUtf8("Devices\xe5\x88\x97\xe8\xa1\xa8 (%1)")
+        .arg(mDevMgr->allDevices().size()));
 }
 
 void MainWindow::showVideoWindows() {
@@ -1188,9 +1221,9 @@ void MainWindow::showVideoWindows() {
         mVlcInstance = libvlc_new(0, nullptr);
         if (!mVlcInstance) {
             qWarning() << "MainWindow: libvlc_new failed";
-        } else {
-            qDebug() << "MainWindow: VLC initialized successfully (lazy)";
+            return;
         }
+        qDebug() << "MainWindow: VLC initialized successfully (lazy)";
     }
 #endif
 
@@ -1208,12 +1241,13 @@ void MainWindow::showVideoWindows() {
                 QString::fromUtf8("广角相机")
             },
             QString::fromUtf8("切换镜头"),
-            nullptr);
+            this);  // 嵌入为子控件
 #ifdef HAS_VLC
         aircraftWin->setVlcInstance(mVlcInstance);
 #endif
         aircraftWin->setStreamUrls(urls.aircraft);
         mVideoWindows.append(aircraftWin);
+        mVideoSplitter->addWidget(aircraftWin);
 
         // 窗口1: 机场 — 切换视频：机场外(默认)/机场内
         auto* dockWin = new VideoStreamWindow(
@@ -1225,61 +1259,20 @@ void MainWindow::showVideoWindows() {
                 QString::fromUtf8("机场内视频")
             },
             QString::fromUtf8("切换视频"),
-            nullptr);
+            this);  // 嵌入为子控件
 #ifdef HAS_VLC
         dockWin->setVlcInstance(mVlcInstance);
 #endif
         dockWin->setStreamUrls(urls.dock);
         mVideoWindows.append(dockWin);
-    }
-
-    // 缩小至原来的 2/3，右侧/底部与主界面对齐
-    int videoW = 426;
-    int videoH = 266;
-    int gap = 20;
-
-    QRect mainGeo = geometry();
-    int x = mainGeo.right() - videoW;
-    int y = mainGeo.bottom() - 2 * videoH - gap;
-
-    for (int i = 0; i < mVideoWindows.size(); ++i) {
-        mVideoWindows[i]->resize(videoW, videoH);
-        mVideoWindows[i]->move(x, y + i * (videoH + gap));
-        mVideoWindows[i]->show();
-        mVideoWindows[i]->raise();
+        mVideoSplitter->addWidget(dockWin);
     }
 }
 
 void MainWindow::hideVideoWindows() {
-    for (auto* win : mVideoWindows) {
-        win->hide();
+    if (mVideoToggleBtn && mVideoToggleBtn->isChecked()) {
+        mVideoToggleBtn->setChecked(false);
     }
-}
-
-void MainWindow::repositionVideoWindows() {
-    if (mVideoWindows.isEmpty()) return;
-
-    int videoW = 426;
-    int videoH = 266;
-    int gap = 20;
-
-    QRect mainGeo = geometry();
-    int x = mainGeo.right() - videoW;
-    int y = mainGeo.bottom() - 2 * videoH - gap;
-
-    for (int i = 0; i < mVideoWindows.size(); ++i) {
-        mVideoWindows[i]->move(x, y + i * (videoH + gap));
-    }
-}
-
-void MainWindow::moveEvent(QMoveEvent* event) {
-    QMainWindow::moveEvent(event);
-    repositionVideoWindows();
-}
-
-void MainWindow::resizeEvent(QResizeEvent* event) {
-    QMainWindow::resizeEvent(event);
-    repositionVideoWindows();
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
@@ -1291,13 +1284,6 @@ void MainWindow::closeEvent(QCloseEvent* event) {
         }
     }
     mPoppedOutDialogs.clear();
-
-    // 关闭所有视频直播窗口
-    for (auto* win : mVideoWindows) {
-        win->close();       // non-spontaneous → accept → 真正关闭
-        win->deleteLater();
-    }
-    mVideoWindows.clear();
 
 #ifdef HAS_VLC
     if (mVlcInstance) {

@@ -48,7 +48,7 @@ VideoStreamWindow::VideoStreamWindow(int index,
                                      const QStringList& switchSources,
                                      const QString& switchLabel,
                                      QWidget* parent)
-    : QWidget(parent, Qt::Window | Qt::WindowStaysOnTopHint)
+    : QWidget(parent)
     , mIndex(index)
     , mDeviceLabel(deviceLabel)
     , mCurrentSource(defaultSource)
@@ -74,21 +74,11 @@ VideoStreamWindow::~VideoStreamWindow() {
 }
 
 void VideoStreamWindow::setupUi() {
-    setMinimumSize(640, 400);
-    resize(640, 400);
+    setMinimumSize(320, 200);
 
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
-
-    // --- 标题栏 ---
-    mTitleLabel = new QLabel(this);
-    mTitleLabel->setStyleSheet(
-        "background: #1e1e1e; color: #ccc; font-size: 12px;"
-        "padding: 6px 10px; font-weight: bold;");
-    mTitleLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    updateTitle();
-    layout->addWidget(mTitleLabel);
 
     // --- 视频区域 ---
     mVideoArea = new QWidget(this);
@@ -231,12 +221,6 @@ void VideoStreamWindow::releaseVlcMedia() {
 #endif
 }
 
-void VideoStreamWindow::updateTitle() {
-    setWindowTitle(QString::fromUtf8("直播 - %1").arg(mDeviceLabel));
-    mTitleLabel->setText(
-        QString::fromUtf8("📷 %1 · %2").arg(mDeviceLabel, mCurrentSource));
-}
-
 void VideoStreamWindow::updateQualityButtonText() {
     mQualityBtn->setText(
         QString::fromUtf8("🎛 %1").arg(mCurrentQuality));
@@ -347,7 +331,6 @@ void VideoStreamWindow::onQualitySelected(const QString& quality) {
 
 void VideoStreamWindow::onSwitchSource(const QString& source) {
     mCurrentSource = source;
-    updateTitle();
     applySourceUrl(source);
 
     // 如果正在播放，自动切换到新视频源
@@ -405,12 +388,6 @@ void VideoStreamWindow::setVlcInstance(libvlc_instance_t* vlc) {
 }
 
 void VideoStreamWindow::closeEvent(QCloseEvent* event) {
-    if (event->spontaneous()) {
-        // 用户点击 X → 仅隐藏，不销毁
-        hide();
-        event->ignore();
-    } else {
-        // 程序关闭（主窗口关闭级联）→ 真正关闭
-        event->accept();
-    }
+    // 嵌入式子控件，直接接受关闭
+    event->accept();
 }
