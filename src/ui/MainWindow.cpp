@@ -452,6 +452,22 @@ void MainWindow::setupLayout() {
 
     leftLayout->addWidget(leftSplitter, 1);
 
+    // Topic 下发面板（折叠，左侧底部 — 与 Topic 列表形成工作流）
+    mPublishPanel = new PublishPanel(this);
+    mPublishPanel->setVisible(false);
+    mPublishPanel->setMinimumHeight(120);
+    leftLayout->addWidget(mPublishPanel);
+
+    mTogglePublishBtn = new QPushButton("▶ Topic 下发", this);
+    mTogglePublishBtn->setObjectName("publishToggle");
+    mTogglePublishBtn->setCheckable(true);
+    mTogglePublishBtn->setCursor(Qt::PointingHandCursor);
+    connect(mTogglePublishBtn, &QPushButton::toggled, this, [this](bool checked) {
+        mPublishPanel->setVisible(checked);
+        mTogglePublishBtn->setText(checked ? "◢ Topic 下发" : "▶ Topic 下发");
+    });
+    leftLayout->addWidget(mTogglePublishBtn);
+
     // === 右侧：OSD + JSON 水平分割 ===
     auto* rightPanel = new QWidget(this);
     auto* rightLayout = new QVBoxLayout(rightPanel);
@@ -491,28 +507,6 @@ void MainWindow::setupLayout() {
     mRightSplitter->setStretchFactor(1, 1);
     mRightSplitter->setSizes({600, 440});
 
-    // 垂直分割器：上方 OSD/JSON 区域 | 下方 Topic 下发面板（支持拖拽调整高度）
-    auto* verticalSplitter = new QSplitter(Qt::Vertical, this);
-    verticalSplitter->addWidget(mRightSplitter);
-    verticalSplitter->setStretchFactor(0, 1);
-
-    // Topic 下发（折叠）
-    mPublishPanel = new PublishPanel(this);
-    mPublishPanel->setVisible(false);
-    mPublishPanel->setMinimumHeight(120);  // 保证基本可操作区域
-
-    verticalSplitter->addWidget(mPublishPanel);
-    verticalSplitter->setStretchFactor(1, 0);
-
-    mTogglePublishBtn = new QPushButton("▶ Topic 下发", this);
-    mTogglePublishBtn->setObjectName("publishToggle");
-    mTogglePublishBtn->setCheckable(true);
-    mTogglePublishBtn->setCursor(Qt::PointingHandCursor);
-    connect(mTogglePublishBtn, &QPushButton::toggled, this, [this](bool checked) {
-        mPublishPanel->setVisible(checked);
-        mTogglePublishBtn->setText(checked ? "◢ Topic 下发" : "▶ Topic 下发");
-    });
-
     // === 标签页（方案E：监控 + 功能面板 → 标签页嵌入 + 可弹出）===
     mRightTabWidget = new QTabWidget(this);
     mRightTabWidget->setDocumentMode(true);
@@ -528,13 +522,12 @@ void MainWindow::setupLayout() {
     connect(popOutBtn, &QToolButton::clicked, this, &MainWindow::popOutCurrentTab);
     mRightTabWidget->setCornerWidget(popOutBtn, Qt::TopRightCorner);
 
-    // Tab 0: 监控（当前右侧全部内容）
+    // Tab 0: 监控
     auto* monitorTab = new QWidget();
     auto* monitorTabLayout = new QVBoxLayout(monitorTab);
     monitorTabLayout->setContentsMargins(0, 0, 0, 0);
     monitorTabLayout->setSpacing(0);
-    monitorTabLayout->addWidget(verticalSplitter, 1);
-    monitorTabLayout->addWidget(mTogglePublishBtn);
+    monitorTabLayout->addWidget(mRightSplitter, 1);
     mRightTabWidget->addTab(monitorTab, "📊 监控");
 
     // 辅助：创建一个带 QScrollArea 包裹的标签页
