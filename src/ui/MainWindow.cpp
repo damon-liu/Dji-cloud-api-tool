@@ -324,11 +324,13 @@ void MainWindow::setupToolBar() {
     featureBtn->setCursor(Qt::PointingHandCursor);
     {
         auto* menu = new QMenu(featureBtn);
-        menu->addAction("🎮 远程调试", this, [this]() { showFunctionInTab(1); });
-        menu->addAction("🛫 飞行控制", this, [this]() { showFunctionInTab(2); });
-        menu->addAction("📢 PSDK功能", this, [this]() { showFunctionInTab(3); });
+        menu->addAction("🎮 远程调试", this, [this]() { showFunctionInTab(TAB_DOCK); });
+        menu->addAction("🛫 飞行控制", this, [this]() { showFunctionInTab(TAB_FLIGHT); });
+        menu->addAction("📢 PSDK功能", this, [this]() { showFunctionInTab(TAB_PSDK); });
         // 运维工具功能暂未完善，暂时隐藏
-        // menu->addAction("🔧 运维工具", this, [this]() { showFunctionInTab(4); });
+        // menu->addAction("🔧 运维工具", this, [this]() { showFunctionInTab(TAB_MAINT); });
+        menu->addSeparator();
+        menu->addAction("📋 下发记录", this, [this]() { showFunctionInTab(TAB_HISTORY); });
         featureBtn->setMenu(menu);
     }
     toolbar->addWidget(featureBtn);
@@ -905,8 +907,19 @@ void MainWindow::connectSignals() {
     connect(mDevMgr, &DeviceManager::speakerProgressUpdated,
             mPsdkSpeakerPanel, &PsdkSpeakerPanel::onSpeakerProgress);
 
-    // 控制记录按钮 → 切换到下发记录标签页
+    // 控制记录按钮 → 切换到下发记录标签页（与 showFunctionInTab 联动）
     auto switchToHistory = [this]() {
+        // 如果已弹出 → 激活独立窗口
+        if (mPoppedOutDialogs.contains(mCommandHistoryDialog)) {
+            auto* dlg = mPoppedOutDialogs[mCommandHistoryDialog];
+            if (dlg) {
+                dlg->show();
+                dlg->raise();
+                dlg->activateWindow();
+            }
+            return;
+        }
+        // 否则切到对应标签页
         for (int i = 0; i < mRightTabWidget->count(); ++i) {
             auto* scroll = qobject_cast<QScrollArea*>(mRightTabWidget->widget(i));
             if (scroll && scroll->widget() == mCommandHistoryDialog) {
@@ -1389,24 +1402,24 @@ void MainWindow::showFunctionInTab(int tabIndex) {
         return;
     }
 
-    // 否则切到对应标签页
-    mRightTabWidget->setCurrentIndex(tabIndex);
+    // 否则切到对应标签页（panel 被 QScrollArea 包裹，需遍历查找）
+    for (int i = 0; i < mRightTabWidget->count(); ++i) {
+        auto* scroll = qobject_cast<QScrollArea*>(mRightTabWidget->widget(i));
+        if (scroll && scroll->widget() == panel) {
+            mRightTabWidget->setCurrentIndex(i);
+            return;
+        }
+    }
 }
 
 void MainWindow::popOutCurrentTab() {
     int idx = mRightTabWidget->currentIndex();
     if (idx == TAB_MONITOR) return;  // 监控标签页不能弹出
 
-    // 找到标签页对应的 panel
-    QWidget* panel = nullptr;
-    switch (idx) {
-        case TAB_DOCK:   panel = mDockControlPanel;   break;
-        case TAB_FLIGHT: panel = mFlightControlPanel; break;
-        case TAB_PSDK:   panel = mPsdkSpeakerPanel;   break;
-        case TAB_MAINT:   panel = mMaintenancePanel;        break;
-        case TAB_HISTORY: panel = mCommandHistoryDialog;    break;
-        default: return;
-    }
+    // 找到标签页对应的 panel（从 QScrollArea 中取出）
+    auto* scrollArea = qobject_cast<QScrollArea*>(mRightTabWidget->widget(idx));
+    QWidget* panel = scrollArea ? scrollArea->widget() : nullptr;
+    if (!panel) return;
 
     if (mPoppedOutDialogs.contains(panel)) return;  // 已弹出
 
