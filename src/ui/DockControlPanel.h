@@ -8,7 +8,6 @@
 
 class QLabel;
 class QPushButton;
-class QPlainTextEdit;
 
 class DockControlPanel : public QWidget {
     Q_OBJECT
@@ -28,6 +27,7 @@ public slots:
 signals:
     void commandRequested(const QString& gatewaySn, DockCommandType type,
                           const QJsonObject& data = {});
+    void historyRequested();
 
 private:
     enum class DebugModeState { Unknown, Disabled, Enabled };
@@ -36,19 +36,16 @@ private:
     void requestCommand(DockCommandType type, const QJsonObject& data = {});
     void updateButtonStates();
     void setStatus(const QString& text, bool error = false);
-    void appendHistory(const DockCommandResult& result);
 
     // --- top row ---
     QComboBox*    mDockCombo = nullptr;
     QLabel*       mOnlineLabel = nullptr;
 
     // --- status ---
-    QLabel*       mDebugModeLabel = nullptr;
     QLabel*       mStatusLabel = nullptr;
 
     // --- debug mode ---
-    QPushButton*  mDebugOpenBtn = nullptr;
-    QPushButton*  mDebugCloseBtn = nullptr;
+    QPushButton*  mDebugToggleBtn = nullptr;
 
     // --- device controls ---
     QPushButton*  mDroneOpenBtn = nullptr;
@@ -59,9 +56,6 @@ private:
     QPushButton*  mChargeOpenBtn = nullptr;
     QPushButton*  mChargeCloseBtn = nullptr;
     QPushButton*  mRebootBtn = nullptr;
-
-    QPlainTextEdit* mHistoryEdit = nullptr;
-    QPushButton*    mToggleHistoryBtn = nullptr;
 
     // --- data ---
     QVector<DeviceInfo> mAvailableDocks;

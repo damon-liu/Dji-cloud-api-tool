@@ -20,6 +20,7 @@
 #include "FlightControlPanel.h"
 #include "MaintenancePanel.h"
 #include "PsdkSpeakerPanel.h"
+#include "CommandHistoryDialog.h"
 #include "DeviceManager.h"
 #include "VideoStreamWindow.h"
 
@@ -68,6 +69,7 @@ private:
     FlightControlPanel*  mFlightControlPanel = nullptr;
     MaintenancePanel*  mMaintenancePanel = nullptr;
     PsdkSpeakerPanel*  mPsdkSpeakerPanel = nullptr;
+    CommandHistoryDialog* mCommandHistoryDialog = nullptr;
     QMap<QWidget*, QWidget*> mPoppedOutDialogs;  // panel → dialog 映射（弹出状态追踪）
     QList<VideoStreamWindow*> mVideoWindows;
     QWidget*           mVideoPanel = nullptr;        // 视频面板容器（嵌入监控标签页）

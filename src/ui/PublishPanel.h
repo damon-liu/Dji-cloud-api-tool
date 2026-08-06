@@ -24,29 +24,24 @@ public:
     void setConnected(bool connected);
     void loadTemplates(const QString& path);
 
-    // 追加外部指令记录（供机场控制/飞行控制/运维模式使用）
-    void appendCommandRecord(const QString& topic, const QString& requestJson,
-                             const QString& replyJson, bool success, const QString& message);
-
 signals:
     void publishRequested(const QString& topic, const QString& json);
+    void historyRequested();
+    void publishCompleted(const QString& topic, const QString& json,
+                          bool success, const QString& message);
 
 public slots:
     void onPublishResult(const QString& topic, bool success, const QString& message);
 
-protected:
-    bool eventFilter(QObject* obj, QEvent* event) override;
-
 private:
     void setupUi();
     void updateSendButtonState();
-    void appendHistory(const QString& topic, const QString& json, bool success, const QString& message,
-                       const QString& replyJson = {});
 
     QComboBox*      mTopicCombo       = nullptr;
     QPlainTextEdit* mEditor           = nullptr;
     QPushButton*    mSendBtn          = nullptr;
-    QPlainTextEdit* mHistoryLog       = nullptr;
+    QPushButton*    mHistoryBtn       = nullptr;
+    QLabel*         mResultLabel      = nullptr;
     QString         mDeviceSn;
     QString         mGatewaySn;
     QString         mLastSentJson;

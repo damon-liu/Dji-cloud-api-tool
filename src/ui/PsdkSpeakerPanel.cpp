@@ -104,6 +104,18 @@ void PsdkSpeakerPanel::setupUi() {
     setStatus(QString::fromUtf8("连接机场后可使用PSDK喊话器"));
     topRow->addWidget(mStatusLabel);
 
+    auto* ctrlRecordBtn = new QPushButton(QString::fromUtf8("📋 控制记录"), this);
+    ctrlRecordBtn->setCursor(Qt::PointingHandCursor);
+    ctrlRecordBtn->setFocusPolicy(Qt::NoFocus);
+    ctrlRecordBtn->setStyleSheet(
+        "QPushButton { border: none; background: transparent; color: #1a73e8;"
+        "font-size: 13px; padding: 4px 8px; }"
+        "QPushButton:hover { color: #1557b0; text-decoration: underline; }");
+    topRow->addWidget(ctrlRecordBtn);
+    connect(ctrlRecordBtn, &QPushButton::clicked, this, [this]() {
+        emit historyRequested();
+    });
+
     mainLayout->addLayout(topRow);
 
     // ===== 可滚动内容区 =====
@@ -440,31 +452,6 @@ void PsdkSpeakerPanel::setupUi() {
     scrollArea->setWidget(scrollContent);
     mainLayout->addWidget(scrollArea, 1);
 
-    // ===== 下发记录（默认收起，▶/◢ 按钮切换） =====
-    mHistoryEdit = new QPlainTextEdit(this);
-    mHistoryEdit->setReadOnly(true);
-    mHistoryEdit->setMinimumHeight(100);
-    mHistoryEdit->setMaximumHeight(180);
-    mHistoryEdit->setPlaceholderText(QString::fromUtf8("暂无下发记录"));
-    mHistoryEdit->setVisible(false);  // 默认收起
-    mainLayout->addWidget(mHistoryEdit);
-
-    mToggleHistoryBtn = new QPushButton(QString::fromUtf8("▶ 下发记录"), this);
-    mToggleHistoryBtn->setCheckable(true);
-    mToggleHistoryBtn->setCursor(Qt::PointingHandCursor);
-    mToggleHistoryBtn->setStyleSheet(
-        "QPushButton { border: none; background: #f1f3f4; color: #5f6368;"
-        "font-size: 13px; font-weight: bold; padding: 4px 8px; border-radius: 4px; }"
-        "QPushButton:hover { background: #e8eaed; }");
-    mainLayout->addWidget(mToggleHistoryBtn);
-
-    connect(mToggleHistoryBtn, &QPushButton::toggled, this, [this](bool checked) {
-        mHistoryEdit->setVisible(checked);
-        mToggleHistoryBtn->setText(checked
-            ? QString::fromUtf8("◢ 下发记录")
-            : QString::fromUtf8("▶ 下发记录"));
-    });
-
     // 按钮最小高度
     mStopBtn->setMinimumHeight(34);
     mReplayBtn->setMinimumHeight(34);
@@ -611,7 +598,6 @@ void PsdkSpeakerPanel::onCommandStateChanged(const DockCommandResult& result) {
     } else {
         setStatus(QString::fromUtf8("%1失败：%2").arg(action, result.message), true);
     }
-    appendHistory(result);
     updateButtonStates();
 }
 
@@ -726,35 +712,6 @@ void PsdkSpeakerPanel::setStatus(const QString& text, bool error) {
     mStatusLabel->setStyleSheet(error
         ? QStringLiteral("color: #d93025; font-weight: bold; padding: 4px;")
         : QStringLiteral("color: #e8710a; font-weight: bold; padding: 4px;"));
-}
-
-void PsdkSpeakerPanel::appendHistory(const DockCommandResult& result) {
-    const QString action = DockCommandBuilder::displayName(result.type);
-    QString verdict;
-    switch (result.state) {
-    case DockCommandState::Succeeded:
-        verdict = QString::fromUtf8("✅ 成功 (result=0)");
-        break;
-    case DockCommandState::TimedOut:
-        verdict = QString::fromUtf8("❌ 超时");
-        break;
-    default:
-        verdict = QString::fromUtf8("❌ 失败（%1）").arg(result.message);
-        break;
-    }
-
-    QString block;
-    block += QStringLiteral("[%1] %2  %3\n")
-        .arg(QTime::currentTime().toString(QStringLiteral("HH:mm:ss")), action, verdict);
-    block += QString::fromUtf8("Topic: thing/product/%1/services\n").arg(result.gatewaySn);
-    block += QString::fromUtf8("下发:\n%1\n").arg(result.requestJson.trimmed());
-    block += QString::fromUtf8("响应:\n%1\n").arg(result.replyJson.isEmpty()
-        ? QString::fromUtf8("（无响应）") : result.replyJson.trimmed());
-    block += QString::fromUtf8("────────────────────────────\n");
-
-    mHistoryEdit->moveCursor(QTextCursor::Start);
-    mHistoryEdit->insertPlainText(block);
-    mHistoryEdit->moveCursor(QTextCursor::Start);
 }
 
 QString PsdkSpeakerPanel::computeMd5(const QString& text) const {

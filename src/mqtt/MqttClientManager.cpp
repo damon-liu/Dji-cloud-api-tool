@@ -139,7 +139,8 @@ void MqttClientManager::onError(QMqttClient::ClientError error) {
     case QMqttClient::UnknownError:
     default:                                 errStr = QStringLiteral("Unknown error"); break;
     }
-    qWarning() << "MQTT error:" << errStr;
+    qWarning() << "MQTT error:" << errStr
+               << "| host:" << mConfig.host << "port:" << mConfig.port;
     emit connectionError(errStr);
 }
 
@@ -150,6 +151,9 @@ void MqttClientManager::onMessageReceived(const QByteArray& message,
 
 void MqttClientManager::onReconnectTimer() {
     qDebug() << "MQTT: reconnecting...";
+    // 重连前先断开，确保内部传输层回到干净状态
+    // 避免前次连接失败（如 TransportInvalid）导致的残留错误状态
+    mClient->disconnectFromHost();
     mClient->connectToHost();
 }
 

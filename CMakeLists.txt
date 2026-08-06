@@ -41,6 +41,7 @@ set(SOURCES
     src/ui/VideoStreamWindow.cpp
     src/ui/TakeoffConfigDialog.cpp
     src/ui/PsdkSpeakerPanel.cpp
+    src/ui/CommandHistoryDialog.cpp
 )
 
 set(HEADERS
@@ -73,6 +74,7 @@ set(HEADERS
     src/ui/TakeoffConfigDialog.h
     src/ui/PsdkSpeakerPanel.h
     src/ui/PsdkSpeakerDialog.h
+    src/ui/CommandHistoryDialog.h
 )
 
 # 自动从 logo.jpg 生成 logo3.ico（jpg 更新时自动重新生成）

@@ -34,13 +34,13 @@ public slots:
 signals:
     void commandRequested(const QString& gatewaySn, DockCommandType type,
                           const QJsonObject& data = {});
+    void historyRequested();
 
 private:
     void setupUi();
     void requestCommand(DockCommandType type, const QJsonObject& data = {});
     void updateButtonStates();
     void setStatus(const QString& text, bool error = false);
-    void appendHistory(const DockCommandResult& result);
     void renderProgress();
     QString computeMd5(const QString& text) const;
 
@@ -78,10 +78,6 @@ private:
     QLabel*       mProgressLabel = nullptr;
     QMap<QString, int> mStepProgress;   // stepKey → percent (-1=未开始, 0-99=进行中, 100=已完成)
     QString       mCurrentProgressMethod; // 当前进度对应的 method（区分 TTS/音频）
-
-    // --- history ---
-    QPlainTextEdit* mHistoryEdit = nullptr;
-    QPushButton*    mToggleHistoryBtn = nullptr;
 
     // --- data ---
     QVector<DeviceInfo> mAvailableDocks;

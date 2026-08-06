@@ -1,16 +1,16 @@
 #include "DockControlPanel.h"
+#include "StyleConstants.h"
 
 #include <QAbstractItemView>
+#include <QFrame>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
-#include <QPlainTextEdit>
 #include <QPushButton>
+#include <QScrollArea>
 #include <QSizePolicy>
-#include <QTextCursor>
-#include <QTime>
 #include <QVBoxLayout>
 
 DockControlPanel::DockControlPanel(QWidget* parent)
@@ -64,44 +64,63 @@ void DockControlPanel::setupUi() {
     setStatus(QString::fromUtf8("连接机场后可使用快捷控制"));
     topRow->addWidget(mStatusLabel);
 
+    auto* ctrlRecordBtn = new QPushButton(QString::fromUtf8("📋 控制记录"), this);
+    ctrlRecordBtn->setCursor(Qt::PointingHandCursor);
+    ctrlRecordBtn->setFocusPolicy(Qt::NoFocus);
+    ctrlRecordBtn->setStyleSheet(
+        "QPushButton { border: none; background: transparent; color: #1a73e8;"
+        "font-size: 13px; padding: 4px 8px; }"
+        "QPushButton:hover { color: #1557b0; text-decoration: underline; }");
+    topRow->addWidget(ctrlRecordBtn);
+    connect(ctrlRecordBtn, &QPushButton::clicked, this, [this]() {
+        emit historyRequested();
+    });
+
     mainLayout->addLayout(topRow);
 
     // ===================================================
-    // 远程调试（参照飞行控制界面布局）
+    // 远程调试（标题在 QGroupBox 边框上，按钮在框内右上角紧贴顶部）
     // ===================================================
     auto* debugGroup = new QGroupBox(QString::fromUtf8("远程调试"), this);
     auto* debugLayout = new QVBoxLayout(debugGroup);
+    debugLayout->setContentsMargins(8, 2, 8, 8);
     debugLayout->setSpacing(8);
 
-    // -- 状态行：状态标签 + stretch + 进入/退出 --
-    auto* debugStatusRow = new QHBoxLayout;
-    mDebugModeLabel = new QLabel(QString::fromUtf8("状态：未知"), debugGroup);
-    debugStatusRow->addWidget(mDebugModeLabel);
-    debugStatusRow->addStretch();
-    mDebugOpenBtn  = new QPushButton(QString::fromUtf8("进入"), debugGroup);
-    mDebugCloseBtn = new QPushButton(QString::fromUtf8("退出"), debugGroup);
-    debugStatusRow->addWidget(mDebugOpenBtn);
-    debugStatusRow->addWidget(mDebugCloseBtn);
-    debugLayout->addLayout(debugStatusRow);
-
-    // 分隔线
-    auto* debugSep = new QFrame(debugGroup);
-    debugSep->setFrameShape(QFrame::HLine);
-    debugSep->setFrameShadow(QFrame::Sunken);
-    debugLayout->addWidget(debugSep);
+    // -- 调试模式切换按钮（右对齐，紧贴 QGroupBox 标题栏下沿） --
+    {
+        auto* toggleRow = new QHBoxLayout;
+        toggleRow->addStretch();
+        mDebugToggleBtn = new QPushButton(debugGroup);
+        mDebugToggleBtn->setCursor(Qt::PointingHandCursor);
+        mDebugToggleBtn->setFocusPolicy(Qt::NoFocus);
+        mDebugToggleBtn->setStyleSheet(
+            "QPushButton {"
+            "  border: 1px solid #c4d7f2; border-radius: 4px;"
+            "  background: #e8f0fe; color: #202124; font-weight: bold;"
+            "  padding: 5px 16px; font-size: 13px;"
+            "}"
+            "QPushButton:hover {"
+            "  border-color: #1a73e8; background: #d2e3fc;"
+            "}");
+        toggleRow->addWidget(mDebugToggleBtn);
+        debugLayout->addLayout(toggleRow);
+    }
 
     // -- 子卡片辅助 lambda --
     auto makeCard = [debugGroup](const QString& title, const QString& openText,
                                  const QString& closeText,
                                  QPushButton*& openBtn, QPushButton*& closeBtn) {
         auto* group = new QGroupBox(title, debugGroup);
+        group->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
         auto* v = new QVBoxLayout(group);
-        v->addStretch();
         auto* row = new QHBoxLayout;
         openBtn  = new QPushButton(openText, group);
         closeBtn = new QPushButton(closeText, group);
+        row->addStretch(1);
         row->addWidget(openBtn);
+        row->addStretch(1);
         row->addWidget(closeBtn);
+        row->addStretch(1);
         v->addLayout(row);
         return group;
     };
@@ -118,36 +137,30 @@ void DockControlPanel::setupUi() {
 
     // 机场舱盖卡片
     auto* coverGroup = new QGroupBox(QString::fromUtf8("机场舱盖"), debugGroup);
+    coverGroup->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     auto* coverLayout = new QVBoxLayout(coverGroup);
-    coverLayout->addStretch();
     auto* coverBtnRow = new QHBoxLayout;
     mCoverOpenBtn  = new QPushButton(QString::fromUtf8("打开"), coverGroup);
     mCoverCloseBtn = new QPushButton(QString::fromUtf8("关闭"), coverGroup);
+    coverBtnRow->addStretch(1);
     coverBtnRow->addWidget(mCoverOpenBtn);
+    coverBtnRow->addStretch(1);
     coverBtnRow->addWidget(mCoverCloseBtn);
+    coverBtnRow->addStretch(1);
     coverLayout->addLayout(coverBtnRow);
 
     // 机场维护卡片
     auto* maintainGroup = new QGroupBox(QString::fromUtf8("机场维护"), debugGroup);
+    maintainGroup->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     auto* maintainLayout = new QVBoxLayout(maintainGroup);
-    maintainLayout->addStretch();
     auto* maintainBtnRow = new QHBoxLayout;
     mRebootBtn = new QPushButton(QString::fromUtf8("机场重启"), maintainGroup);
-    mRebootBtn->setFocusPolicy(Qt::NoFocus);
-    mRebootBtn->setStyleSheet(
-        "QPushButton { background: #f29900; color: #fff; font-weight: bold;"
-        "border: none; border-radius: 4px; padding: 6px 16px; font-size: 13px; }"
-        "QPushButton:hover { background: #e37400; }"
-        "QPushButton:disabled { background: #dadce0; color: #80868b; }");
-    maintainBtnRow->addWidget(mRebootBtn);
     mCoverForceBtn = new QPushButton(QString::fromUtf8("强制关舱门"), maintainGroup);
-    mCoverForceBtn->setFocusPolicy(Qt::NoFocus);
-    mCoverForceBtn->setStyleSheet(
-        "QPushButton { border: 1px solid #d93025; border-radius: 4px; color: #d93025;"
-        "font-weight: bold; background: #fff; padding: 6px 16px; font-size: 13px; }"
-        "QPushButton:hover { background: #fce8e6; }"
-        "QPushButton:disabled { border-color: #dadce0; color: #80868b; background: #f8f9fa; }");
+    maintainBtnRow->addStretch(1);
+    maintainBtnRow->addWidget(mRebootBtn);
+    maintainBtnRow->addStretch(1);
     maintainBtnRow->addWidget(mCoverForceBtn);
+    maintainBtnRow->addStretch(1);
     maintainLayout->addLayout(maintainBtnRow);
 
     // -- 第一行：飞机充电 | 飞机电源 --
@@ -163,55 +176,34 @@ void DockControlPanel::setupUi() {
     deviceRow2->addWidget(maintainGroup, 1);
     deviceRow2->addWidget(coverGroup, 1);
     debugLayout->addLayout(deviceRow2);
+    debugLayout->addStretch();
 
-    // --- 下发记录（默认收起，▶/◢ 按钮切换，放在远程调试底部，展开向下弹出） ---
-    mToggleHistoryBtn = new QPushButton(QString::fromUtf8("▶ 下发记录"), debugGroup);
-    mToggleHistoryBtn->setCheckable(true);
-    mToggleHistoryBtn->setCursor(Qt::PointingHandCursor);
-    mToggleHistoryBtn->setStyleSheet(
-        "QPushButton { border: none; background: #f1f3f4; color: #5f6368;"
-        "font-size: 13px; font-weight: bold; padding: 4px 8px; border-radius: 4px; }"
-        "QPushButton:hover { background: #e8eaed; }");
-    debugLayout->addWidget(mToggleHistoryBtn);
+    // --- ScrollArea 包裹（视频展开时保持按钮可滚动访问） ---
+    auto* scrollArea = new QScrollArea(this);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setWidget(debugGroup);
+    mainLayout->addWidget(scrollArea, 1);
 
-    mHistoryEdit = new QPlainTextEdit(debugGroup);
-    mHistoryEdit->setReadOnly(true);
-    mHistoryEdit->setMinimumHeight(80);
-    mHistoryEdit->setPlaceholderText(QString::fromUtf8("暂无下发记录"));
-    mHistoryEdit->setVisible(false);
-    debugLayout->addWidget(mHistoryEdit);
+    // --- 按钮统一样式 ---
+    styleWarningButton(mRebootBtn);
+    styleDangerOutlineButton(mCoverForceBtn);
 
-    mainLayout->addWidget(debugGroup);
-    mainLayout->addStretch();
-
-    connect(mToggleHistoryBtn, &QPushButton::toggled, this, [this](bool checked) {
-        mHistoryEdit->setVisible(checked);
-        mToggleHistoryBtn->setText(checked
-            ? QString::fromUtf8("◢ 下发记录")
-            : QString::fromUtf8("▶ 下发记录"));
-    });
-
-    const QList<QPushButton*> buttons = {
-        mDebugOpenBtn, mDebugCloseBtn, mDroneOpenBtn, mDroneCloseBtn,
-        mCoverOpenBtn, mCoverCloseBtn, mCoverForceBtn,
-        mChargeOpenBtn, mChargeCloseBtn, mRebootBtn
+    const QList<QPushButton*> defaultButtons = {
+        mDroneOpenBtn, mDroneCloseBtn,
+        mCoverOpenBtn, mCoverCloseBtn,
+        mChargeOpenBtn, mChargeCloseBtn
     };
-    for (auto* button : buttons) {
-        button->setCursor(Qt::PointingHandCursor);
-        button->setFocusPolicy(Qt::NoFocus);
-        button->setMinimumHeight(34);
-        button->setStyleSheet(
-            "QPushButton { border: 1px solid #dadce0; border-radius: 4px;"
-            "background: #fff; color: #333; font-weight: bold;"
-            "padding: 6px 16px; font-size: 13px; }"
-            "QPushButton:hover { border-color: #1a73e8; color: #1a73e8; background: #e8f0fe; }"
-            "QPushButton:disabled { border-color: #dadce0; color: #80868b; background: #f8f9fa; }");
-    }
+    for (auto* btn : defaultButtons)
+        styleDefaultButton(btn);
 
-    connect(mDebugOpenBtn, &QPushButton::clicked, this,
-            [this]() { requestCommand(DockCommandType::DebugModeOpen); });
-    connect(mDebugCloseBtn, &QPushButton::clicked, this,
-            [this]() { requestCommand(DockCommandType::DebugModeClose); });
+    connect(mDebugToggleBtn, &QPushButton::clicked, this, [this]() {
+        if (mDebugModeState == DebugModeState::Enabled)
+            requestCommand(DockCommandType::DebugModeClose);
+        else
+            requestCommand(DockCommandType::DebugModeOpen);
+    });
     connect(mDroneOpenBtn, &QPushButton::clicked, this,
             [this]() { requestCommand(DockCommandType::DroneOpen); });
     connect(mDroneCloseBtn, &QPushButton::clicked, this,
@@ -234,7 +226,14 @@ void DockControlPanel::setupUi() {
     connect(mChargeCloseBtn, &QPushButton::clicked, this,
             [this]() { requestCommand(DockCommandType::ChargeClose); });
     connect(mRebootBtn, &QPushButton::clicked, this,
-            [this]() { requestCommand(DockCommandType::DeviceReboot); });
+            [this]() {
+        auto ret = QMessageBox::warning(this,
+            QString::fromUtf8("确认机场重启"),
+            QString::fromUtf8("机场重启将中断当前所有任务，确定要重启吗？"),
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        if (ret == QMessageBox::Yes)
+            requestCommand(DockCommandType::DeviceReboot);
+    });
 }
 
 void DockControlPanel::setDevice(const QString& displayName, const QString& gatewaySn, bool online) {
@@ -362,14 +361,16 @@ void DockControlPanel::onCommandStateChanged(const DockCommandResult& result) {
     } else {
         setStatus(QString::fromUtf8("%1失败：%2").arg(action, result.message), true);
     }
-    appendHistory(result);
     updateButtonStates();
 }
 
 void DockControlPanel::updateButtonStates() {
     const bool available = mConnected && mOnline && !mGatewaySn.isEmpty() && !mPending;
-    mDebugOpenBtn->setEnabled(available && mDebugModeState != DebugModeState::Enabled);
-    mDebugCloseBtn->setEnabled(available && mDebugModeState != DebugModeState::Disabled);
+    mDebugToggleBtn->setEnabled(available);
+    if (mDebugModeState == DebugModeState::Enabled)
+        mDebugToggleBtn->setText(QString::fromUtf8("✅ 退出调试模式"));
+    else
+        mDebugToggleBtn->setText(QString::fromUtf8("进入调试模式"));
 
     const bool debugControlsEnabled = available && mDebugModeState == DebugModeState::Enabled;
     mDroneOpenBtn->setEnabled(debugControlsEnabled);
@@ -380,21 +381,6 @@ void DockControlPanel::updateButtonStates() {
     mChargeOpenBtn->setEnabled(debugControlsEnabled);
     mChargeCloseBtn->setEnabled(debugControlsEnabled);
     mRebootBtn->setEnabled(debugControlsEnabled);
-
-    switch (mDebugModeState) {
-    case DebugModeState::Enabled:
-        mDebugModeLabel->setText(QString::fromUtf8("状态：已开启"));
-        mDebugModeLabel->setStyleSheet(QStringLiteral("color: #1e8e3e; font-weight: bold;"));
-        break;
-    case DebugModeState::Disabled:
-        mDebugModeLabel->setText(QString::fromUtf8("状态：已退出"));
-        mDebugModeLabel->setStyleSheet(QStringLiteral("color: #5f6368;"));
-        break;
-    case DebugModeState::Unknown:
-        mDebugModeLabel->setText(QString::fromUtf8("状态：未知（以本客户端操作结果为准）"));
-        mDebugModeLabel->setStyleSheet(QStringLiteral("color: #b06000;"));
-        break;
-    }
 }
 
 void DockControlPanel::setStatus(const QString& text, bool error) {
@@ -402,34 +388,4 @@ void DockControlPanel::setStatus(const QString& text, bool error) {
     mStatusLabel->setStyleSheet(error
         ? QStringLiteral("color: #d93025; font-weight: bold; padding: 4px;")
         : QStringLiteral("color: #e8710a; font-weight: bold; padding: 4px;"));
-}
-
-void DockControlPanel::appendHistory(const DockCommandResult& result) {
-    const QString action = DockCommandBuilder::displayName(result.type);
-    QString verdict;
-    switch (result.state) {
-    case DockCommandState::Succeeded:
-        verdict = QString::fromUtf8("✅ 成功 (result=0)");
-        break;
-    case DockCommandState::TimedOut:
-        verdict = QString::fromUtf8("❌ 超时");
-        break;
-    default:
-        verdict = QString::fromUtf8("❌ 失败（%1）").arg(result.message);
-        break;
-    }
-
-    QString block;
-    block += QStringLiteral("[%1] %2  %3\n")
-        .arg(QTime::currentTime().toString(QStringLiteral("HH:mm:ss")), action, verdict);
-    block += QString::fromUtf8("Topic: thing/product/%1/services\n").arg(result.gatewaySn);
-    block += QString::fromUtf8("下发:\n%1\n").arg(result.requestJson.trimmed());
-    block += QString::fromUtf8("响应:\n%1\n").arg(result.replyJson.isEmpty()
-        ? QString::fromUtf8("（无响应）") : result.replyJson.trimmed());
-    block += QString::fromUtf8("────────────────────────────\n");
-
-    // 最新记录插入顶部
-    mHistoryEdit->moveCursor(QTextCursor::Start);
-    mHistoryEdit->insertPlainText(block);
-    mHistoryEdit->moveCursor(QTextCursor::Start);
 }

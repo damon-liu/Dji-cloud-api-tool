@@ -112,6 +112,23 @@ void PublishPanel::setupUi() {
     btnLayout->addWidget(mSendBtn);
     layout->addLayout(btnLayout);
 
+    // 下发记录按钮 + 发送结果提示 + 发送按钮
+    mHistoryBtn = new QPushButton(QString::fromUtf8("📋 下发记录"), this);
+    mHistoryBtn->setCursor(Qt::PointingHandCursor);
+    mHistoryBtn->setFocusPolicy(Qt::NoFocus);
+    mHistoryBtn->setStyleSheet(
+        "QPushButton { border: none; background: transparent; color: #1a73e8;"
+        "font-size: 13px; padding: 4px 8px; }"
+        "QPushButton:hover { color: #1557b0; text-decoration: underline; }");
+    btnLayout->insertWidget(0, mHistoryBtn);
+    connect(mHistoryBtn, &QPushButton::clicked, this, [this]() {
+        emit historyRequested();
+    });
+
+    mResultLabel = new QLabel(this);
+    mResultLabel->setStyleSheet("font-size: 12px; padding: 2px 8px;");
+    btnLayout->insertWidget(1, mResultLabel);
+
     // 发送按钮：发射 publishRequested 信号
     connect(mSendBtn, &QPushButton::clicked, this, [this]() {
         QString topic = mTopicCombo->currentText().trimmed();
@@ -121,22 +138,6 @@ void PublishPanel::setupUi() {
         mLastSentJson = json;
         emit publishRequested(topic, json);
     });
-
-    // 下发记录标签
-    auto* historyLabel = new QLabel(QString::fromUtf8("下发记录:"));
-    historyLabel->setStyleSheet("font-size: 12px; color: #5f6368;");
-    layout->addWidget(historyLabel);
-
-    // 下发记录（只读），占据剩余空间
-    mHistoryLog = new QPlainTextEdit(this);
-    mHistoryLog->setReadOnly(true);
-    mHistoryLog->setPlaceholderText(QString::fromUtf8("暂无下发记录"));
-    mHistoryLog->setStyleSheet(
-        "QPlainTextEdit { background: #fafafa; border: 1px solid #e0e0e0; "
-        "border-radius: 4px; font-family: 'Consolas', monospace; font-size: 11px; "
-        "padding: 4px; color: #333; }");
-    mHistoryLog->viewport()->installEventFilter(this);
-    layout->addWidget(mHistoryLog, 1);
 }
 
 void PublishPanel::setDeviceSn(const QString& sn) {
@@ -173,42 +174,15 @@ void PublishPanel::updateSendButtonState() {
 }
 
 void PublishPanel::onPublishResult(const QString& topic, bool success, const QString& message) {
-    QString msg = success ? QString::fromUtf8("发送成功")
-                          : QString::fromUtf8("发送失败: ") + message;
-    appendHistory(topic, mLastSentJson, success, msg);
+    if (success) {
+        mResultLabel->setText(QString::fromUtf8("✅ 发送成功"));
+        mResultLabel->setStyleSheet("color: #1e8e3e; font-size: 12px; padding: 2px 8px;");
+    } else {
+        mResultLabel->setText(QString::fromUtf8("❌ 发送失败: %1").arg(message));
+        mResultLabel->setStyleSheet("color: #d93025; font-size: 12px; padding: 2px 8px;");
+    }
+    emit publishCompleted(topic, mLastSentJson, success, message);
     mLastSentJson.clear();
-}
-
-void PublishPanel::appendHistory(const QString& topic, const QString& json,
-                                 bool success, const QString& message,
-                                 const QString& replyJson) {
-    QString timeStr = QTime::currentTime().toString("HH:mm:ss");
-    QString icon = success ? QString::fromUtf8("✅") : QString::fromUtf8("❌");
-
-    QString block;
-    block += QStringLiteral("[%1] %2 %3\n").arg(timeStr, icon, message);
-    block += QString::fromUtf8("Topic: %1\n").arg(topic);
-    block += QString::fromUtf8("下发:\n%1\n").arg(json.trimmed());
-    if (!replyJson.isEmpty())
-        block += QString::fromUtf8("响应:\n%1\n").arg(replyJson.trimmed());
-    block += QString::fromUtf8("────────────────────────────\n");
-
-    // 最新记录插入顶部
-    mHistoryLog->moveCursor(QTextCursor::Start);
-    mHistoryLog->insertPlainText(block);
-    mHistoryLog->moveCursor(QTextCursor::Start);
-}
-
-void PublishPanel::appendCommandRecord(const QString& topic, const QString& requestJson,
-                                        const QString& replyJson, bool success, const QString& message) {
-    QString msg = success ? message
-                          : QString::fromUtf8("失败（%1）").arg(message);
-    appendHistory(topic, requestJson, success, msg, replyJson);
-}
-
-bool PublishPanel::eventFilter(QObject* obj, QEvent* event) {
-    Q_UNUSED(obj) Q_UNUSED(event)
-    return QWidget::eventFilter(obj, event);
 }
 
 void PublishPanel::loadTemplates(const QString& path) {

@@ -98,6 +98,14 @@ static const char* TOPIC_MAPPINGS_BUILTIN = R"(
 }
 )";
 
+// 标签页索引常量（需要在 connectSignals 之前定义）
+static const int TAB_MONITOR  = 0;
+static const int TAB_DOCK     = 1;
+static const int TAB_FLIGHT   = 2;
+static const int TAB_PSDK     = 3;
+static const int TAB_MAINT    = 4;
+static const int TAB_HISTORY  = 5;  // switch 标识用，非标签页索引（运维未创建时实际索引为 4）
+
 MainWindow::MainWindow(DeviceManager* devMgr, QWidget* parent)
     : QMainWindow(parent), mDevMgr(devMgr)
 {
@@ -319,7 +327,8 @@ void MainWindow::setupToolBar() {
         menu->addAction("🎮 远程调试", this, [this]() { showFunctionInTab(1); });
         menu->addAction("🛫 飞行控制", this, [this]() { showFunctionInTab(2); });
         menu->addAction("📢 PSDK功能", this, [this]() { showFunctionInTab(3); });
-        menu->addAction("🔧 运维工具", this, [this]() { showFunctionInTab(4); });
+        // 运维工具功能暂未完善，暂时隐藏
+        // menu->addAction("🔧 运维工具", this, [this]() { showFunctionInTab(4); });
         featureBtn->setMenu(menu);
     }
     toolbar->addWidget(featureBtn);
@@ -553,8 +562,12 @@ void MainWindow::setupLayout() {
     mPsdkSpeakerPanel->setConnected(mDevMgr->isConnected());
     createPanelTab(mPsdkSpeakerPanel, "📢 PSDK功能");
 
-    mMaintenancePanel = new MaintenancePanel();
-    createPanelTab(mMaintenancePanel, "🔧 运维工具");
+    // 运维工具功能暂未完善，暂时隐藏
+    // mMaintenancePanel = new MaintenancePanel();
+    // createPanelTab(mMaintenancePanel, "🔧 运维工具");
+
+    mCommandHistoryDialog = new CommandHistoryDialog();
+    createPanelTab(mCommandHistoryDialog, "📋 下发记录");
 
     // === 右侧分割器：标签页 + 视频面板（可拖拽调节） ===
     auto* rightContentSplitter = new QSplitter(Qt::Vertical, this);
@@ -829,16 +842,53 @@ void MainWindow::connectSignals() {
             mDevMgr, &DeviceManager::executeDockCommand);
     connect(mDevMgr, &DeviceManager::dockCommandStateChanged,
             mDockControlPanel, &DockControlPanel::onCommandStateChanged);
-    // 指令结果同步到 Topic 下发记录
+    // 指令结果同步到统一下发记录
     connect(mDevMgr, &DeviceManager::dockCommandStateChanged,
             this, [this](const DockCommandResult& result) {
         if (result.state == DockCommandState::Publishing
             || result.state == DockCommandState::WaitingReply)
             return;
-        bool success = (result.state == DockCommandState::Succeeded);
-        QString topic = QStringLiteral("thing/product/%1/services").arg(result.gatewaySn);
-        mPublishPanel->appendCommandRecord(topic, result.requestJson, result.replyJson,
-                                            success, DockCommandBuilder::displayName(result.type));
+        // 根据指令类型判断来源
+        HistorySource source = HistorySource::Dock;
+        switch (result.type) {
+        case DockCommandType::DebugModeOpen:
+        case DockCommandType::DebugModeClose:
+        case DockCommandType::DroneOpen:
+        case DockCommandType::DroneClose:
+        case DockCommandType::CoverOpen:
+        case DockCommandType::CoverClose:
+        case DockCommandType::CoverForceClose:
+        case DockCommandType::ChargeOpen:
+        case DockCommandType::ChargeClose:
+        case DockCommandType::DeviceReboot:
+            source = HistorySource::Dock;
+            break;
+        case DockCommandType::FlightAuthorityGrab:
+        case DockCommandType::FlightAuthorityRelease:
+        case DockCommandType::Takeoff:
+        case DockCommandType::Return:
+        case DockCommandType::ReturnHomeCancel:
+        case DockCommandType::EmergencyStop:
+        case DockCommandType::PayloadAuthorityGrab:
+        case DockCommandType::PayloadAuthorityRelease:
+        case DockCommandType::CameraPhotoTake:
+        case DockCommandType::CameraRecordStart:
+        case DockCommandType::CameraRecordStop:
+        case DockCommandType::GimbalReset:
+            source = HistorySource::Flight;
+            break;
+        case DockCommandType::SpeakerTtsPlay:
+        case DockCommandType::SpeakerAudioPlay:
+        case DockCommandType::SpeakerVolumeSet:
+        case DockCommandType::SpeakerModeSet:
+        case DockCommandType::SpeakerStop:
+        case DockCommandType::SpeakerReplay:
+            source = HistorySource::PSDK;
+            break;
+        default:
+            break;
+        }
+        mCommandHistoryDialog->appendDockCommand(source, result);
     });
 
     // FlightControlPanel ↔ DeviceManager
@@ -854,6 +904,32 @@ void MainWindow::connectSignals() {
             mPsdkSpeakerPanel, &PsdkSpeakerPanel::onCommandStateChanged);
     connect(mDevMgr, &DeviceManager::speakerProgressUpdated,
             mPsdkSpeakerPanel, &PsdkSpeakerPanel::onSpeakerProgress);
+
+    // 控制记录按钮 → 切换到下发记录标签页
+    auto switchToHistory = [this]() {
+        for (int i = 0; i < mRightTabWidget->count(); ++i) {
+            auto* scroll = qobject_cast<QScrollArea*>(mRightTabWidget->widget(i));
+            if (scroll && scroll->widget() == mCommandHistoryDialog) {
+                mRightTabWidget->setCurrentIndex(i);
+                return;
+            }
+        }
+    };
+    connect(mDockControlPanel, &DockControlPanel::historyRequested,
+            this, switchToHistory);
+    connect(mFlightControlPanel, &FlightControlPanel::historyRequested,
+            this, switchToHistory);
+    connect(mPsdkSpeakerPanel, &PsdkSpeakerPanel::historyRequested,
+            this, switchToHistory);
+    connect(mPublishPanel, &PublishPanel::historyRequested,
+            this, switchToHistory);
+
+    // Topic 下发结果 → 统一下发记录
+    connect(mPublishPanel, &PublishPanel::publishCompleted,
+            this, [this](const QString& topic, const QString& json,
+                         bool success, const QString& message) {
+        mCommandHistoryDialog->appendTopicPublish(topic, json, success, message);
+    });
 
     // è®¾å¤å¨çº¿ç¶æåå â å·æ°æºåºåè¡¨
     connect(mDevMgr, &DeviceManager::deviceOnlineChanged,
@@ -1290,12 +1366,6 @@ void MainWindow::closeEvent(QCloseEvent* event) {
 
 // ——— 方案E：标签页 → 弹出/合并 ———
 
-static const int TAB_MONITOR  = 0;
-static const int TAB_DOCK     = 1;
-static const int TAB_FLIGHT   = 2;
-static const int TAB_PSDK     = 3;
-static const int TAB_MAINT    = 4;
-
 void MainWindow::showFunctionInTab(int tabIndex) {
     // 找到对应 panel
     QWidget* panel = nullptr;
@@ -1303,7 +1373,8 @@ void MainWindow::showFunctionInTab(int tabIndex) {
         case TAB_DOCK:   panel = mDockControlPanel;   break;
         case TAB_FLIGHT: panel = mFlightControlPanel; break;
         case TAB_PSDK:   panel = mPsdkSpeakerPanel;   break;
-        case TAB_MAINT:  panel = mMaintenancePanel;   break;
+        case TAB_MAINT:   panel = mMaintenancePanel;        break;
+        case TAB_HISTORY: panel = mCommandHistoryDialog;    break;
         default: return;
     }
 
@@ -1332,7 +1403,8 @@ void MainWindow::popOutCurrentTab() {
         case TAB_DOCK:   panel = mDockControlPanel;   break;
         case TAB_FLIGHT: panel = mFlightControlPanel; break;
         case TAB_PSDK:   panel = mPsdkSpeakerPanel;   break;
-        case TAB_MAINT:  panel = mMaintenancePanel;   break;
+        case TAB_MAINT:   panel = mMaintenancePanel;        break;
+        case TAB_HISTORY: panel = mCommandHistoryDialog;    break;
         default: return;
     }
 
@@ -1383,6 +1455,7 @@ void MainWindow::popInPanel(QWidget* panel) {
     else if (panel == mFlightControlPanel) tabIndex = TAB_FLIGHT;
     else if (panel == mPsdkSpeakerPanel)   tabIndex = TAB_PSDK;
     else if (panel == mMaintenancePanel)   tabIndex = TAB_MAINT;
+    else if (panel == mCommandHistoryDialog) tabIndex = TAB_HISTORY;
 
     // 从 dialog 中取出 panel
     if (dlg) {
@@ -1408,7 +1481,8 @@ void MainWindow::popInPanel(QWidget* panel) {
         case TAB_DOCK:  title = "🎮 远程调试"; break;
         case TAB_FLIGHT: title = "🛫 飞行控制"; break;
         case TAB_PSDK:  title = "📢 PSDK功能"; break;
-        case TAB_MAINT: title = "🔧 运维工具"; break;
+        case TAB_MAINT:   title = "🔧 运维工具"; break;
+        case TAB_HISTORY: title = "📋 下发记录"; break;
     }
 
     mRightTabWidget->insertTab(tabIndex, scroll, title);

@@ -8,7 +8,6 @@
 
 class QLabel;
 class QPushButton;
-class QPlainTextEdit;
 
 class FlightControlPanel : public QWidget {
     Q_OBJECT
@@ -33,13 +32,13 @@ public slots:
 signals:
     void commandRequested(const QString& gatewaySn, DockCommandType type,
                           const QJsonObject& data = {});
+    void historyRequested();
 
 private:
     void setupUi();
     void requestCommand(DockCommandType type, const QJsonObject& data = {});
     void updateButtonStates();
     void setStatus(const QString& text, bool error = false);
-    void appendHistory(const DockCommandResult& result);
 
     // --- top row ---
     QComboBox*    mDockCombo = nullptr;
@@ -49,18 +48,14 @@ private:
     QLabel*       mStatusLabel = nullptr;
 
     // --- flight command section ---
-    QLabel*       mFlightAuthStatusLabel = nullptr;
-    QPushButton*  mFlightAuthGrabBtn = nullptr;
-    QPushButton*  mFlightAuthReleaseBtn = nullptr;
+    QPushButton*  mFlightAuthToggleBtn = nullptr;
     QPushButton*  mTakeoffBtn = nullptr;
     QPushButton*  mReturnHomeBtn = nullptr;
     QPushButton*  mCancelReturnBtn = nullptr;
     QPushButton*  mEmergencyStopBtn = nullptr;
 
     // --- payload section ---
-    QLabel*       mPayloadAuthStatusLabel = nullptr;
-    QPushButton*  mPayloadAuthGrabBtn = nullptr;
-    QPushButton*  mPayloadAuthReleaseBtn = nullptr;
+    QPushButton*  mPayloadAuthToggleBtn = nullptr;
     QPushButton*  mCameraPhotoBtn = nullptr;
     QPushButton*  mCameraRecordStartBtn = nullptr;
     QPushButton*  mCameraRecordStopBtn = nullptr;
@@ -68,10 +63,6 @@ private:
     QPushButton*  mGimbalDownBtn = nullptr;
     QPushButton*  mGimbalYawCenterBtn = nullptr;
     QPushButton*  mGimbalPitchDownBtn = nullptr;
-
-    // --- history ---
-    QPlainTextEdit* mHistoryEdit = nullptr;
-    QPushButton*    mToggleHistoryBtn = nullptr;
 
     // --- data ---
     QVector<DeviceInfo> mAvailableDocks;
