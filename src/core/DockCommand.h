@@ -37,7 +37,13 @@ enum class DockCommandType {
     SpeakerVolumeSet,    // 设置音量 speaker_play_volume_set
     SpeakerModeSet,      // 设置播放模式 speaker_play_mode_set
     SpeakerStop,         // 停止播放 speaker_play_stop
-    SpeakerReplay        // 重新播放 speaker_replay
+    SpeakerReplay,        // 重新播放 speaker_replay
+    // 视频直播推流控制
+    LiveStartPush,       // 开始推流 live_start_push
+    LiveStopPush,        // 停止推流 live_stop_push
+    LiveSetQuality,      // 设置清晰度 live_set_quality
+    LiveLensChange,      // 切换镜头类型 live_lens_change
+    LiveCameraChange,    // 切换相机 live_camera_change
 };
 
 enum class DockCommandState {

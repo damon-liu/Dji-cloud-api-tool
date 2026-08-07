@@ -756,6 +756,9 @@ void MainWindow::connectSignals() {
         mUserDeselected = false;
         hideVideoWindows();
     });
+    // 视频直播 — live_status 动态驱动
+    connect(mDevMgr, &DeviceManager::deviceLiveStatusChanged,
+            this, &MainWindow::onLiveStatusChanged);
     connect(mDevMgr, &DeviceManager::brokerError, this, [this](const QString& err) {
         statusBar()->showMessage("MQTT 错误: " + err, 5000);
     });
@@ -766,6 +769,13 @@ void MainWindow::connectSignals() {
         mTopicListWidget->clearTopics();
         mTopicParsePanel->clear();
         mUserDeselected = false;
+        // 清除视频直播缓存和窗口
+        mCachedLiveStatus.clear();
+        while (!mVideoWindows.isEmpty()) {
+            VideoStreamWindow* win = mVideoWindows.takeLast();
+            win->deleteLater();
+        }
+        hideVideoWindows();
         updateStatusBar();
     });
 
@@ -1323,45 +1333,51 @@ void MainWindow::showVideoWindows() {
     }
 #endif
 
-    StreamUrlConfig urls = mDevMgr->streamUrls();
+    // 尝试从 live_status cache 初始化窗口
+    const auto& allDevs = mDevMgr->allDevices();
+    bool hasLiveStatus = false;
 
-    if (mVideoWindows.isEmpty()) {
-        // 窗口0: 飞机 — 切换镜头：红外(默认)/变焦/广角
-        auto* aircraftWin = new VideoStreamWindow(
-            0,
-            QString::fromUtf8("飞机"),
-            QString::fromUtf8("红外相机"),
-            QStringList{
-                QString::fromUtf8("红外相机"),
-                QString::fromUtf8("变焦相机"),
-                QString::fromUtf8("广角相机")
-            },
-            QString::fromUtf8("切换镜头"),
-            this);  // 嵌入为子控件
-#ifdef HAS_VLC
-        aircraftWin->setVlcInstance(mVlcInstance);
-#endif
-        aircraftWin->setStreamUrls(urls.aircraft);
-        mVideoWindows.append(aircraftWin);
-        mVideoSplitter->addWidget(aircraftWin);
+    for (auto* dev : allDevs) {
+        QVector<LiveStatusInfo> liveList = mDevMgr->latestLiveStatus(dev->sn);
+        if (!liveList.isEmpty()) {
+            hasLiveStatus = true;
+            onLiveStatusChanged(dev->sn, liveList);
+        }
+    }
 
-        // 窗口1: 机场 — 切换视频：机场外(默认)/机场内
-        auto* dockWin = new VideoStreamWindow(
-            1,
-            QString::fromUtf8("机场"),
-            QString::fromUtf8("机场外视频"),
-            QStringList{
-                QString::fromUtf8("机场外视频"),
-                QString::fromUtf8("机场内视频")
-            },
-            QString::fromUtf8("切换视频"),
-            this);  // 嵌入为子控件
+    // 向后兼容：无 live_status 则使用静态 stream_urls
+    if (!hasLiveStatus && mVideoWindows.isEmpty()) {
+        StreamUrlConfig urls = mDevMgr->streamUrls();
+
+        QStringList acKeys = urls.aircraft.keys();
+        if (!acKeys.isEmpty()) {
+            LiveStatusInfo info;
+            info.deviceSn = QString::fromUtf8("飞机");
+            info.videoId  = acKeys.first();
+            info.status   = 1;
+            auto* win = new VideoStreamWindow(info, this);
 #ifdef HAS_VLC
-        dockWin->setVlcInstance(mVlcInstance);
+            win->setVlcInstance(mVlcInstance);
 #endif
-        dockWin->setStreamUrls(urls.dock);
-        mVideoWindows.append(dockWin);
-        mVideoSplitter->addWidget(dockWin);
+            win->setStreamUrl(urls.aircraft.value(acKeys.first()));
+            mVideoWindows.append(win);
+            mVideoSplitter->addWidget(win);
+        }
+
+        QStringList dockKeys = urls.dock.keys();
+        if (!dockKeys.isEmpty()) {
+            LiveStatusInfo info;
+            info.deviceSn = QString::fromUtf8("机场");
+            info.videoId  = dockKeys.first();
+            info.status   = 1;
+            auto* win = new VideoStreamWindow(info, this);
+#ifdef HAS_VLC
+            win->setVlcInstance(mVlcInstance);
+#endif
+            win->setStreamUrl(urls.dock.value(dockKeys.first()));
+            mVideoWindows.append(win);
+            mVideoSplitter->addWidget(win);
+        }
     }
 }
 
@@ -1369,6 +1385,105 @@ void MainWindow::hideVideoWindows() {
     if (mVideoToggleBtn && mVideoToggleBtn->isChecked()) {
         mVideoToggleBtn->setChecked(false);
     }
+}
+
+void MainWindow::onLiveStatusChanged(const QString& sn, const QVector<LiveStatusInfo>& list) {
+#ifdef HAS_VLC
+    if (!mVlcInstance) {
+        mVlcInstance = libvlc_new(0, nullptr);
+        if (!mVlcInstance) return;
+    }
+#endif
+
+    // 反闪烁：与缓存完全相同则跳过
+    if (mCachedLiveStatus.value(sn) == list)
+        return;
+    mCachedLiveStatus[sn] = list;
+
+    // 解析网关 SN：推流控制指令必须发到机场（gateway），子飞机的 live_status
+    // 其 topic SN 为飞机 SN，需解析到父机场 SN
+    QString gatewaySn = sn;
+    DeviceInfo* dev = mDevMgr->device(sn);
+    if (dev && !dev->parentSn.isEmpty())
+        gatewaySn = dev->parentSn;
+
+    StreamMediaConfig ss = mDevMgr->streamMediaConfig();
+    bool serverConfigured = !ss.ip.isEmpty();
+
+    // 移除该设备的所有旧窗口，再按最新 live_status[] 重建
+    removeVideoWindowsForDevice(sn);
+
+    for (const auto& info : list) {
+        auto* win = new VideoStreamWindow(info, this);
+        win->setProperty("videoId", info.videoId);
+        win->setProperty("deviceSn", info.deviceSn);
+#ifdef HAS_VLC
+        win->setVlcInstance(mVlcInstance);
+#endif
+        if (serverConfigured) {
+            QString url = buildStreamUrl(ss, info.videoId);
+            win->setStreamUrl(url);
+        }
+        connectPushControlSignals(win, gatewaySn);
+
+        mVideoWindows.append(win);
+        mVideoSplitter->addWidget(win);
+    }
+}
+
+void MainWindow::removeVideoWindowsForDevice(const QString& sn) {
+    QMutableListIterator<VideoStreamWindow*> it(mVideoWindows);
+    while (it.hasNext()) {
+        VideoStreamWindow* win = it.next();
+        if (win->property("deviceSn").toString() == sn) {
+            win->hide();
+            win->deleteLater();
+            it.remove();
+        }
+    }
+}
+
+QString MainWindow::buildStreamUrl(const StreamMediaConfig& ss, const QString& videoId) {
+    QString scheme;
+    switch (ss.protocol) {
+    case 1:  scheme = QStringLiteral("rtmp");    break;
+    case 3:  scheme = QStringLiteral("gb28181"); break;
+    case 4:  scheme = QStringLiteral("webrtc");  break;
+    default: scheme = QStringLiteral("rtmp");    break;
+    }
+    return QString("%1://%2:%3/live/%4")
+        .arg(scheme)
+        .arg(ss.ip)
+        .arg(ss.port)
+        .arg(videoId);
+}
+
+void MainWindow::connectPushControlSignals(VideoStreamWindow* win, const QString& gatewaySn) {
+    connect(win, &VideoStreamWindow::startPushRequested, this,
+            [this](const QString& gwSn, const QString& videoId,
+                   const QString& url, int urlType, int quality) {
+        mDevMgr->liveStartPush(gwSn, videoId, url, urlType, quality);
+    });
+
+    connect(win, &VideoStreamWindow::stopPushRequested, this,
+            [this](const QString& gwSn, const QString& videoId) {
+        mDevMgr->liveStopPush(gwSn, videoId);
+    });
+
+    connect(win, &VideoStreamWindow::setQualityRequested, this,
+            [this](const QString& gwSn, const QString& videoId, int quality) {
+        mDevMgr->liveSetQuality(gwSn, videoId, quality);
+    });
+
+    connect(win, &VideoStreamWindow::lensChangeRequested, this,
+            [this](const QString& gwSn, const QString& videoType) {
+        mDevMgr->liveLensChange(gwSn, videoType);
+    });
+
+    connect(win, &VideoStreamWindow::cameraChangeRequested, this,
+            [this](const QString& gwSn, const QString& videoId, int pos) {
+        mDevMgr->liveCameraChange(gwSn, videoId, pos);
+    });
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
@@ -1380,6 +1495,12 @@ void MainWindow::closeEvent(QCloseEvent* event) {
         }
     }
     mPoppedOutDialogs.clear();
+
+    // 清理所有视频窗口（在 VLC 释放前）
+    while (!mVideoWindows.isEmpty()) {
+        VideoStreamWindow* win = mVideoWindows.takeLast();
+        win->deleteLater();
+    }
 
 #ifdef HAS_VLC
     if (mVlcInstance) {

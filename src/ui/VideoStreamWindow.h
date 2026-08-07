@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <QStringList>
 #include <QMap>
+#include "DeviceInfo.h"  // LiveStatusInfo
 
 class QLabel;
 class QPushButton;
@@ -18,27 +19,32 @@ struct libvlc_media_t;
 class VideoStreamWindow : public QWidget {
     Q_OBJECT
 public:
-    // deviceLabel: "飞机" / "机场"
-    // defaultSource: 默认视频源 "红外相机" / "机场外视频"
-    // switchSources: 可切换的视频源列表
-    // switchLabel: 切换按钮文字 "切换镜头" / "切换视频"
-    explicit VideoStreamWindow(int index,
-                               const QString& deviceLabel,
-                               const QString& defaultSource,
-                               const QStringList& switchSources,
-                               const QString& switchLabel,
+    // 新构造：由 LiveStatusInfo 驱动
+    explicit VideoStreamWindow(const LiveStatusInfo& info,
                                QWidget* parent = nullptr);
 
     void setStreamUrl(const QString& url);
-    void setStreamUrls(const QMap<QString, QString>& urls);   // 预设所有视频源 URL
-    void setVlcInstance(libvlc_instance_t* vlc);              // 注入全局 VLC 实例
+    void setVlcInstance(libvlc_instance_t* vlc);
 
-    // VLC 事件回调（由静态 C 回调 onVlcEvent 调用）
+    // 增量更新：OSD 高频推送时复用窗口，只更新标签不重建 VLC
+    void updateLiveStatus(const LiveStatusInfo& info);
+
+    // VLC 事件回调
     void onVlcError();
     void onVlcBuffering(float cache);
     void onVlcPlaying();
 
     ~VideoStreamWindow() override;
+
+signals:
+    void startPushRequested(const QString& gatewaySn, const QString& videoId,
+                            const QString& url, int urlType, int videoQuality);
+    void stopPushRequested(const QString& gatewaySn, const QString& videoId);
+    void setQualityRequested(const QString& gatewaySn, const QString& videoId,
+                             int quality);
+    void lensChangeRequested(const QString& gatewaySn, const QString& videoType);
+    void cameraChangeRequested(const QString& gatewaySn, const QString& videoId,
+                               int cameraPosition);
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -46,44 +52,47 @@ protected:
 private slots:
     void onStart();
     void onStop();
-    void onQualitySelected(const QString& quality);
-    void onSwitchSource(const QString& source);
+    void onQualitySelected(const QString& quality, int qualityVal);
+    void onLensSelected(const QString& videoType);
+    void onCameraSelected(int cameraPosition);
 
 private:
     void setupUi();
     void updateButtonStates();
     void updateQualityButtonText();
-    void applySourceUrl(const QString& source);   // 切换视频源时更新 URL
-    void releaseVlcMedia();                        // 释放当前 VLC media
+    void releaseVlcMedia();
 
-    int         mIndex;
-    QString     mDeviceLabel;
-    QString     mCurrentSource;
-    QStringList mSwitchSources;
-    QString     mSwitchLabel;
+    // 当前直播状态
+    QString     mDeviceSn;
+    QString     mVideoId;
+    int         mVideoQuality = 0;
+    QString     mVideoType;
+    int         mLiveStatus   = 0;   // 0=未直播, 1=在直播
+    int         mErrorStatus  = 0;
     QString     mCurrentQuality;
-    bool        mStreaming = false;
-    bool        mBuffering = false;
+    bool        mStreaming    = false;
+    bool        mBuffering    = false;
 
     // 视频区域
-    QWidget* mVideoArea;
-    QLabel*  mPlaceholderLabel;
+    QWidget*    mVideoArea;
+    QLabel*     mPlaceholderLabel;
+
+    // 信息标签
+    QLabel*     mTitleLabel;         // "设备SN | video_id: xxx"
+    QLabel*     mStatusLabel;        // "状态: 在直播 | 清晰度: 超清"
 
     // URL 输入
-    QLineEdit* mUrlInput;
+    QLineEdit*  mUrlInput;
 
     // 控制按钮
     QPushButton* mStartBtn;
     QPushButton* mStopBtn;
     QPushButton* mQualityBtn;
     QMenu*       mQualityMenu;
-
-    // 切换视频源按钮
-    QPushButton* mSwitchBtn;
-    QMenu*       mSwitchMenu;
-
-    // 视频源 → URL 映射（来自 config.json）
-    QMap<QString, QString> mUrlMap;
+    QPushButton* mLensBtn;          // 镜头类型切换
+    QMenu*       mLensMenu;
+    QPushButton* mCameraBtn;        // 相机切换（舱内/舱外）
+    QMenu*       mCameraMenu;
 
     // libVLC
     libvlc_instance_t*      mVlcInstance = nullptr;

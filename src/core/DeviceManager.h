@@ -79,6 +79,18 @@ public:
     StreamMediaConfig streamMediaConfig() const;
     void setStreamMediaConfig(const StreamMediaConfig& config);
 
+    // 视频直播 — live_status 缓存查询
+    QVector<LiveStatusInfo> latestLiveStatus(const QString& sn) const;
+
+    // 视频直播 — 推流控制指令
+    void liveStartPush(const QString& gatewaySn, const QString& videoId,
+                       const QString& url, int urlType, int videoQuality);
+    void liveStopPush(const QString& gatewaySn, const QString& videoId);
+    void liveSetQuality(const QString& gatewaySn, const QString& videoId, int quality);
+    void liveLensChange(const QString& gatewaySn, const QString& videoType);
+    void liveCameraChange(const QString& gatewaySn, const QString& videoId,
+                          int cameraPosition);
+
     // 保存配置
     bool saveConfig(const QString& path);
 
@@ -108,6 +120,7 @@ signals:
     void publishResult(const QString& topic, bool success, const QString& message);
     void dockCommandStateChanged(const DockCommandResult& result);
     void speakerProgressUpdated(const SpeakerProgress& progress);
+    void deviceLiveStatusChanged(const QString& sn, const QVector<LiveStatusInfo>& list);
 
 private slots:
     void onPublishCompleted(const QString& topic, bool success, const QString& message);
@@ -130,6 +143,7 @@ private:
     QMap<QString, QMap<QString, QString>> mRawJsonCache;  // sn → topic → json
     QMap<QString, QMap<QString, QJsonObject>> mMergedOsdData;  // sn → topic → merged data fields
     QMap<QString, QMap<QString, QStringList>> mJsonHistory;  // SN → topic → history[]
+    QMap<QString, QVector<LiveStatusInfo>> mLiveStatusCache;   // SN → latest live_status[]
     QMap<QString, qint64>       mLastMessageTime;  // SN → 最后收到消息的时间戳
     QTimer*                     mOfflineTimer = nullptr;
     QString                     mConfigPath;

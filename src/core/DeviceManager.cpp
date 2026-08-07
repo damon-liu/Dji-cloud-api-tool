@@ -324,6 +324,10 @@ void DeviceManager::setStreamMediaConfig(const StreamMediaConfig& config) {
     mConfigStore->setStreamMediaConfig(config);
 }
 
+QVector<LiveStatusInfo> DeviceManager::latestLiveStatus(const QString& sn) const {
+    return mLiveStatusCache.value(sn);
+}
+
 bool DeviceManager::saveConfig(const QString& path) {
     // 同步设备列表和 topics 到 ConfigStore
     QVector<DeviceInfo> devs;
@@ -391,6 +395,7 @@ void DeviceManager::switchToProfile(const QString& name) {
     mDockOsdCache.clear();
     mRawJsonCache.clear();
     mJsonHistory.clear();
+    mLiveStatusCache.clear();
     mTopicManager->clear();
 
     // 切换到新 profile（抑制信号，设备加载完后再通知 UI）
@@ -624,6 +629,29 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
                 }
             }
         }
+
+        // 解析 live_status[] 数组（视频直播状态）— 适用于所有设备类型
+        if (data.contains("live_status")) {
+            QJsonArray liveArr = data["live_status"].toArray();
+            QVector<LiveStatusInfo> liveList;
+            for (const auto& item : liveArr) {
+                QJsonObject obj = item.toObject();
+                LiveStatusInfo info;
+                info.videoId      = obj["video_id"].toString();
+                info.videoQuality = obj["video_quality"].toInt(0);
+                info.videoType    = obj["video_type"].toString();
+                info.status       = obj["status"].toInt(0);
+                info.errorStatus  = obj["error_status"].toInt(0);
+                info.deviceSn     = sn;
+                liveList.append(info);
+            }
+
+            // 反闪烁：内容未变化则不发射信号
+            if (mLiveStatusCache.value(sn) != liveList) {
+                mLiveStatusCache[sn] = liveList;
+                emit deviceLiveStatusChanged(sn, liveList);
+            }
+        }
     }
 
     // 如果之前是 offline，切换为 online
@@ -674,4 +702,42 @@ void DeviceManager::publishMessage(const QString& topic, const QString& json) {
 void DeviceManager::executeDockCommand(const QString& gatewaySn, DockCommandType type,
                                        const QJsonObject& data) {
     mDockCmdExecutor->execute(gatewaySn, type, data);
+}
+
+void DeviceManager::liveStartPush(const QString& gatewaySn, const QString& videoId,
+                                   const QString& url, int urlType, int videoQuality) {
+    QJsonObject data;
+    data["url_type"]      = urlType;
+    data["url"]           = url;
+    data["video_id"]      = videoId;
+    data["video_quality"] = videoQuality;
+    executeDockCommand(gatewaySn, DockCommandType::LiveStartPush, data);
+}
+
+void DeviceManager::liveStopPush(const QString& gatewaySn, const QString& videoId) {
+    QJsonObject data;
+    data["video_id"] = videoId;
+    executeDockCommand(gatewaySn, DockCommandType::LiveStopPush, data);
+}
+
+void DeviceManager::liveSetQuality(const QString& gatewaySn, const QString& videoId,
+                                    int quality) {
+    QJsonObject data;
+    data["video_id"]      = videoId;
+    data["video_quality"] = quality;
+    executeDockCommand(gatewaySn, DockCommandType::LiveSetQuality, data);
+}
+
+void DeviceManager::liveLensChange(const QString& gatewaySn, const QString& videoType) {
+    QJsonObject data;
+    data["video_type"] = videoType;
+    executeDockCommand(gatewaySn, DockCommandType::LiveLensChange, data);
+}
+
+void DeviceManager::liveCameraChange(const QString& gatewaySn, const QString& videoId,
+                                      int cameraPosition) {
+    QJsonObject data;
+    data["video_id"]        = videoId;
+    data["camera_position"] = cameraPosition;
+    executeDockCommand(gatewaySn, DockCommandType::LiveCameraChange, data);
 }

@@ -37,6 +37,11 @@ QString DockCommandBuilder::method(DockCommandType type) {
     case DockCommandType::SpeakerModeSet:   return QStringLiteral("speaker_play_mode_set");
     case DockCommandType::SpeakerStop:      return QStringLiteral("speaker_play_stop");
     case DockCommandType::SpeakerReplay:    return QStringLiteral("speaker_replay");
+    case DockCommandType::LiveStartPush:   return QStringLiteral("live_start_push");
+    case DockCommandType::LiveStopPush:    return QStringLiteral("live_stop_push");
+    case DockCommandType::LiveSetQuality:  return QStringLiteral("live_set_quality");
+    case DockCommandType::LiveLensChange:  return QStringLiteral("live_lens_change");
+    case DockCommandType::LiveCameraChange: return QStringLiteral("live_camera_change");
     }
     return {};
 }
@@ -73,6 +78,11 @@ QString DockCommandBuilder::displayName(DockCommandType type) {
     case DockCommandType::SpeakerModeSet:   return QString::fromUtf8("设置播放模式");
     case DockCommandType::SpeakerStop:      return QString::fromUtf8("停止播放");
     case DockCommandType::SpeakerReplay:    return QString::fromUtf8("重新播放");
+    case DockCommandType::LiveStartPush:   return QString::fromUtf8("开始推流");
+    case DockCommandType::LiveStopPush:    return QString::fromUtf8("停止推流");
+    case DockCommandType::LiveSetQuality:  return QString::fromUtf8("设置清晰度");
+    case DockCommandType::LiveLensChange:  return QString::fromUtf8("切换镜头类型");
+    case DockCommandType::LiveCameraChange: return QString::fromUtf8("切换相机");
     }
     return {};
 }
@@ -100,7 +110,12 @@ bool DockCommandBuilder::requiresDebugMode(DockCommandType type) {
         && type != DockCommandType::CameraPhotoTake
         && type != DockCommandType::CameraRecordStart
         && type != DockCommandType::CameraRecordStop
-        && type != DockCommandType::GimbalReset;
+        && type != DockCommandType::GimbalReset
+        && type != DockCommandType::LiveStartPush
+        && type != DockCommandType::LiveStopPush
+        && type != DockCommandType::LiveSetQuality
+        && type != DockCommandType::LiveLensChange
+        && type != DockCommandType::LiveCameraChange;
 }
 
 DockCommandRequest DockCommandBuilder::build(const QString& gatewaySn, DockCommandType type,

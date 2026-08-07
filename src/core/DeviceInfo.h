@@ -45,4 +45,40 @@ struct DeviceInfo {
     bool isChild() const { return !parentSn.isEmpty(); }
 };
 
+// 视频直播状态信息（从 OSD live_status[] 解析）
+struct LiveStatusInfo {
+    QString videoId;       // "1ZNDH1D0010098/39-0-7/normal-0"
+    int     videoQuality = 0;  // 0=自适应, 1=流畅, 2=标清, 3=高清, 4=超清
+    QString videoType;     // "normal", "wide", "zoom", "ir"
+    int     status = 0;        // 0=未直播, 1=在直播
+    int     errorStatus = 0;   // 0=正常, 非0=错误
+    QString deviceSn;      // 所属设备 SN（从 topic 路径解析）
+
+    bool operator==(const LiveStatusInfo& other) const {
+        return videoId == other.videoId
+            && videoQuality == other.videoQuality
+            && videoType == other.videoType
+            && status == other.status
+            && errorStatus == other.errorStatus
+            && deviceSn == other.deviceSn;
+    }
+
+    bool operator!=(const LiveStatusInfo& other) const {
+        return !(*this == other);
+    }
+};
+
+// 用于 QVector<LiveStatusInfo> 的相等比较
+inline bool operator==(const QVector<LiveStatusInfo>& a, const QVector<LiveStatusInfo>& b) {
+    if (a.size() != b.size()) return false;
+    for (int i = 0; i < a.size(); ++i) {
+        if (a[i] != b[i]) return false;
+    }
+    return true;
+}
+
+inline bool operator!=(const QVector<LiveStatusInfo>& a, const QVector<LiveStatusInfo>& b) {
+    return !(a == b);
+}
+
 #endif // DEVICEINFO_H

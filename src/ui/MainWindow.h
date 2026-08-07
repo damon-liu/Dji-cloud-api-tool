@@ -53,6 +53,10 @@ private:
     void refreshDockControlList(const QString& currentSn);
     void showVideoWindows();
     void hideVideoWindows();
+    void onLiveStatusChanged(const QString& sn, const QVector<LiveStatusInfo>& list);
+    void removeVideoWindowsForDevice(const QString& sn);
+    QString buildStreamUrl(const StreamMediaConfig& ss, const QString& videoId);
+    void connectPushControlSignals(VideoStreamWindow* win, const QString& gatewaySn);
     void showFunctionInTab(int tabIndex);
     void popOutCurrentTab();
     void popInPanel(QWidget* panel);
@@ -72,6 +76,7 @@ private:
     CommandHistoryDialog* mCommandHistoryDialog = nullptr;
     QMap<QWidget*, QWidget*> mPoppedOutDialogs;  // panel → dialog 映射（弹出状态追踪）
     QList<VideoStreamWindow*> mVideoWindows;
+    QMap<QString, QVector<LiveStatusInfo>> mCachedLiveStatus;  // 用于增量对比（反闪烁）
     QWidget*           mVideoPanel = nullptr;        // 视频面板容器（嵌入监控标签页）
     QSplitter*         mVideoSplitter = nullptr;     // 两个视频窗口水平分割器
     QPushButton*       mVideoToggleBtn = nullptr;    // 视频面板折叠/展开按钮
