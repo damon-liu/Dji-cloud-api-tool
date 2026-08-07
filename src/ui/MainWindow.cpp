@@ -611,10 +611,10 @@ void MainWindow::setupLayout() {
     mVideoToggleBtn->setCursor(Qt::PointingHandCursor);
     connect(mVideoToggleBtn, &QPushButton::toggled, this,
             [this, rightContentSplitter](bool checked) {
+        mVideoPanel->setVisible(checked);
         if (checked && mVideoWindows.isEmpty()) {
             showVideoWindows();
         }
-        mVideoPanel->setVisible(checked);
         mVideoToggleBtn->setText(checked ? QString::fromUtf8("◢ 视频直播")
                                          : QString::fromUtf8("▶ 视频直播"));
 
@@ -1402,6 +1402,12 @@ bool MainWindow::initVlc() {
 }
 
 void MainWindow::onLiveStatusChanged(const QString& sn, const QVector<LiveStatusInfo>& list) {
+    // 视频面板未展开：只缓存数据，不初始化 VLC 不创建窗口
+    if (!mVideoPanel || !mVideoPanel->isVisible()) {
+        mCachedLiveStatus[sn] = list;
+        return;
+    }
+
     if (!initVlc()) return;
 
     // 反闪烁：与缓存完全相同则跳过
