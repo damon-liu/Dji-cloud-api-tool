@@ -15,6 +15,13 @@ struct StreamUrlConfig {
     QMap<QString, QString> dock;       // 机场视频源 -> URL ("机场外视频" -> "rtmp://...")
 };
 
+// 流媒体推流服务器配置
+struct StreamMediaConfig {
+    QString ip       = "";       // 流媒体服务器 IP
+    int     port     = 1935;     // 端口 (RTMP 默认 1935)
+    int     protocol = 1;        // 协议类型: 1=RTMP, 3=GB28181, 4=WebRTC
+};
+
 // MQTT 连接配置
 struct MqttConfig {
     QString host     = "192.168.1.100";
@@ -29,6 +36,7 @@ struct ProfileData {
     QString                     name;
     MqttConfig                  mqtt;
     StreamUrlConfig             streamUrls;     // 视频直播流 URL
+    StreamMediaConfig           streamMedia;    // 流媒体推流服务器
     QVector<DeviceInfo>         devices;
     QMap<QString, QStringList>  deviceTopics;      // SN -> topics (有序)
     QMap<QString, QSet<QString>> disabledTopics;    // SN -> disabled topics
@@ -65,6 +73,9 @@ public:
 
     StreamUrlConfig streamUrls() const;
     void setStreamUrls(const StreamUrlConfig& urls);
+
+    StreamMediaConfig streamMediaConfig() const;
+    void setStreamMediaConfig(const StreamMediaConfig& config);
 
     QStringList topicsForDevice(const QString& sn) const;
     void setTopicsForDevice(const QString& sn, const QStringList& topics);

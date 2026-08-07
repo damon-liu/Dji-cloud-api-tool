@@ -75,6 +75,10 @@ public:
     StreamUrlConfig streamUrls() const;
     void setStreamUrls(const StreamUrlConfig& urls);
 
+    // 流媒体推流服务器配置
+    StreamMediaConfig streamMediaConfig() const;
+    void setStreamMediaConfig(const StreamMediaConfig& config);
+
     // 保存配置
     bool saveConfig(const QString& path);
 

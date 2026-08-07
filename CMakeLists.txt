@@ -30,6 +30,7 @@ set(SOURCES
     src/ui/RawJsonPanel.cpp
     src/ui/PublishPanel.cpp
     src/ui/ConfigDialog.cpp
+    src/ui/StreamMediaDialog.cpp
     src/ui/TopicEditDialog.cpp
     src/ui/TopicListWidget.cpp
     src/ui/TopicParsePanel.cpp
@@ -42,6 +43,7 @@ set(SOURCES
     src/ui/TakeoffConfigDialog.cpp
     src/ui/PsdkSpeakerPanel.cpp
     src/ui/CommandHistoryDialog.cpp
+    src/ui/AboutDialog.cpp
 )
 
 set(HEADERS
@@ -57,6 +59,7 @@ set(HEADERS
     src/ui/RawJsonPanel.h
     src/ui/PublishPanel.h
     src/ui/ConfigDialog.h
+    src/ui/StreamMediaDialog.h
     src/ui/TopicEditDialog.h
     src/ui/TopicListWidget.h
     src/core/TopicMapping.h
@@ -75,6 +78,7 @@ set(HEADERS
     src/ui/PsdkSpeakerPanel.h
     src/ui/PsdkSpeakerDialog.h
     src/ui/CommandHistoryDialog.h
+    src/ui/AboutDialog.h
 )
 
 # 自动从 logo.jpg 生成 logo3.ico（jpg 更新时自动重新生成）
@@ -96,11 +100,13 @@ if(PYTHON_EXECUTABLE)
     )
     add_executable(DjiCloudApi ${SOURCES} ${HEADERS}
         src/resources/app_icon.rc
+        src/resources/resources.qrc
         ${LOGO_ICO}
     )
 else()
     add_executable(DjiCloudApi ${SOURCES} ${HEADERS}
         src/resources/app_icon.rc
+        src/resources/resources.qrc
     )
 endif()
 

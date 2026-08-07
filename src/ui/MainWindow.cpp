@@ -1,6 +1,8 @@
 #include "MainWindow.h"
 #include "ConfigDialog.h"
+#include "StreamMediaDialog.h"
 #include "TopicEditDialog.h"
+#include "AboutDialog.h"
 #include <QAction>
 #include <QCloseEvent>
 #include <QDialog>
@@ -166,6 +168,9 @@ void MainWindow::applyStyle() {
             border: 1px solid #dadce0;
             background: #fff;
         }
+        QToolBar QToolButton#configBtn::menu-indicator {
+            image: none;
+        }
         QToolBar QToolButton#configBtn:hover {
             background: #f1f3f4;
         }
@@ -297,24 +302,37 @@ void MainWindow::setupToolBar() {
     toolbar->setMovable(false);
     toolbar->setFloatable(false);
 
-    // 左侧：配置按钮
-    auto* configAct = toolbar->addAction("⚙ 配置中心");
-    auto* configBtn = qobject_cast<QToolButton*>(toolbar->widgetForAction(configAct));
-    if (configBtn) configBtn->setObjectName("configBtn");
-    connect(configAct, &QAction::triggered, this, [this]() {
-        ConfigDialog dlg(mDevMgr, this);
-        if (dlg.exec() == QDialog::Accepted) {
-            // Profile 切换在对话框内已完成，这里只需保存配置并重连
-            mDevMgr->saveConfig(QApplication::applicationDirPath() + "/config/config.json");
-            if (!mDevMgr->isConnected()) {
-                mDevMgr->connectBroker();
-            } else {
-                // 已连接但配置可能变了，断开重连
-                mDevMgr->disconnectBroker();
-                mDevMgr->connectBroker();
+    // 左侧：配置中心下拉菜单
+    auto* configBtn = new QToolButton(this);
+    configBtn->setText("⚙ 配置中心");
+    configBtn->setObjectName("configBtn");
+    configBtn->setPopupMode(QToolButton::InstantPopup);
+    configBtn->setCursor(Qt::PointingHandCursor);
+    {
+        auto* menu = new QMenu(configBtn);
+        menu->addAction(QString::fromUtf8("\xf0\x9f\x94\x8c MQTT \xe8\xbf\x9e\xe6\x8e\xa5\xe9\x85\x8d\xe7\xbd\xae"), this, [this]() {
+            ConfigDialog dlg(mDevMgr, this);
+            if (dlg.exec() == QDialog::Accepted) {
+                // Profile 切换在对话框内已完成，这里只需保存配置并重连
+                mDevMgr->saveConfig(QApplication::applicationDirPath() + "/config/config.json");
+                if (!mDevMgr->isConnected()) {
+                    mDevMgr->connectBroker();
+                } else {
+                    // 已连接但配置可能变了，断开重连
+                    mDevMgr->disconnectBroker();
+                    mDevMgr->connectBroker();
+                }
             }
-        }
-    });
+        });
+        menu->addAction(QString::fromUtf8("\xf0\x9f\x93\xb9 \xe6\xb5\x81\xe5\xaa\x92\xe4\xbd\x93\xe9\x85\x8d\xe7\xbd\xae"), this, [this]() {
+            StreamMediaDialog dlg(mDevMgr, this);
+            if (dlg.exec() == QDialog::Accepted) {
+                mDevMgr->saveConfig(QApplication::applicationDirPath() + "/config/config.json");
+            }
+        });
+        configBtn->setMenu(menu);
+    }
+    toolbar->addWidget(configBtn);
 
     // 功能中心按钮（配置与帮助之间）
     auto* featureBtn = new QToolButton(this);
@@ -363,19 +381,15 @@ void MainWindow::setupToolBar() {
     helpBtn->setCursor(Qt::PointingHandCursor);
     {
         auto* menu = new QMenu(helpBtn);
-        menu->addAction("🛠️ GitHub项目地址", this, []() {
-            QDesktopServices::openUrl(QUrl("https://github.com/damon-liu/Dji-cloud-api-tool"));
+        menu->addAction(QString::fromUtf8("📋 关于本软件"), this, [this]() {
+            auto* dlg = new AboutDialog(this);
+            dlg->setAttribute(Qt::WA_DeleteOnClose);
+            dlg->show();
         });
-        menu->addAction("📖 大疆上云 API 文档", this, []() {
+                menu->addAction("📖 大疆上云 API 文档", this, []() {
             QDesktopServices::openUrl(QUrl("https://developer.dji.com/doc/cloud-api-tutorial/cn/api-reference/dock-to-cloud/mqtt/dock/dock3/properties.html"));
         });
         menu->addSeparator();
-        menu->addAction(QString::fromUtf8("📋 版本信息"), this, [this]() {
-            QMessageBox::about(this, QString::fromUtf8("版本信息"),
-                QString::fromUtf8("DJI-CLOUD-API 监控客户端\n\n"
-                                  "版本: v1.0.4\n"
-                                  "项目地址: github.com/damon-liu/Dji-cloud-api-tool"));
-        });
         helpBtn->setMenu(menu);
     }
     toolbar->addWidget(helpBtn);

@@ -316,6 +316,14 @@ void DeviceManager::setStreamUrls(const StreamUrlConfig& urls) {
     mConfigStore->setStreamUrls(urls);
 }
 
+StreamMediaConfig DeviceManager::streamMediaConfig() const {
+    return mConfigStore->streamMediaConfig();
+}
+
+void DeviceManager::setStreamMediaConfig(const StreamMediaConfig& config) {
+    mConfigStore->setStreamMediaConfig(config);
+}
+
 bool DeviceManager::saveConfig(const QString& path) {
     // 同步设备列表和 topics 到 ConfigStore
     QVector<DeviceInfo> devs;

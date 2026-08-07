@@ -84,6 +84,12 @@ bool ConfigStore::load(const QString& filePath) {
             pd.streamUrls.aircraft = streamUrlMapFromJson(streamObj.value("aircraft").toObject());
             pd.streamUrls.dock = streamUrlMapFromJson(streamObj.value("dock").toObject());
 
+            // 读取 stream_media（可选字段，缺失时使用默认值）
+            QJsonObject mediaObj = pObj.value("stream_media").toObject();
+            pd.streamMedia.ip       = mediaObj.value("ip").toString("");
+            pd.streamMedia.port     = mediaObj.value("port").toInt(1935);
+            pd.streamMedia.protocol = mediaObj.value("protocol").toInt(1);
+
             QJsonArray devs = pObj["devices"].toArray();
             for (const auto& dVal : devs) {
                 QJsonObject devObj = dVal.toObject();
@@ -244,6 +250,13 @@ bool ConfigStore::save(const QString& filePath) {
         streamObj["dock"] = streamUrlMapToJson(pd.streamUrls.dock);
         if (!pd.streamUrls.aircraft.isEmpty() || !pd.streamUrls.dock.isEmpty())
             pObj["stream_urls"] = streamObj;
+
+        // 写入 stream_media
+        QJsonObject mediaObj;
+        mediaObj["ip"] = pd.streamMedia.ip;
+        mediaObj["port"] = pd.streamMedia.port;
+        mediaObj["protocol"] = pd.streamMedia.protocol;
+        pObj["stream_media"] = mediaObj;
 
         QMap<QString, QJsonObject> dockMap;
         QVector<QJsonObject> pilotList;
@@ -420,4 +433,12 @@ StreamUrlConfig ConfigStore::streamUrls() const {
 
 void ConfigStore::setStreamUrls(const StreamUrlConfig& urls) {
     currentProfileData().streamUrls = urls;
+}
+
+StreamMediaConfig ConfigStore::streamMediaConfig() const {
+    return currentProfileData().streamMedia;
+}
+
+void ConfigStore::setStreamMediaConfig(const StreamMediaConfig& config) {
+    currentProfileData().streamMedia = config;
 }

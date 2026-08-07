@@ -26,6 +26,11 @@
                 "port": 8883,
                 "username": "YOUR_USERNAME"
             },
+            "stream_media": {
+                "ip": "",
+                "port": 1935,
+                "protocol": 1
+            },
             "stream_urls": {
                 "aircraft": {
                     "红外相机": "",
