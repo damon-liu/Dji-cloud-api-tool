@@ -600,6 +600,16 @@ void MainWindow::setupLayout() {
     mVideoSplitter->setChildrenCollapsible(false);
     videoPanelLayout->addWidget(mVideoSplitter, 1);
 
+    // 视频引擎初始化加载提示（覆盖在视频面板中央，默认隐藏）
+    mVideoLoadingLabel = new QLabel(mVideoPanel);
+    mVideoLoadingLabel->setText(QString::fromUtf8("⏳ 视频引擎正在初始化，请稍候..."));
+    mVideoLoadingLabel->setAlignment(Qt::AlignCenter);
+    mVideoLoadingLabel->setStyleSheet(
+        "color: #f9ab00; font-size: 20px; font-weight: bold;"
+        "background: #1a1a1a;");
+    mVideoLoadingLabel->setVisible(false);
+    // 不加入 layout，手动 resizeEvent 中居中定位
+
     mVideoPanel->setVisible(false);
     mVideoPanel->setMinimumHeight(300);
 
@@ -1322,11 +1332,27 @@ void MainWindow::updateStatusBar() {
 }
 
 void MainWindow::showVideoWindows() {
-    if (!initVlc()) return;
+    // 显示居中的加载提示
+    if (mVideoLoadingLabel) {
+        mVideoLoadingLabel->setGeometry(mVideoPanel->rect());
+        mVideoLoadingLabel->setVisible(true);
+        mVideoLoadingLabel->raise();
+    }
+    QApplication::processEvents();
+
+    if (!initVlc()) {
+        if (mVideoLoadingLabel)
+            mVideoLoadingLabel->setVisible(false);
+        return;
+    }
 
     // 尝试从 live_status cache 初始化窗口
     const auto& allDevs = mDevMgr->allDevices();
     bool hasLiveStatus = false;
+
+    // 清除反闪烁缓存：面板隐藏期间缓存的 live_status 数据与当前
+    // 数据相同，会导致 onLiveStatusChanged() 反闪烁检查跳过窗口创建。
+    mCachedLiveStatus.clear();
 
     for (auto* dev : allDevs) {
         QVector<LiveStatusInfo> liveList = mDevMgr->latestLiveStatus(dev->sn);
@@ -1370,6 +1396,10 @@ void MainWindow::showVideoWindows() {
             mVideoSplitter->addWidget(win);
         }
     }
+
+    // 隐藏加载提示
+    if (mVideoLoadingLabel)
+        mVideoLoadingLabel->setVisible(false);
 }
 
 void MainWindow::hideVideoWindows() {

@@ -81,6 +81,7 @@ private:
     QWidget*           mVideoPanel = nullptr;        // 视频面板容器（嵌入监控标签页）
     QSplitter*         mVideoSplitter = nullptr;     // 两个视频窗口水平分割器
     QPushButton*       mVideoToggleBtn = nullptr;    // 视频面板折叠/展开按钮
+    QLabel*            mVideoLoadingLabel = nullptr; // 视频引擎初始化加载提示
 #ifdef HAS_VLC
     libvlc_instance_t* mVlcInstance = nullptr;
 #endif
