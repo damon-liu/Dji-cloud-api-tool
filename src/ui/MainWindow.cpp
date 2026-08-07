@@ -1322,16 +1322,7 @@ void MainWindow::updateStatusBar() {
 }
 
 void MainWindow::showVideoWindows() {
-#ifdef HAS_VLC
-    if (!mVlcInstance) {
-        mVlcInstance = libvlc_new(0, nullptr);
-        if (!mVlcInstance) {
-            qWarning() << "MainWindow: libvlc_new failed";
-            return;
-        }
-        qDebug() << "MainWindow: VLC initialized successfully (lazy)";
-    }
-#endif
+    if (!initVlc()) return;
 
     // 尝试从 live_status cache 初始化窗口
     const auto& allDevs = mDevMgr->allDevices();
@@ -1387,13 +1378,31 @@ void MainWindow::hideVideoWindows() {
     }
 }
 
-void MainWindow::onLiveStatusChanged(const QString& sn, const QVector<LiveStatusInfo>& list) {
+bool MainWindow::initVlc() {
 #ifdef HAS_VLC
+    if (mVlcInstance)
+        return true;
+
+    // 显示加载中提示
+    statusBar()->showMessage(QString::fromUtf8("正在初始化视频引擎，请稍候..."));
+    QApplication::processEvents();  // 立即刷新 UI
+
+    mVlcInstance = libvlc_new(0, nullptr);
     if (!mVlcInstance) {
-        mVlcInstance = libvlc_new(0, nullptr);
-        if (!mVlcInstance) return;
+        qWarning() << "MainWindow: libvlc_new failed";
+        statusBar()->showMessage(QString::fromUtf8("视频引擎初始化失败"), 5000);
+        return false;
     }
+    qDebug() << "MainWindow: VLC initialized successfully (lazy)";
+    statusBar()->showMessage(QString::fromUtf8("视频引擎就绪"), 2000);
+    return true;
+#else
+    return true;
 #endif
+}
+
+void MainWindow::onLiveStatusChanged(const QString& sn, const QVector<LiveStatusInfo>& list) {
+    if (!initVlc()) return;
 
     // 反闪烁：与缓存完全相同则跳过
     if (mCachedLiveStatus.value(sn) == list)

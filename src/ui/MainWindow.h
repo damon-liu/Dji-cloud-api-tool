@@ -53,6 +53,7 @@ private:
     void refreshDockControlList(const QString& currentSn);
     void showVideoWindows();
     void hideVideoWindows();
+    bool initVlc();  // 懒加载 VLC，显示加载中提示
     void onLiveStatusChanged(const QString& sn, const QVector<LiveStatusInfo>& list);
     void removeVideoWindowsForDevice(const QString& sn);
     QString buildStreamUrl(const StreamMediaConfig& ss, const QString& videoId);
