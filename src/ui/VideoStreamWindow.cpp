@@ -116,7 +116,7 @@ void VideoStreamWindow::setupUi() {
     controlLayout->setContentsMargins(8, 6, 8, 6);
     controlLayout->setSpacing(6);
 
-    // URL 输入框（只读，由程序拼接）
+    // URL 输入框（由程序拼接，支持用户手动修改）
     mUrlInput = new QLineEdit(controlBar);
     mUrlInput->setPlaceholderText(QString::fromUtf8("请先在配置中心设置流媒体服务器"));
     mUrlInput->setStyleSheet(
@@ -124,7 +124,6 @@ void VideoStreamWindow::setupUi() {
         "border: 1px solid #555; border-radius: 4px;"
         "padding: 4px 8px; font-size: 12px; }"
         "QLineEdit:focus { border-color: #1a73e8; }");
-    mUrlInput->setReadOnly(true);
     mUrlInput->setMinimumWidth(160);
     controlLayout->addWidget(mUrlInput, 1);
 
@@ -257,9 +256,12 @@ void VideoStreamWindow::updateLiveStatus(const LiveStatusInfo& info) {
     mLiveStatus   = info.status;
     mErrorStatus  = info.errorStatus;
 
-    // 更新标题 — "设备SN | video_id: xxx"
-    mTitleLabel->setText(QString("%1  |  video_id: %2")
-        .arg(mDeviceSn, mVideoId));
+    // 更新标题 — "[机场] 设备名 | video_id: xxx"
+    QString prefix = mDeviceName.isEmpty()
+        ? QString()
+        : QString("[%1] ").arg(mDeviceName);
+    mTitleLabel->setText(QString("%1%2  |  video_id: %3")
+        .arg(prefix, mDeviceSn, mVideoId));
 
     // 更新状态标签
     QString statusText;
@@ -313,8 +315,70 @@ void VideoStreamWindow::onStart() {
         return;
     }
 
-    // 发射信号 → MainWindow → DeviceManager 下发 live_start_push
+    // 1) 发射信号 → MainWindow → DeviceManager 下发 live_start_push
     emit startPushRequested(mDeviceSn, mVideoId, url, 1, mVideoQuality);
+
+#ifdef HAS_VLC
+    if (!mVlcInstance) {
+        QMessageBox::warning(this,
+            QString::fromUtf8("提示"),
+            QString::fromUtf8("VLC 未初始化"));
+        return;
+    }
+
+    // 2) VLC 拉流播放 — 从同一 RTMP 地址拉流显示
+    // 如果已有播放器，先停再换媒体
+    if (mVlcPlayer) {
+        libvlc_media_player_stop(mVlcPlayer);
+    }
+    releaseVlcMedia();
+
+    mVlcMedia = libvlc_media_new_location(mVlcInstance, url.toUtf8().constData());
+    if (!mVlcMedia) {
+        QMessageBox::warning(this,
+            QString::fromUtf8("播放失败"),
+            QString::fromUtf8("无法创建媒体源，请检查地址是否正确"));
+        return;
+    }
+
+    // RTMP 直播流网络缓冲参数
+    libvlc_media_add_option(mVlcMedia, ":network-caching=3000");
+    libvlc_media_add_option(mVlcMedia, ":live-caching=3000");
+    libvlc_media_add_option(mVlcMedia, ":rtmp-timeout=15");
+    libvlc_media_add_option(mVlcMedia, ":no-audio");
+
+    // 首次创建播放器：绑定窗口 + 注册事件
+    if (!mVlcPlayer) {
+        mVlcPlayer = libvlc_media_player_new_from_media(mVlcMedia);
+        libvlc_media_player_set_hwnd(mVlcPlayer, (void*)mVideoArea->winId());
+
+        libvlc_event_manager_t* em = libvlc_media_player_event_manager(mVlcPlayer);
+        libvlc_event_attach(em, libvlc_MediaPlayerEncounteredError, onVlcEvent, this);
+        libvlc_event_attach(em, libvlc_MediaPlayerBuffering, onVlcEvent, this);
+        libvlc_event_attach(em, libvlc_MediaPlayerPlaying, onVlcEvent, this);
+    } else {
+        // 复用播放器，仅替换媒体
+        libvlc_media_player_set_media(mVlcPlayer, mVlcMedia);
+    }
+
+    int ret = libvlc_media_player_play(mVlcPlayer);
+    if (ret != 0) {
+        QMessageBox::warning(this,
+            QString::fromUtf8("播放失败"),
+            QString::fromUtf8("无法开始播放 (错误码: %1)").arg(ret));
+        releaseVlcMedia();
+        return;
+    }
+#endif
+
+    mStreaming = true;
+    mBuffering = false;
+    mPlaceholderLabel->setText(
+        QString::fromUtf8("⏳ 正在连接视频流..."));
+    mPlaceholderLabel->setStyleSheet(
+        "color: #f9ab00; font-size: 14px; background: transparent;");
+    mPlaceholderLabel->show();
+    updateButtonStates();
 }
 
 void VideoStreamWindow::onStop() {
@@ -383,6 +447,23 @@ void VideoStreamWindow::onVlcPlaying() {
 
 void VideoStreamWindow::setStreamUrl(const QString& url) {
     mUrlInput->setText(url);
+}
+
+void VideoStreamWindow::setDeviceName(const QString& name) {
+    mDeviceName = name;
+    // 立即刷新标题
+    QString prefix = mDeviceName.isEmpty()
+        ? QString()
+        : QString("[%1] ").arg(mDeviceName);
+    mTitleLabel->setText(QString("%1%2  |  video_id: %3")
+        .arg(prefix, mDeviceSn, mVideoId));
+}
+
+void VideoStreamWindow::setDeviceType(DeviceType type) {
+    // 镜头切换、相机切换按钮仅飞机显示
+    bool isAircraft = (type == DeviceType::Aircraft);
+    mLensBtn->setVisible(isAircraft);
+    mCameraBtn->setVisible(isAircraft);
 }
 
 void VideoStreamWindow::setVlcInstance(libvlc_instance_t* vlc) {

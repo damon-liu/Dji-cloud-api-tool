@@ -79,16 +79,30 @@ bool ConfigStore::load(const QString& filePath) {
             pd.mqtt.password = mqtt.value("password").toString();
             pd.mqtt.clientId = mqtt.value("client_id").toString();
 
+            // 读取 stream_media（优先从 mqtt 内读取，兼容旧格式 pObj 层级）
+            QJsonObject mediaObj = mqtt.value("stream_media").toObject();
+            if (mediaObj.isEmpty())
+                mediaObj = pObj.value("stream_media").toObject();
+            pd.mqtt.streamMedia.ip        = mediaObj.value("ip").toString("");
+            pd.mqtt.streamMedia.port      = mediaObj.value("port").toInt(1935);
+            pd.mqtt.streamMedia.protocol  = mediaObj.value("protocol").toInt(1);
+            pd.mqtt.streamMedia.streamKey = mediaObj.value("stream_key").toString("");
+
             // 读取 stream_urls（可选字段，缺失时为空）
             QJsonObject streamObj = pObj.value("stream_urls").toObject();
             pd.streamUrls.aircraft = streamUrlMapFromJson(streamObj.value("aircraft").toObject());
             pd.streamUrls.dock = streamUrlMapFromJson(streamObj.value("dock").toObject());
 
-            // 读取 stream_media（可选字段，缺失时使用默认值）
-            QJsonObject mediaObj = pObj.value("stream_media").toObject();
-            pd.streamMedia.ip       = mediaObj.value("ip").toString("");
-            pd.streamMedia.port     = mediaObj.value("port").toInt(1935);
-            pd.streamMedia.protocol = mediaObj.value("protocol").toInt(1);
+            // 读取 device_push_urls（可选字段，用户点击推流后保存）
+            QJsonObject pushObj = pObj.value("device_push_urls").toObject();
+            for (auto it = pushObj.begin(); it != pushObj.end(); ++it) {
+                QJsonObject inner = it.value().toObject();
+                QMap<QString, QString> videoMap;
+                for (auto jt = inner.begin(); jt != inner.end(); ++jt)
+                    videoMap[jt.key()] = jt.value().toString();
+                if (!videoMap.isEmpty())
+                    pd.devicePushUrls[it.key()] = videoMap;
+            }
 
             QJsonArray devs = pObj["devices"].toArray();
             for (const auto& dVal : devs) {
@@ -242,6 +256,16 @@ bool ConfigStore::save(const QString& filePath) {
         mqtt["password"] = pd.mqtt.password;
         if (!pd.mqtt.clientId.isEmpty())
             mqtt["client_id"] = pd.mqtt.clientId;
+
+        // 写入 stream_media（嵌套在 mqtt 内）
+        QJsonObject mediaObj;
+        mediaObj["ip"] = pd.mqtt.streamMedia.ip;
+        mediaObj["port"] = pd.mqtt.streamMedia.port;
+        mediaObj["protocol"] = pd.mqtt.streamMedia.protocol;
+        if (!pd.mqtt.streamMedia.streamKey.isEmpty())
+            mediaObj["stream_key"] = pd.mqtt.streamMedia.streamKey;
+        mqtt["stream_media"] = mediaObj;
+
         pObj["mqtt"] = mqtt;
 
         // 写入 stream_urls
@@ -251,12 +275,17 @@ bool ConfigStore::save(const QString& filePath) {
         if (!pd.streamUrls.aircraft.isEmpty() || !pd.streamUrls.dock.isEmpty())
             pObj["stream_urls"] = streamObj;
 
-        // 写入 stream_media
-        QJsonObject mediaObj;
-        mediaObj["ip"] = pd.streamMedia.ip;
-        mediaObj["port"] = pd.streamMedia.port;
-        mediaObj["protocol"] = pd.streamMedia.protocol;
-        pObj["stream_media"] = mediaObj;
+        // 写入 device_push_urls
+        if (!pd.devicePushUrls.isEmpty()) {
+            QJsonObject pushObj;
+            for (auto it = pd.devicePushUrls.begin(); it != pd.devicePushUrls.end(); ++it) {
+                QJsonObject inner;
+                for (auto jt = it.value().begin(); jt != it.value().end(); ++jt)
+                    inner[jt.key()] = jt.value();
+                pushObj[it.key()] = inner;
+            }
+            pObj["device_push_urls"] = pushObj;
+        }
 
         QMap<QString, QJsonObject> dockMap;
         QVector<QJsonObject> pilotList;
@@ -435,10 +464,13 @@ void ConfigStore::setStreamUrls(const StreamUrlConfig& urls) {
     currentProfileData().streamUrls = urls;
 }
 
-StreamMediaConfig ConfigStore::streamMediaConfig() const {
-    return currentProfileData().streamMedia;
+QString ConfigStore::devicePushUrl(const QString& sn, const QString& videoId) const {
+    return currentProfileData().devicePushUrls.value(sn).value(videoId);
 }
 
-void ConfigStore::setStreamMediaConfig(const StreamMediaConfig& config) {
-    currentProfileData().streamMedia = config;
+void ConfigStore::setDevicePushUrl(const QString& sn, const QString& videoId, const QString& url) {
+    currentProfileData().devicePushUrls[sn][videoId] = url;
 }
+
+// streamMediaConfig() / setStreamMediaConfig() — removed;
+// stream media is now accessed via mqttConfig().streamMedia

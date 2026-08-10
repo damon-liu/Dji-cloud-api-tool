@@ -79,6 +79,10 @@ public:
     StreamMediaConfig streamMediaConfig() const;
     void setStreamMediaConfig(const StreamMediaConfig& config);
 
+    // 设备推流地址持久化
+    QString devicePushUrl(const QString& sn, const QString& videoId) const;
+    void setDevicePushUrl(const QString& sn, const QString& videoId, const QString& url);
+
     // 视频直播 — live_status 缓存查询
     QVector<LiveStatusInfo> latestLiveStatus(const QString& sn) const;
 

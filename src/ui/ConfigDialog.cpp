@@ -7,6 +7,7 @@
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QLabel>
+#include <QGroupBox>
 
 // QSpinBox 子类：值为 0 时显示空白，不显示数字
 class PortSpinBox : public QSpinBox {
@@ -21,8 +22,8 @@ ConfigDialog::ConfigDialog(DeviceManager* devMgr, QWidget* parent)
     : QDialog(parent)
     , mDevMgr(devMgr)
 {
-    setWindowTitle("MQTT 连接配置");
-    setMinimumWidth(420);
+    setWindowTitle(QString::fromUtf8("MQTT \xe8\xbf\x9e\xe6\x8e\xa5\xe9\x85\x8d\xe7\xbd\xae"));
+    setMinimumWidth(750);
 
     auto* layout = new QVBoxLayout(this);
 
@@ -62,8 +63,15 @@ ConfigDialog::ConfigDialog(DeviceManager* devMgr, QWidget* parent)
     sep->setStyleSheet("color: #e0e0e0;");
     layout->addWidget(sep);
 
-    // ——— MQTT 参数 ———
+    // ——— 左右分栏：MQTT 连接 | 流媒体推流 ———
+    auto* splitLayout = new QHBoxLayout;
+    splitLayout->setSpacing(12);
+
+    // ===== 左侧：MQTT 连接配置 =====
+    auto* mqttGroup = new QGroupBox(QString::fromUtf8("\xf0\x9f\x94\x8c MQTT \xe8\xbf\x9e\xe6\x8e\xa5"), this);
+    auto* mqttGroupLayout = new QVBoxLayout(mqttGroup);
     auto* form = new QFormLayout;
+
     mHostEdit = new QLineEdit(this);
     mPortSpin = new PortSpinBox(this);
     mPortSpin->setRange(0, 65535);
@@ -92,7 +100,39 @@ ConfigDialog::ConfigDialog(DeviceManager* devMgr, QWidget* parent)
     mClientIdEdit = new QLineEdit(this);
     mClientIdEdit->setPlaceholderText(QString::fromUtf8("\xe7\x95\x99\xe7\xa9\xba\xe4\xbd\xbf\xe7\x94\xa8\xe9\xbb\x98\xe8\xae\xa4\xe5\x80\xbc"));
     form->addRow("Client ID:", mClientIdEdit);
-    layout->addLayout(form);
+
+    mqttGroupLayout->addLayout(form);
+    splitLayout->addWidget(mqttGroup);
+
+    // ===== 右侧：流媒体推流配置 =====
+    auto* streamGroup = new QGroupBox(QString::fromUtf8("\xf0\x9f\x93\xb9 \xe6\xb5\x81\xe5\xaa\x92\xe4\xbd\x93\xe6\x8e\xa8\xe6\xb5\x81"), this);
+    auto* streamGroupLayout = new QVBoxLayout(streamGroup);
+    auto* streamForm = new QFormLayout;
+
+    mStreamIpEdit = new QLineEdit(this);
+    mStreamIpEdit->setPlaceholderText(QString::fromUtf8("\xe7\x95\x99\xe7\xa9\xba\xe5\x88\x99\xe4\xb8\x8d\xe5\x90\xaf\xe7\x94\xa8\xe6\x8e\xa8\xe6\xb5\x81"));
+    streamForm->addRow(QString::fromUtf8("\xe6\x9c\x8d\xe5\x8a\xa1\xe5\x99\xa8 IP:"), mStreamIpEdit);
+
+    mStreamPortSpin = new PortSpinBox(this);
+    mStreamPortSpin->setRange(0, 65535);
+    mStreamPortSpin->setValue(1935);
+    streamForm->addRow(QString::fromUtf8("\xe7\xab\xaf\xe5\x8f\xa3:"), mStreamPortSpin);
+
+    mStreamProtocolCombo = new QComboBox(this);
+    mStreamProtocolCombo->addItem("RTMP",   1);
+    mStreamProtocolCombo->addItem("GB28181", 3);
+    mStreamProtocolCombo->addItem("WebRTC",  4);
+    streamForm->addRow(QString::fromUtf8("\xe5\x8d\x8f\xe8\xae\xae\xe7\xb1\xbb\xe5\x9e\x8b:"), mStreamProtocolCombo);
+
+    mStreamKeyEdit = new QLineEdit(this);
+    mStreamKeyEdit->setPlaceholderText(QString::fromUtf8("\xe7\x95\x99\xe7\xa9\xba\xe5\x88\x99\xe8\x87\xaa\xe5\x8a\xa8\xe4\xbd\xbf\xe7\x94\xa8 video_id"));
+    streamForm->addRow(QString::fromUtf8("\xe6\xb5\x81\xe5\x90\x8d\xe7\xa7\xb0:"), mStreamKeyEdit);
+
+    streamGroupLayout->addLayout(streamForm);
+    streamGroupLayout->addStretch();
+    splitLayout->addWidget(streamGroup);
+
+    layout->addLayout(splitLayout);
 
     // 底部按钮行
     auto* bottomLayout = new QHBoxLayout;
@@ -143,6 +183,14 @@ void ConfigDialog::loadProfile(const QString& name) {
     mUsernameEdit->setText(cfg.username);
     mPasswordEdit->setText(cfg.password);
     mClientIdEdit->setText(cfg.clientId);
+
+    // 流媒体推流配置
+    mStreamIpEdit->setText(cfg.streamMedia.ip);
+    mStreamPortSpin->setValue(cfg.streamMedia.port);
+    int protoIdx = mStreamProtocolCombo->findData(cfg.streamMedia.protocol);
+    if (protoIdx >= 0)
+        mStreamProtocolCombo->setCurrentIndex(protoIdx);
+    mStreamKeyEdit->setText(cfg.streamMedia.streamKey);
 }
 
 MqttConfig ConfigDialog::getConfig() const {
@@ -152,6 +200,13 @@ MqttConfig ConfigDialog::getConfig() const {
     cfg.username = mUsernameEdit->text().trimmed();
     cfg.password = mPasswordEdit->text();
     cfg.clientId = mClientIdEdit->text().trimmed();
+
+    // 流媒体推流配置
+    cfg.streamMedia.ip        = mStreamIpEdit->text().trimmed();
+    cfg.streamMedia.port      = mStreamPortSpin->value();
+    cfg.streamMedia.protocol  = mStreamProtocolCombo->currentData().toInt();
+    cfg.streamMedia.streamKey = mStreamKeyEdit->text().trimmed();
+
     return cfg;
 }
 

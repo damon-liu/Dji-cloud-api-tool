@@ -1,6 +1,6 @@
 #include "MainWindow.h"
 #include "ConfigDialog.h"
-#include "StreamMediaDialog.h"
+
 #include "TopicEditDialog.h"
 #include "AboutDialog.h"
 #include <QAction>
@@ -8,6 +8,7 @@
 #include <QDialog>
 #include <QMessageBox>
 #include <QApplication>
+#include <algorithm>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QSet>
@@ -311,25 +312,38 @@ void MainWindow::setupToolBar() {
     {
         auto* menu = new QMenu(configBtn);
         menu->addAction(QString::fromUtf8("\xf0\x9f\x94\x8c MQTT \xe8\xbf\x9e\xe6\x8e\xa5\xe9\x85\x8d\xe7\xbd\xae"), this, [this]() {
+            MqttConfig oldMqtt = mDevMgr->mqttConfig();
             ConfigDialog dlg(mDevMgr, this);
             if (dlg.exec() == QDialog::Accepted) {
-                // Profile 切换在对话框内已完成，这里只需保存配置并重连
                 mDevMgr->saveConfig(QApplication::applicationDirPath() + "/config/config.json");
+                MqttConfig newMqtt = mDevMgr->mqttConfig();
+
+                // 仅当 MQTT 连接参数变更时才断开重连，流媒体配置变更不影响当前连接
+                bool mqttChanged = (oldMqtt.host != newMqtt.host)
+                                || (oldMqtt.port != newMqtt.port)
+                                || (oldMqtt.username != newMqtt.username)
+                                || (oldMqtt.password != newMqtt.password)
+                                || (oldMqtt.clientId != newMqtt.clientId);
+
+                bool streamMediaChanged = (oldMqtt.streamMedia.ip != newMqtt.streamMedia.ip)
+                                       || (oldMqtt.streamMedia.port != newMqtt.streamMedia.port)
+                                       || (oldMqtt.streamMedia.protocol != newMqtt.streamMedia.protocol)
+                                       || (oldMqtt.streamMedia.streamKey != newMqtt.streamMedia.streamKey);
+
                 if (!mDevMgr->isConnected()) {
                     mDevMgr->connectBroker();
-                } else {
-                    // 已连接但配置可能变了，断开重连
+                } else if (mqttChanged) {
                     mDevMgr->disconnectBroker();
                     mDevMgr->connectBroker();
                 }
+
+                // 流媒体配置变更：刷新已有视频窗口的推流地址
+                if (streamMediaChanged && mVideoPanel && mVideoPanel->isVisible()) {
+                    refreshVideoWindows();
+                }
             }
         });
-        menu->addAction(QString::fromUtf8("\xf0\x9f\x93\xb9 \xe6\xb5\x81\xe5\xaa\x92\xe4\xbd\x93\xe9\x85\x8d\xe7\xbd\xae"), this, [this]() {
-            StreamMediaDialog dlg(mDevMgr, this);
-            if (dlg.exec() == QDialog::Accepted) {
-                mDevMgr->saveConfig(QApplication::applicationDirPath() + "/config/config.json");
-            }
-        });
+        // 流媒体配置已合并至 "MQTT 连接配置" 对话框内
         configBtn->setMenu(menu);
     }
     toolbar->addWidget(configBtn);
@@ -622,8 +636,13 @@ void MainWindow::setupLayout() {
     connect(mVideoToggleBtn, &QPushButton::toggled, this,
             [this, rightContentSplitter](bool checked) {
         mVideoPanel->setVisible(checked);
-        if (checked && mVideoWindows.isEmpty()) {
-            showVideoWindows();
+        if (checked) {
+            if (mVideoWindows.isEmpty()) {
+                showVideoWindows();
+            } else {
+                // 已有窗口，刷新推流地址和 live_status（配置可能已变更）
+                refreshVideoWindows();
+            }
         }
         mVideoToggleBtn->setText(checked ? QString::fromUtf8("◢ 视频直播")
                                          : QString::fromUtf8("▶ 视频直播"));
@@ -1452,27 +1471,99 @@ void MainWindow::onLiveStatusChanged(const QString& sn, const QVector<LiveStatus
     if (dev && !dev->parentSn.isEmpty())
         gatewaySn = dev->parentSn;
 
+    // 设备类型标签（用于视频窗口标题识别机场/飞机）
+    QString deviceName;
+    if (dev) {
+        if (dev->type == DeviceType::Dock)
+            deviceName = QString::fromUtf8("机场");
+        else
+            deviceName = QString::fromUtf8("飞机");
+        // 优先使用用户自定义名称
+        if (!dev->name.isEmpty() && dev->name != dev->sn)
+            deviceName = deviceName + QString("-%1").arg(dev->name);
+    }
+
     StreamMediaConfig ss = mDevMgr->streamMediaConfig();
     bool serverConfigured = !ss.ip.isEmpty();
 
-    // 移除该设备的所有旧窗口，再按最新 live_status[] 重建
-    removeVideoWindowsForDevice(sn);
+    // 计算每路摄像头的默认推流后缀
+    // 机场: 按 video_id 排序后依次编号 0, 1, ...
+    // 飞机: 固定为 "3"
+    auto sorted = list;
+    std::sort(sorted.begin(), sorted.end(), [](const LiveStatusInfo& a, const LiveStatusInfo& b) {
+        return a.videoId < b.videoId;
+    });
+    QMap<QString, QString> suffixMap;  // video_id → cameraSuffix
+    int dockIdx = 0;
+    for (const auto& info : sorted) {
+        if (dev && dev->type == DeviceType::Dock)
+            suffixMap[info.videoId] = QString::number(dockIdx++);
+        else
+            suffixMap[info.videoId] = QStringLiteral("3");
+    }
 
-    for (const auto& info : list) {
-        auto* win = new VideoStreamWindow(info, this);
-        win->setProperty("videoId", info.videoId);
-        win->setProperty("deviceSn", info.deviceSn);
-#ifdef HAS_VLC
-        win->setVlcInstance(mVlcInstance);
-#endif
-        if (serverConfigured) {
-            QString url = buildStreamUrl(ss, info.videoId);
-            win->setStreamUrl(url);
+    // 索引该设备已有窗口：videoId → win
+    QMap<QString, VideoStreamWindow*> existingWindows;
+    for (auto* win : mVideoWindows) {
+        if (win->property("deviceSn").toString() == sn) {
+            existingWindows[win->property("videoId").toString()] = win;
         }
-        connectPushControlSignals(win, gatewaySn);
+    }
 
-        mVideoWindows.append(win);
-        mVideoSplitter->addWidget(win);
+    // 增量更新：已有窗口复用（保留 VLC 推流状态），只创建新增的 videoId
+    for (const auto& info : sorted) {
+        if (existingWindows.contains(info.videoId)) {
+            // 复用已有窗口，增量刷新标题和状态标签
+            VideoStreamWindow* win = existingWindows.take(info.videoId);
+            win->updateLiveStatus(info);
+            // 刷新推流地址（配置可能已变更）
+            if (serverConfigured) {
+                QString url = buildStreamUrl(ss, gatewaySn, info.deviceSn,
+                                             info.videoId, suffixMap.value(info.videoId));
+                win->setStreamUrl(url);
+            }
+        } else {
+            // 新出现的 videoId，创建窗口
+            auto* win = new VideoStreamWindow(info, this);
+            win->setProperty("videoId", info.videoId);
+            win->setProperty("deviceSn", info.deviceSn);
+#ifdef HAS_VLC
+            win->setVlcInstance(mVlcInstance);
+#endif
+            if (serverConfigured) {
+                QString url = buildStreamUrl(ss, gatewaySn, info.deviceSn,
+                                             info.videoId, suffixMap.value(info.videoId));
+                win->setStreamUrl(url);
+            }
+            if (!deviceName.isEmpty())
+                win->setDeviceName(deviceName);
+            if (dev)
+                win->setDeviceType(dev->type);
+            connectPushControlSignals(win, gatewaySn);
+
+            mVideoWindows.append(win);
+            mVideoSplitter->addWidget(win);
+        }
+    }
+
+    // 移除在新 list 中已不存在的窗口
+    const QList<VideoStreamWindow*> staleWindows = existingWindows.values();
+    for (auto* win : staleWindows) {
+        win->hide();
+        win->deleteLater();
+        mVideoWindows.removeAll(win);
+    }
+}
+
+void MainWindow::refreshVideoWindows() {
+    const auto& allDevs = mDevMgr->allDevices();
+    for (auto* dev : allDevs) {
+        QVector<LiveStatusInfo> liveList = mDevMgr->latestLiveStatus(dev->sn);
+        if (!liveList.isEmpty()) {
+            // 绕过反闪烁缓存，强制刷新（配置可能已变更）
+            mCachedLiveStatus.remove(dev->sn);
+            onLiveStatusChanged(dev->sn, liveList);
+        }
     }
 }
 
@@ -1488,7 +1579,15 @@ void MainWindow::removeVideoWindowsForDevice(const QString& sn) {
     }
 }
 
-QString MainWindow::buildStreamUrl(const StreamMediaConfig& ss, const QString& videoId) {
+QString MainWindow::buildStreamUrl(const StreamMediaConfig& ss, const QString& gatewaySn,
+                                    const QString& deviceSn, const QString& videoId,
+                                    const QString& cameraSuffix) {
+    // 1) 优先使用已保存的设备推流地址（以完整 video_id 为 key）
+    QString saved = mDevMgr->devicePushUrl(deviceSn, videoId);
+    if (!saved.isEmpty())
+        return saved;
+
+    // 2) 生成默认推流地址
     QString scheme;
     switch (ss.protocol) {
     case 1:  scheme = QStringLiteral("rtmp");    break;
@@ -1496,17 +1595,29 @@ QString MainWindow::buildStreamUrl(const StreamMediaConfig& ss, const QString& v
     case 4:  scheme = QStringLiteral("webrtc");  break;
     default: scheme = QStringLiteral("rtmp");    break;
     }
+    // RTMP 默认流名称: {网关SN}{cameraSuffix}
+    // 机场 2 路摄像头: 0 / 1，飞机: 3
+    // 用户自定义 streamKey 可覆盖此默认流名称
+    QString key = ss.streamKey.isEmpty()
+        ? QString("%1%2").arg(gatewaySn, cameraSuffix)
+        : ss.streamKey;
     return QString("%1://%2:%3/live/%4")
         .arg(scheme)
         .arg(ss.ip)
         .arg(ss.port)
-        .arg(videoId);
+        .arg(key);
 }
 
 void MainWindow::connectPushControlSignals(VideoStreamWindow* win, const QString& gatewaySn) {
     connect(win, &VideoStreamWindow::startPushRequested, this,
-            [this](const QString& gwSn, const QString& videoId,
+            [this, win](const QString& gwSn, const QString& videoId,
                    const QString& url, int urlType, int quality) {
+        // 按设备保存推流地址，下次优先使用
+        QString deviceSn = win->property("deviceSn").toString();
+        if (!deviceSn.isEmpty() && !url.isEmpty()) {
+            mDevMgr->setDevicePushUrl(deviceSn, videoId, url);
+            mDevMgr->saveConfig(QApplication::applicationDirPath() + "/config/config.json");
+        }
         mDevMgr->liveStartPush(gwSn, videoId, url, urlType, quality);
     });
 

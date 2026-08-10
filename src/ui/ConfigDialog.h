@@ -41,6 +41,13 @@ private:
     QLineEdit*     mUsernameEdit;
     QLineEdit*     mPasswordEdit;
     QLineEdit*     mClientIdEdit;
+
+    // 流媒体推流服务器
+    QLineEdit*     mStreamIpEdit;
+    QSpinBox*      mStreamPortSpin;
+    QComboBox*     mStreamProtocolCombo;
+    QLineEdit*     mStreamKeyEdit;
+
     QPushButton*   mTestBtn;
     QMqttClient*   mTestClient    = nullptr;
     QTimer*        mTestTimer     = nullptr;

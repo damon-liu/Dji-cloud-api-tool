@@ -35,6 +35,11 @@ StreamMediaDialog::StreamMediaDialog(DeviceManager* devMgr, QWidget* parent)
     mProtocolCombo->addItem("WebRTC",   4);
     form->addRow(QString::fromUtf8("\xe5\x8d\x8f\xe8\xae\xae\xe7\xb1\xbb\xe5\x9e\x8b:"), mProtocolCombo);  // 协议类型:
 
+    // 流名称（stream key）
+    mStreamKeyEdit = new QLineEdit(this);
+    mStreamKeyEdit->setPlaceholderText(QString::fromUtf8("\xe7\x95\x99\xe7\xa9\xba\xe5\x88\x99\xe8\x87\xaa\xe5\x8a\xa8\xe4\xbd\xbf\xe7\x94\xa8 video_id"));  // 留空则自动使用 video_id
+    form->addRow(QString::fromUtf8("\xe6\xb5\x81\xe5\x90\x8d\xe7\xa7\xb0:"), mStreamKeyEdit);  // 流名称:
+
     layout->addLayout(form);
 
     // 按钮
@@ -55,12 +60,14 @@ StreamMediaDialog::StreamMediaDialog(DeviceManager* devMgr, QWidget* parent)
     int protoIdx = mProtocolCombo->findData(cfg.protocol);
     if (protoIdx >= 0)
         mProtocolCombo->setCurrentIndex(protoIdx);
+    mStreamKeyEdit->setText(cfg.streamKey);
 }
 
 StreamMediaConfig StreamMediaDialog::getConfig() const {
     StreamMediaConfig cfg;
-    cfg.ip       = mIpEdit->text().trimmed();
-    cfg.port     = mPortSpin->value();
-    cfg.protocol = mProtocolCombo->currentData().toInt();
+    cfg.ip        = mIpEdit->text().trimmed();
+    cfg.port      = mPortSpin->value();
+    cfg.protocol  = mProtocolCombo->currentData().toInt();
+    cfg.streamKey = mStreamKeyEdit->text().trimmed();
     return cfg;
 }

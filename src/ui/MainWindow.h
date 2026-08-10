@@ -56,7 +56,10 @@ private:
     bool initVlc();  // 懒加载 VLC，显示加载中提示
     void onLiveStatusChanged(const QString& sn, const QVector<LiveStatusInfo>& list);
     void removeVideoWindowsForDevice(const QString& sn);
-    QString buildStreamUrl(const StreamMediaConfig& ss, const QString& videoId);
+    void refreshVideoWindows();  // 从当前配置刷新已有窗口的推流地址 + live_status
+    QString buildStreamUrl(const StreamMediaConfig& ss, const QString& gatewaySn,
+                           const QString& deviceSn, const QString& videoId,
+                           const QString& cameraSuffix);
     void connectPushControlSignals(VideoStreamWindow* win, const QString& gatewaySn);
     void showFunctionInTab(int tabIndex);
     void popOutCurrentTab();

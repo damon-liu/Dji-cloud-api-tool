@@ -23,6 +23,7 @@ private:
     QLineEdit*      mIpEdit;
     QSpinBox*       mPortSpin;
     QComboBox*      mProtocolCombo;
+    QLineEdit*      mStreamKeyEdit;
 };
 
 #endif // STREAMMEDIADIALOG_H

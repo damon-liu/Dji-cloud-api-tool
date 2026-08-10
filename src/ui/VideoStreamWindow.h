@@ -24,6 +24,8 @@ public:
                                QWidget* parent = nullptr);
 
     void setStreamUrl(const QString& url);
+    void setDeviceName(const QString& name);
+    void setDeviceType(DeviceType type);
     void setVlcInstance(libvlc_instance_t* vlc);
 
     // 增量更新：OSD 高频推送时复用窗口，只更新标签不重建 VLC
@@ -64,6 +66,7 @@ private:
 
     // 当前直播状态
     QString     mDeviceSn;
+    QString     mDeviceName;         // "[机场]" / "[飞机]" 设备名
     QString     mVideoId;
     int         mVideoQuality = 0;
     QString     mVideoType;

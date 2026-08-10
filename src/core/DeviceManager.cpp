@@ -317,11 +317,21 @@ void DeviceManager::setStreamUrls(const StreamUrlConfig& urls) {
 }
 
 StreamMediaConfig DeviceManager::streamMediaConfig() const {
-    return mConfigStore->streamMediaConfig();
+    return mConfigStore->mqttConfig().streamMedia;
 }
 
 void DeviceManager::setStreamMediaConfig(const StreamMediaConfig& config) {
-    mConfigStore->setStreamMediaConfig(config);
+    MqttConfig mqtt = mConfigStore->mqttConfig();
+    mqtt.streamMedia = config;
+    mConfigStore->setMqttConfig(mqtt);
+}
+
+QString DeviceManager::devicePushUrl(const QString& sn, const QString& videoId) const {
+    return mConfigStore->devicePushUrl(sn, videoId);
+}
+
+void DeviceManager::setDevicePushUrl(const QString& sn, const QString& videoId, const QString& url) {
+    mConfigStore->setDevicePushUrl(sn, videoId, url);
 }
 
 QVector<LiveStatusInfo> DeviceManager::latestLiveStatus(const QString& sn) const {
