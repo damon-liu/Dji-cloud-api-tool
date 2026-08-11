@@ -642,7 +642,7 @@ void MainWindow::setupLayout() {
             // 先分配空间 + 显示加载提示，让 UI 立即刷新
             int total = rightContentSplitter->height();
             if (total > 0) {
-                rightContentSplitter->setSizes({total * 65 / 100, total * 35 / 100});
+                rightContentSplitter->setSizes({total * 60 / 100, total * 40 / 100});
             }
             mVideoLoadingLabel->setGeometry(mVideoPanel->rect());
             mVideoLoadingLabel->setVisible(true);
