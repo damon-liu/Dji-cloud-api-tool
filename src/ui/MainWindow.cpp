@@ -8,6 +8,7 @@
 #include <QDialog>
 #include <QMessageBox>
 #include <QApplication>
+#include <QTimer>
 #include <algorithm>
 #include <QDebug>
 #include <QVBoxLayout>
@@ -638,23 +639,27 @@ void MainWindow::setupLayout() {
             [this, rightContentSplitter](bool checked) {
         mVideoPanel->setVisible(checked);
         if (checked) {
-            if (mVideoWindows.isEmpty()) {
-                showVideoWindows();
-            } else {
-                // 已有窗口，刷新推流地址和 live_status（配置可能已变更）
-                refreshVideoWindows();
-            }
-        }
-        mVideoToggleBtn->setText(checked ? QString::fromUtf8("◢ 视频直播")
-                                         : QString::fromUtf8("▶ 视频直播"));
-
-        if (checked) {
-            // 展开时给视频面板分配 ~35% 垂直空间
+            // 先分配空间 + 显示加载提示，让 UI 立即刷新
             int total = rightContentSplitter->height();
             if (total > 0) {
                 rightContentSplitter->setSizes({total * 65 / 100, total * 35 / 100});
             }
+            mVideoLoadingLabel->setGeometry(mVideoPanel->rect());
+            mVideoLoadingLabel->setVisible(true);
+            QApplication::processEvents();
+
+            // 延迟到下一轮事件循环执行重活，确保加载提示先渲染
+            QTimer::singleShot(50, this, [this]() {
+                if (mVideoWindows.isEmpty()) {
+                    showVideoWindows();
+                } else {
+                    refreshVideoWindows();
+                }
+                mVideoLoadingLabel->setVisible(false);
+            });
         }
+        mVideoToggleBtn->setText(checked ? QString::fromUtf8("◢ 视频直播")
+                                         : QString::fromUtf8("▶ 视频直播"));
     });
 
     rightLayout->addWidget(rightContentSplitter, 1);

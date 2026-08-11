@@ -151,6 +151,7 @@ void VideoStreamWindow::setupUi() {
     mStartBtn->setCursor(Qt::PointingHandCursor);
     mStartBtn->setFocusPolicy(Qt::NoFocus);
     mStartBtn->setFixedHeight(30);
+    mStartBtn->setMinimumWidth(100);
     mStartBtn->setStyleSheet(
         "QPushButton { background: #1a73e8; color: #fff; font-weight: bold;"
         "border: none; border-radius: 4px; padding: 4px 12px; font-size: 12px; }"
@@ -164,6 +165,7 @@ void VideoStreamWindow::setupUi() {
     mPullBtn->setCursor(Qt::PointingHandCursor);
     mPullBtn->setFocusPolicy(Qt::NoFocus);
     mPullBtn->setFixedHeight(30);
+    mPullBtn->setMinimumWidth(100);
     mPullBtn->setStyleSheet(
         "QPushButton { background: #2e7d32; color: #fff; font-weight: bold;"
         "border: none; border-radius: 4px; padding: 4px 12px; font-size: 12px; }"
@@ -313,7 +315,7 @@ void VideoStreamWindow::updateQualityButtonText() {
 void VideoStreamWindow::updateButtonStates() {
     bool hasUrl = !mUrlInput->text().trimmed().isEmpty()
         && !mUrlInput->text().contains(QString::fromUtf8("请先在配置中心设置"));
-    mStartBtn->setEnabled(!mStreaming);
+    mStartBtn->setEnabled(true);
     mPullBtn->setEnabled(hasUrl);
     if (mMoreStopAction)
         mMoreStopAction->setEnabled(mStreaming);
