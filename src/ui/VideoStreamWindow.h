@@ -36,6 +36,9 @@ public:
     // 手动拉流播放（不发送推流指令）
     void onPullStream();
 
+    // 设备离线时调用：停止 VLC 播放、变黑、更新状态
+    void setDeviceOffline();
+
     // VLC 事件回调
     void onVlcError();
     void onVlcBuffering(float cache);
@@ -84,6 +87,7 @@ private:
     QString     mCurrentQuality;
     bool        mStreaming    = false;
     bool        mBuffering    = false;
+    bool        mDeviceOffline = false;  // 设备曾离线，恢复上线后自动重拉流
 
     // 视频区域
     QWidget*    mVideoArea;
@@ -98,12 +102,13 @@ private:
 
     // 控制按钮
     QPushButton* mStartBtn;
-    QPushButton* mStopBtn;
     QPushButton* mPullBtn;         // 手动拉流（不推流）
-    QPushButton* mQualityBtn;
-    QMenu*       mQualityMenu;
-    QPushButton* mLensBtn;          // 镜头类型切换
-    QMenu*       mLensMenu;
+    QMenu*       mQualityMenu;     // 清晰度菜单（收入更多）
+    QMenu*       mLensMenu;        // 镜头类型菜单（收入更多）
+    QPushButton* mMoreBtn;         // "更多"按钮
+    QMenu*       mMoreMenu;
+    QAction*     mMoreStopAction = nullptr;   // 更多菜单中的停止推流
+    QAction*     mMoreLensAction = nullptr;   // 更多菜单中的镜头子菜单
 
     // libVLC
     libvlc_instance_t*      mVlcInstance = nullptr;

@@ -159,19 +159,6 @@ void VideoStreamWindow::setupUi() {
     connect(mStartBtn, &QPushButton::clicked, this, &VideoStreamWindow::onStart);
     controlLayout->addWidget(mStartBtn);
 
-    // 停止推流按钮
-    mStopBtn = new QPushButton(QString::fromUtf8("■ 停止推流"), controlBar);
-    mStopBtn->setCursor(Qt::PointingHandCursor);
-    mStopBtn->setFocusPolicy(Qt::NoFocus);
-    mStopBtn->setFixedHeight(30);
-    mStopBtn->setStyleSheet(
-        "QPushButton { background: #d93025; color: #fff; font-weight: bold;"
-        "border: none; border-radius: 4px; padding: 4px 12px; font-size: 12px; }"
-        "QPushButton:hover { background: #b3261e; }"
-        "QPushButton:disabled { background: #4a4a4a; color: #888; }");
-    connect(mStopBtn, &QPushButton::clicked, this, &VideoStreamWindow::onStop);
-    controlLayout->addWidget(mStopBtn);
-
     // 手动拉流按钮（仅 VLC 拉流，不发送推流指令）
     mPullBtn = new QPushButton(QString::fromUtf8("🔗 拉流"), controlBar);
     mPullBtn->setCursor(Qt::PointingHandCursor);
@@ -186,20 +173,9 @@ void VideoStreamWindow::setupUi() {
     connect(mPullBtn, &QPushButton::clicked, this, &VideoStreamWindow::onPullStream);
     controlLayout->addWidget(mPullBtn);
 
-    // 清晰度按钮
-    mQualityBtn = new QPushButton(controlBar);
-    mQualityBtn->setCursor(Qt::PointingHandCursor);
-    mQualityBtn->setFocusPolicy(Qt::NoFocus);
-    mQualityBtn->setFixedHeight(30);
-    mQualityBtn->setStyleSheet(
-        "QPushButton { background: #3a3a3a; color: #ccc;"
-        "border: 1px solid #555; border-radius: 4px;"
-        "padding: 4px 10px; font-size: 12px; }"
-        "QPushButton:hover { background: #4a4a4a; border-color: #888; }"
-        "QPushButton::menu-indicator { image: none; }");
-    updateQualityButtonText();
-
+    // 清晰度菜单（收入"更多"）
     mQualityMenu = new QMenu(this);
+    mQualityMenu->setTitle(QString::fromUtf8("🎛 自适应"));
     mQualityMenu->setStyleSheet(
         "QMenu { background: #2a2a2a; border: 1px solid #555;"
         "border-radius: 4px; padding: 4px 0; }"
@@ -215,22 +191,10 @@ void VideoStreamWindow::setupUi() {
             onQualitySelected(qStr, qVal);
         });
     }
-    mQualityBtn->setMenu(mQualityMenu);
-    controlLayout->addWidget(mQualityBtn);
 
-    // 镜头类型按钮
-    mLensBtn = new QPushButton(QString::fromUtf8("🔍 镜头 ▾"), controlBar);
-    mLensBtn->setCursor(Qt::PointingHandCursor);
-    mLensBtn->setFocusPolicy(Qt::NoFocus);
-    mLensBtn->setFixedHeight(30);
-    mLensBtn->setStyleSheet(
-        "QPushButton { background: #3a3a3a; color: #ccc;"
-        "border: 1px solid #555; border-radius: 4px;"
-        "padding: 4px 10px; font-size: 12px; }"
-        "QPushButton:hover { background: #4a4a4a; border-color: #888; }"
-        "QPushButton::menu-indicator { image: none; }");
-
+    // 镜头类型菜单（收入"更多"）
     mLensMenu = new QMenu(this);
+    mLensMenu->setTitle(QString::fromUtf8("🔍 镜头"));
     mLensMenu->setStyleSheet(
         "QMenu { background: #2a2a2a; border: 1px solid #555;"
         "border-radius: 4px; padding: 4px 0; }"
@@ -246,14 +210,44 @@ void VideoStreamWindow::setupUi() {
             onLensSelected(value);
         });
     }
-    mLensBtn->setMenu(mLensMenu);
-    controlLayout->addWidget(mLensBtn);
+
+    // "更多" 按钮 — 收纳停止推流、清晰度、镜头等次要操作
+    mMoreBtn = new QPushButton(QString::fromUtf8("⋮ 更多"), controlBar);
+    mMoreBtn->setCursor(Qt::PointingHandCursor);
+    mMoreBtn->setFocusPolicy(Qt::NoFocus);
+    mMoreBtn->setFixedHeight(30);
+    mMoreBtn->setStyleSheet(
+        "QPushButton { background: #3a3a3a; color: #ccc;"
+        "border: 1px solid #555; border-radius: 4px;"
+        "padding: 4px 10px; font-size: 12px; }"
+        "QPushButton:hover { background: #4a4a4a; border-color: #888; }"
+        "QPushButton::menu-indicator { image: none; }");
+
+    mMoreMenu = new QMenu(this);
+    mMoreMenu->setStyleSheet(
+        "QMenu { background: #2a2a2a; border: 1px solid #555;"
+        "border-radius: 4px; padding: 4px 0; }"
+        "QMenu::item { color: #ccc; padding: 6px 28px 6px 16px; font-size: 12px; }"
+        "QMenu::item:selected { background: #1a73e8; color: #fff; }");
+
+    // 停止推流 action
+    mMoreStopAction = mMoreMenu->addAction(QString::fromUtf8("■ 停止推流"),
+                                            this, &VideoStreamWindow::onStop);
+    // 清晰度子菜单
+    mMoreMenu->addMenu(mQualityMenu);
+    // 镜头子菜单（仅飞机显示）
+    mMoreLensAction = mMoreMenu->addMenu(mLensMenu);
+
+    mMoreBtn->setMenu(mMoreMenu);
+    controlLayout->addWidget(mMoreBtn);
 
     controlLayout->addStretch();
     layout->addWidget(controlBar);
 }
 
 void VideoStreamWindow::updateLiveStatus(const LiveStatusInfo& info) {
+    int prevStatus = mLiveStatus;
+
     mDeviceSn     = info.deviceSn;
     mVideoId      = info.videoId;
     mVideoQuality = info.videoQuality;
@@ -269,6 +263,18 @@ void VideoStreamWindow::updateLiveStatus(const LiveStatusInfo& info) {
         .arg(prefix, mVideoId));
 
     refreshStatusLabel();
+
+    // 设备从离线恢复 → 自动重新拉流
+    if (mDeviceOffline && info.status == 1 && prevStatus == 0) {
+        mDeviceOffline = false;
+        QString url = mUrlInput->text().trimmed();
+        if (!url.isEmpty()
+            && !url.contains(QString::fromUtf8("请先在配置中心设置"))) {
+            qDebug() << "VideoStreamWindow: device back online, auto-restarting VLC"
+                     << mDeviceSn << mVideoId;
+            tryVlcPlayback(url);
+        }
+    }
 }
 
 void VideoStreamWindow::refreshStatusLabel() {
@@ -300,16 +306,17 @@ void VideoStreamWindow::releaseVlcMedia() {
 }
 
 void VideoStreamWindow::updateQualityButtonText() {
-    mQualityBtn->setText(
-        QString::fromUtf8("🎛 %1 ▾").arg(mCurrentQuality));
+    mQualityMenu->setTitle(
+        QString::fromUtf8("🎛 %1").arg(mCurrentQuality));
 }
 
 void VideoStreamWindow::updateButtonStates() {
     bool hasUrl = !mUrlInput->text().trimmed().isEmpty()
         && !mUrlInput->text().contains(QString::fromUtf8("请先在配置中心设置"));
-    mStartBtn->setEnabled(!mStreaming && hasUrl);
-    mStopBtn->setEnabled(mStreaming);
+    mStartBtn->setEnabled(!mStreaming);
     mPullBtn->setEnabled(hasUrl);
+    if (mMoreStopAction)
+        mMoreStopAction->setEnabled(mStreaming);
 }
 
 void VideoStreamWindow::onStart() {
@@ -578,9 +585,33 @@ void VideoStreamWindow::setDeviceName(const QString& name) {
 }
 
 void VideoStreamWindow::setDeviceType(DeviceType type) {
-    // 镜头切换按钮仅飞机显示
+    // 镜头切换仅飞机显示（在"更多"菜单中）
     bool isAircraft = (type == DeviceType::Aircraft);
-    mLensBtn->setVisible(isAircraft);
+    if (mMoreLensAction)
+        mMoreLensAction->setVisible(isAircraft);
+}
+
+void VideoStreamWindow::setDeviceOffline() {
+    // 停止 VLC 播放，画面变黑
+#ifdef HAS_VLC
+    if (mVlcPlayer) {
+        libvlc_media_player_stop(mVlcPlayer);
+    }
+    releaseVlcMedia();
+#endif
+
+    // 显示离线提示
+    mPlaceholderLabel->setText(QString::fromUtf8("⚠ 设备已离线"));
+    mPlaceholderLabel->setStyleSheet(
+        "color: #d93025; font-size: 14px; background: transparent;");
+    mPlaceholderLabel->show();
+
+    // 更新内部状态
+    mStreaming = false;
+    mLiveStatus = 0;
+    mDeviceOffline = true;
+    refreshStatusLabel();
+    updateButtonStates();
 }
 
 void VideoStreamWindow::closeEvent(QCloseEvent* event) {

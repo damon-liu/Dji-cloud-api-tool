@@ -828,12 +828,20 @@ void MainWindow::connectSignals() {
 
     connect(mDevMgr, &DeviceManager::deviceOnlineChanged,
             this, [this](const QString& sn, bool online) {
-        Q_UNUSED(sn) Q_UNUSED(online)
         QString prevSelected = mDeviceTree->selectedDeviceSn();
         mDeviceTree->rebuild(mDevMgr->topLevelDevices(), mDevMgr->allDevices());
         // rebuild 会清空选中，恢复之前自动选中的设备
         if (!prevSelected.isEmpty())
             mDeviceTree->selectDevice(prevSelected);
+
+        // 设备离线：通知对应视频窗口停止播放、变黑、更新状态
+        if (!online) {
+            for (auto* win : mVideoWindows) {
+                if (win->property("deviceSn").toString() == sn) {
+                    win->setDeviceOffline();
+                }
+            }
+        }
     });
 
     // TopicParsePanel: topic 选中变化 → 更新解析面板
@@ -1501,12 +1509,15 @@ void MainWindow::onLiveStatusChanged(const QString& sn, const QVector<LiveStatus
 
             // 按 entry 查设备类型和名称
             DeviceType entryType = entryTypeMap.value(info.videoId, DeviceType::Dock);
-            QString deviceName = (entryType == DeviceType::Dock)
-                ? QString::fromUtf8("机场")
-                : QString::fromUtf8("飞机");
-            DeviceInfo* entryDev = mDevMgr->device(info.deviceSn);
-            if (entryDev && !entryDev->name.isEmpty() && entryDev->name != entryDev->sn)
-                deviceName = deviceName + QString("-%1").arg(entryDev->name);
+            QString deviceName;
+            if (entryType == DeviceType::Dock) {
+                deviceName = QString::fromUtf8("机场");
+                DeviceInfo* entryDev = mDevMgr->device(info.deviceSn);
+                if (entryDev && !entryDev->name.isEmpty() && entryDev->name != entryDev->sn)
+                    deviceName = deviceName + QString("-%1").arg(entryDev->name);
+            } else {
+                deviceName = QString::fromUtf8("飞机");
+            }
 
             win->setDeviceName(deviceName);
             win->setDeviceType(entryType);
