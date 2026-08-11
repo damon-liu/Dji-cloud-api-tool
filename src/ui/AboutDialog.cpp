@@ -81,7 +81,7 @@ void AboutDialog::setupUi()
     layout->addWidget(titleLabel);
 
     // ── 简短描述 ──
-    auto* descLabel = new QLabel(QString::fromUtf8("轻量级大疆上云 API 调试与监控工具"), this);
+    auto* descLabel = new QLabel(QString::fromUtf8("一款轻量级大疆上云 API 调试与监控工具"), this);
     descLabel->setObjectName("appDesc");
     descLabel->setAlignment(Qt::AlignCenter);
     layout->addWidget(descLabel);

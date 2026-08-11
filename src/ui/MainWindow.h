@@ -61,6 +61,8 @@ private:
     void showFunctionInTab(int tabIndex);
     void popOutCurrentTab();
     void popInPanel(QWidget* panel);
+    VideoStreamWindow* findDockVideoWindow();  // 查找机库视频窗口
+    void applyVideoLayoutMode();               // 根据当前视频窗口情况自动切换布局
 
     DeviceManager*     mDevMgr;
     DeviceTreeWidget*  mDeviceTree;
@@ -68,6 +70,8 @@ private:
     RawJsonPanel*      mRawJsonPanel;
     PublishPanel*      mPublishPanel;
     QSplitter*         mRightSplitter;   // OSD | JSON (horizontal)
+    QSplitter*         mRightColumnWidget = nullptr;       // 右侧栏：原始JSON(上) + 内嵌机库视频(下) — QSplitter
+    QWidget*           mDockVideoInlineContainer = nullptr; // 机库视频内嵌占位容器
     QPushButton*       mTogglePublishBtn;
     QTabWidget*        mRightTabWidget = nullptr;   // 右侧标签页（方案E）
     DockControlPanel*  mDockControlPanel = nullptr;
@@ -84,6 +88,10 @@ private:
     QLabel*            mVideoLoadingLabel = nullptr; // 视频引擎初始化加载提示
     QLabel*            mDeviceTitleLabel;   // Devices列表 (N)
     QLabel*            mBrokerLabel;
+
+    // 视频布局模式
+    enum class VideoLayoutMode { Normal, Compact };
+    VideoLayoutMode    mVideoLayoutMode = VideoLayoutMode::Normal;
 
     // Toolbar actions
     QAction*           mConnectAct;
