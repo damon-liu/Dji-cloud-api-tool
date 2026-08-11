@@ -225,7 +225,6 @@ void CommandHistoryDialog::appendLivePushCommand(const QString& gatewaySn,
         {"live_stop_push",    QString::fromUtf8("停止推流")},
         {"live_set_quality",  QString::fromUtf8("设置清晰度")},
         {"live_lens_change",  QString::fromUtf8("切换镜头类型")},
-        {"live_camera_change",QString::fromUtf8("切换相机")},
     };
 
     QString action = METHOD_NAMES.value(method, method);

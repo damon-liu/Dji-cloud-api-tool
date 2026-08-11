@@ -135,16 +135,30 @@ void VideoStreamWindow::setupUi() {
     controlLayout->setContentsMargins(8, 6, 8, 6);
     controlLayout->setSpacing(6);
 
-    // URL 输入框（由程序拼接，支持用户手动修改）
-    mUrlInput = new QLineEdit(controlBar);
-    mUrlInput->setPlaceholderText(QString::fromUtf8("请先在配置中心设置流媒体服务器"));
-    mUrlInput->setStyleSheet(
-        "QLineEdit { background: #1e1e1e; color: #ccc;"
+    // URL 下拉框（可编辑，列出所有摄像头的推流地址，用户可直接选择切换）
+    mUrlCombo = new QComboBox(controlBar);
+    mUrlCombo->setEditable(true);
+    mUrlCombo->setInsertPolicy(QComboBox::NoInsert);
+    mUrlCombo->lineEdit()->setPlaceholderText(QString::fromUtf8("请先在配置中心设置流媒体服务器"));
+    mUrlCombo->setStyleSheet(
+        "QComboBox { background: #1e1e1e; color: #ccc;"
         "border: 1px solid #555; border-radius: 4px;"
         "padding: 4px 8px; font-size: 12px; }"
-        "QLineEdit:focus { border-color: #1a73e8; }");
-    mUrlInput->setMinimumWidth(160);
-    controlLayout->addWidget(mUrlInput, 1);
+        "QComboBox:hover { border-color: #888; }"
+        "QComboBox:focus { border-color: #1a73e8; }"
+        "QComboBox::drop-down { border: none; width: 20px; }"
+        "QComboBox::down-arrow { image: none; border-left: 4px solid transparent;"
+        "border-right: 4px solid transparent; border-top: 6px solid #aaa;"
+        "margin-right: 6px; }"
+        "QComboBox QAbstractItemView { background: #2a2a2a; color: #ccc;"
+        "border: 1px solid #555; selection-background-color: #1a73e8;"
+        "outline: none; }");
+    mUrlCombo->setToolTip(QString::fromUtf8("选择或输入推流地址"));
+    mUrlCombo->setMinimumWidth(160);
+    mUrlCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    connect(mUrlCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &VideoStreamWindow::onUrlComboChanged);
+    controlLayout->addWidget(mUrlCombo, 1);
 
     // 开始推流按钮
     mStartBtn = new QPushButton(QString::fromUtf8("▶ 开始推流"), controlBar);
@@ -257,6 +271,14 @@ void VideoStreamWindow::updateLiveStatus(const LiveStatusInfo& info) {
     mLiveStatus   = info.status;
     mErrorStatus  = info.errorStatus;
 
+    // 同步更新 mCameraList 中对应的条目
+    for (int i = 0; i < mCameraList.size(); ++i) {
+        if (mCameraList[i].videoId == info.videoId) {
+            mCameraList[i] = info;
+            break;
+        }
+    }
+
     // 更新标题 — "[机场/飞机]  |  video_id: xxx"
     QString prefix = mDeviceName.isEmpty()
         ? QString()
@@ -269,7 +291,7 @@ void VideoStreamWindow::updateLiveStatus(const LiveStatusInfo& info) {
     // 设备从离线恢复 → 自动重新拉流
     if (mDeviceOffline && info.status == 1 && prevStatus == 0) {
         mDeviceOffline = false;
-        QString url = mUrlInput->text().trimmed();
+        QString url = mUrlCombo->currentText().trimmed();
         if (!url.isEmpty()
             && !url.contains(QString::fromUtf8("请先在配置中心设置"))) {
             qDebug() << "VideoStreamWindow: device back online, auto-restarting VLC"
@@ -313,8 +335,8 @@ void VideoStreamWindow::updateQualityButtonText() {
 }
 
 void VideoStreamWindow::updateButtonStates() {
-    bool hasUrl = !mUrlInput->text().trimmed().isEmpty()
-        && !mUrlInput->text().contains(QString::fromUtf8("请先在配置中心设置"));
+    bool hasUrl = !mUrlCombo->currentText().trimmed().isEmpty()
+        && !mUrlCombo->currentText().contains(QString::fromUtf8("请先在配置中心设置"));
     mStartBtn->setEnabled(true);
     mPullBtn->setEnabled(hasUrl);
     if (mMoreStopAction)
@@ -323,7 +345,7 @@ void VideoStreamWindow::updateButtonStates() {
 
 void VideoStreamWindow::onStart() {
     // 检查流媒体服务器是否已配置
-    QString url = mUrlInput->text().trimmed();
+    QString url = mUrlCombo->currentText().trimmed();
     if (url.isEmpty()
         || url.contains(QString::fromUtf8("请先在配置中心设置"))) {
         QMessageBox::warning(this,
@@ -333,7 +355,8 @@ void VideoStreamWindow::onStart() {
     }
 
     // 1) 发射信号 → MainWindow → DeviceManager 下发 live_start_push
-    emit startPushRequested(mDeviceSn, mVideoId, url, 1, mVideoQuality);
+    QString gwSn = mGatewaySn.isEmpty() ? mDeviceSn : mGatewaySn;
+    emit startPushRequested(gwSn, mVideoId, url, 1, mVideoQuality);
 
     // 2) VLC 拉流播放（含自动重试）
     tryVlcPlayback(url);
@@ -342,7 +365,7 @@ void VideoStreamWindow::onStart() {
 void VideoStreamWindow::autoPlay() {
     // 仅 VLC 拉流播放，不发送推流指令
     // 适用场景：设备此前已收到 live_start_push 且持续推流，重启程序后只需重新拉流
-    QString url = mUrlInput->text().trimmed();
+    QString url = mUrlCombo->currentText().trimmed();
     qDebug() << "VideoStreamWindow::autoPlay()" << mDeviceSn << mVideoId << "url:" << url;
     if (url.isEmpty()) {
         qDebug() << "  -> skipped: url is empty";
@@ -352,7 +375,7 @@ void VideoStreamWindow::autoPlay() {
 }
 
 void VideoStreamWindow::onPullStream() {
-    QString url = mUrlInput->text().trimmed();
+    QString url = mUrlCombo->currentText().trimmed();
     if (url.isEmpty()
         || url.contains(QString::fromUtf8("请先在配置中心设置"))) {
         QMessageBox::warning(this,
@@ -508,22 +531,21 @@ void VideoStreamWindow::onStop() {
     updateButtonStates();
 
     // 通知 MainWindow 下发 live_stop_push
-    emit stopPushRequested(mDeviceSn, mVideoId);
+    QString gwSn = mGatewaySn.isEmpty() ? mDeviceSn : mGatewaySn;
+    emit stopPushRequested(gwSn, mVideoId);
 }
 
 void VideoStreamWindow::onQualitySelected(const QString& quality, int qualityVal) {
     mCurrentQuality = quality;
     updateQualityButtonText();
     // 下发清晰度切换指令
-    emit setQualityRequested(mDeviceSn, mVideoId, qualityVal);
+    QString gwSn = mGatewaySn.isEmpty() ? mDeviceSn : mGatewaySn;
+    emit setQualityRequested(gwSn, mVideoId, qualityVal);
 }
 
 void VideoStreamWindow::onLensSelected(const QString& videoType) {
-    emit lensChangeRequested(mDeviceSn, videoType);
-}
-
-void VideoStreamWindow::onCameraSelected(int cameraPosition) {
-    emit cameraChangeRequested(mDeviceSn, mVideoId, cameraPosition);
+    QString gwSn = mGatewaySn.isEmpty() ? mDeviceSn : mGatewaySn;
+    emit lensChangeRequested(gwSn, videoType);
 }
 
 // ——— VLC 事件回调 ———
@@ -572,7 +594,7 @@ void VideoStreamWindow::onVlcPlaying() {
 }
 
 void VideoStreamWindow::setStreamUrl(const QString& url) {
-    mUrlInput->setText(url);
+    mUrlCombo->setEditText(url);
     updateButtonStates();
 }
 
@@ -591,6 +613,114 @@ void VideoStreamWindow::setDeviceType(DeviceType type) {
     bool isAircraft = (type == DeviceType::Aircraft);
     if (mMoreLensAction)
         mMoreLensAction->setVisible(isAircraft);
+}
+
+void VideoStreamWindow::setGatewaySn(const QString& sn) {
+    mGatewaySn = sn;
+}
+
+void VideoStreamWindow::setCameraOptions(const QVector<LiveStatusInfo>& cameras,
+                                          const QMap<QString, QString>& urlMap,
+                                          const QString& currentVideoId) {
+    if (!mUrlCombo)
+        return;
+
+    mCameraList = cameras;
+    mCameraUrlMap = urlMap;
+
+    // 阻止信号以免触发 onUrlComboChanged
+    mUrlCombo->blockSignals(true);
+    mUrlCombo->clear();
+
+    int selectIndex = -1;
+    for (int i = 0; i < cameras.size(); ++i) {
+        const auto& cam = cameras[i];
+        QString url = urlMap.value(cam.videoId);
+        if (!url.isEmpty()) {
+            // 直接以推流 URL 作为下拉项，用户一目了然
+            mUrlCombo->addItem(url, cam.videoId);
+            if (cam.videoId == currentVideoId)
+                selectIndex = mUrlCombo->count() - 1;
+        }
+    }
+
+    // 如果当前 URL 不在列表中（用户手动输入或已保存地址），fallback 到第一个
+    if (selectIndex < 0 && mUrlCombo->count() > 0) {
+        selectIndex = 0;
+    }
+
+    if (selectIndex >= 0)
+        mUrlCombo->setCurrentIndex(selectIndex);
+
+    mUrlCombo->blockSignals(false);
+}
+
+void VideoStreamWindow::onUrlComboChanged(int index) {
+    if (index < 0 || index >= mUrlCombo->count())
+        return;
+
+    // 从下拉项获取对应的 videoId
+    QString selectedVideoId = mUrlCombo->itemData(index).toString();
+    if (selectedVideoId.isEmpty())
+        return;  // 用户手动输入的 URL，不切换摄像头
+
+    if (selectedVideoId == mVideoId)
+        return;  // 未变化
+
+    // 查找对应的摄像头信息
+    const LiveStatusInfo* cam = nullptr;
+    for (int i = 0; i < mCameraList.size(); ++i) {
+        if (mCameraList[i].videoId == selectedVideoId) {
+            cam = &mCameraList[i];
+            break;
+        }
+    }
+    if (!cam)
+        return;
+
+    qDebug() << "VideoStreamWindow: URL combo switched to" << cam->videoId
+             << "type:" << cam->videoType << "quality:" << cam->videoQuality;
+
+    // 更新当前摄像头信息
+    mVideoId      = cam->videoId;
+    mVideoType    = cam->videoType;
+    mVideoQuality = cam->videoQuality;
+    mLiveStatus   = cam->status;
+    mErrorStatus  = cam->errorStatus;
+
+    // 获取新 URL（当前下拉框显示的文本）
+    QString newUrl = mUrlCombo->currentText().trimmed();
+    if (newUrl.isEmpty() && mCameraUrlMap.contains(cam->videoId)) {
+        newUrl = mCameraUrlMap.value(cam->videoId);
+    }
+
+    // 刷新标题和状态
+    QString prefix = mDeviceName.isEmpty()
+        ? QString()
+        : QString("[%1] ").arg(mDeviceName);
+    mTitleLabel->setText(QString("%1 |  video_id: %2")
+        .arg(prefix, mVideoId));
+    refreshStatusLabel();
+
+    // 如果正在推流/拉流 → 先停止，再用新摄像头的 URL 重新推流 + 拉流
+    bool wasStreaming = mStreaming;
+    if (wasStreaming) {
+#ifdef HAS_VLC
+        if (mVlcPlayer) {
+            libvlc_media_player_stop(mVlcPlayer);
+        }
+        releaseVlcMedia();
+#endif
+        mStreaming = false;
+    }
+
+    if (wasStreaming && !newUrl.isEmpty()) {
+        // 用新摄像头的 URL 重新推流
+        QString gwSn = mGatewaySn.isEmpty() ? mDeviceSn : mGatewaySn;
+        emit startPushRequested(gwSn, cam->videoId, newUrl, 1, cam->videoQuality);
+        // VLC 拉到新 URL
+        tryVlcPlayback(newUrl);
+    }
 }
 
 void VideoStreamWindow::setDeviceOffline() {

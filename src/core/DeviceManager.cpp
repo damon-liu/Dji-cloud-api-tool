@@ -748,10 +748,3 @@ void DeviceManager::liveLensChange(const QString& gatewaySn, const QString& vide
     executeDockCommand(gatewaySn, DockCommandType::LiveLensChange, data);
 }
 
-void DeviceManager::liveCameraChange(const QString& gatewaySn, const QString& videoId,
-                                      int cameraPosition) {
-    QJsonObject data;
-    data["video_id"]        = videoId;
-    data["camera_position"] = cameraPosition;
-    executeDockCommand(gatewaySn, DockCommandType::LiveCameraChange, data);
-}

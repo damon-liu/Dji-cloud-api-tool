@@ -41,7 +41,6 @@ QString DockCommandBuilder::method(DockCommandType type) {
     case DockCommandType::LiveStopPush:    return QStringLiteral("live_stop_push");
     case DockCommandType::LiveSetQuality:  return QStringLiteral("live_set_quality");
     case DockCommandType::LiveLensChange:  return QStringLiteral("live_lens_change");
-    case DockCommandType::LiveCameraChange: return QStringLiteral("live_camera_change");
     }
     return {};
 }
@@ -82,7 +81,6 @@ QString DockCommandBuilder::displayName(DockCommandType type) {
     case DockCommandType::LiveStopPush:    return QString::fromUtf8("停止推流");
     case DockCommandType::LiveSetQuality:  return QString::fromUtf8("设置清晰度");
     case DockCommandType::LiveLensChange:  return QString::fromUtf8("切换镜头类型");
-    case DockCommandType::LiveCameraChange: return QString::fromUtf8("切换相机");
     }
     return {};
 }
@@ -114,8 +112,7 @@ bool DockCommandBuilder::requiresDebugMode(DockCommandType type) {
         && type != DockCommandType::LiveStartPush
         && type != DockCommandType::LiveStopPush
         && type != DockCommandType::LiveSetQuality
-        && type != DockCommandType::LiveLensChange
-        && type != DockCommandType::LiveCameraChange;
+        && type != DockCommandType::LiveLensChange;
 }
 
 DockCommandRequest DockCommandBuilder::build(const QString& gatewaySn, DockCommandType type,

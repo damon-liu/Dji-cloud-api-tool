@@ -92,8 +92,6 @@ public:
     void liveStopPush(const QString& gatewaySn, const QString& videoId);
     void liveSetQuality(const QString& gatewaySn, const QString& videoId, int quality);
     void liveLensChange(const QString& gatewaySn, const QString& videoType);
-    void liveCameraChange(const QString& gatewaySn, const QString& videoId,
-                          int cameraPosition);
 
     // 保存配置
     bool saveConfig(const QString& path);

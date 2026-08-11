@@ -4,12 +4,14 @@
 #include <QWidget>
 #include <QStringList>
 #include <QMap>
+#include <QVector>
+#include <QComboBox>
+#include <functional>
 #include "DeviceInfo.h"  // LiveStatusInfo
 
 class QLabel;
 class QPushButton;
 class QMenu;
-class QLineEdit;
 
 // libVLC 前向声明
 struct libvlc_instance_t;
@@ -26,6 +28,16 @@ public:
     void setStreamUrl(const QString& url);
     void setDeviceName(const QString& name);
     void setDeviceType(DeviceType type);
+    void setGatewaySn(const QString& sn);
+
+    // 设置 URL 下拉选项（机场多路视频切换）
+    // cameras: 所有可用摄像头；urlMap: videoId → 推流地址
+    void setCameraOptions(const QVector<LiveStatusInfo>& cameras,
+                          const QMap<QString, QString>& urlMap,
+                          const QString& currentVideoId);
+
+    // 判断是否有多个摄像头（用于 MainWindow 判断是否需要合并）
+    bool hasMultipleCameras() const { return mUrlCombo->count() > 1; }
 
     // 增量更新：OSD 高频推送时复用窗口，只更新标签不重建 VLC
     void updateLiveStatus(const LiveStatusInfo& info);
@@ -53,8 +65,6 @@ signals:
     void setQualityRequested(const QString& gatewaySn, const QString& videoId,
                              int quality);
     void lensChangeRequested(const QString& gatewaySn, const QString& videoType);
-    void cameraChangeRequested(const QString& gatewaySn, const QString& videoId,
-                               int cameraPosition);
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -64,7 +74,7 @@ private slots:
     void onStop();
     void onQualitySelected(const QString& quality, int qualityVal);
     void onLensSelected(const QString& videoType);
-    void onCameraSelected(int cameraPosition);
+    void onUrlComboChanged(int index);
 
 private:
     void setupUi();
@@ -78,6 +88,7 @@ private:
 
     // 当前直播状态
     QString     mDeviceSn;
+    QString     mGatewaySn;          // 推流控制网关 SN（机场设备 SN）
     QString     mDeviceName;         // "[机场]" / "[飞机]" 设备名
     QString     mVideoId;
     int         mVideoQuality = 0;
@@ -89,6 +100,10 @@ private:
     bool        mBuffering    = false;
     bool        mDeviceOffline = false;  // 设备曾离线，恢复上线后自动重拉流
 
+    // 摄像头/URL 切换
+    QVector<LiveStatusInfo> mCameraList;             // 所有可切换摄像头（videoId → info）
+    QMap<QString, QString> mCameraUrlMap;            // videoId → 推流地址
+
     // 视频区域
     QWidget*    mVideoArea;
     QLabel*     mPlaceholderLabel;
@@ -97,8 +112,8 @@ private:
     QLabel*     mTitleLabel;         // "设备SN | video_id: xxx"
     QLabel*     mStatusLabel;        // "状态: 在直播 | 清晰度: 超清"
 
-    // URL 输入
-    QLineEdit*  mUrlInput;
+    // URL 输入（可编辑下拉框，列出所有摄像头推流地址）
+    QComboBox*  mUrlCombo;
 
     // 控制按钮
     QPushButton* mStartBtn;

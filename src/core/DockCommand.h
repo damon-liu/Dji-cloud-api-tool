@@ -43,7 +43,6 @@ enum class DockCommandType {
     LiveStopPush,        // 停止推流 live_stop_push
     LiveSetQuality,      // 设置清晰度 live_set_quality
     LiveLensChange,      // 切换镜头类型 live_lens_change
-    LiveCameraChange,    // 切换相机 live_camera_change
 };
 
 enum class DockCommandState {
