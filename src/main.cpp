@@ -14,11 +14,10 @@ int main(int argc, char* argv[]) {
     QString configDir = QApplication::applicationDirPath() + "/config";
     QDir().mkpath(configDir);
 
-    // 配置文件路径
+    // 配置文件路径：优先使用 config/config.json
     QString configPath = configDir + "/config.json";
-    // 如果运行目录有 config.json 优先使用（兼容旧版）
-    if (QFile::exists("config.json"))
-        configPath = "config.json";
+    if (!QFile::exists(configPath) && QFile::exists("config.json"))
+        configPath = "config.json";  // 降级兼容旧版 CWD 根目录
 
     qDebug() << "Using config:" << configPath;
 

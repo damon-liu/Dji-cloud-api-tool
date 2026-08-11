@@ -652,7 +652,11 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
                 info.videoType    = obj["video_type"].toString();
                 info.status       = obj["status"].toInt(0);
                 info.errorStatus  = obj["error_status"].toInt(0);
-                info.deviceSn     = sn;
+                // video_id 格式 "{deviceSn}/...", 提取真实设备 SN（飞机摄像头经机场 topic 上报时 sn 为机场 SN）
+                {
+                    QString vidSn = info.videoId.section('/', 0, 0);
+                    info.deviceSn = vidSn.isEmpty() ? sn : vidSn;
+                }
                 liveList.append(info);
             }
 

@@ -26,10 +26,15 @@ public:
     void setStreamUrl(const QString& url);
     void setDeviceName(const QString& name);
     void setDeviceType(DeviceType type);
-    void setVlcInstance(libvlc_instance_t* vlc);
 
     // 增量更新：OSD 高频推送时复用窗口，只更新标签不重建 VLC
     void updateLiveStatus(const LiveStatusInfo& info);
+
+    // 自动拉流播放（仅 VLC 播放，不发送推流指令）— 用于已保存推流地址的窗口初始化
+    void autoPlay();
+
+    // 手动拉流播放（不发送推流指令）
+    void onPullStream();
 
     // VLC 事件回调
     void onVlcError();
@@ -63,6 +68,10 @@ private:
     void updateButtonStates();
     void updateQualityButtonText();
     void releaseVlcMedia();
+    void startVlcPlayback(const QString& url);  // VLC 拉流播放（底层实现）
+    void tryVlcPlayback(const QString& url);     // VLC 拉流播放（含自动重试）
+    void scheduleRetry();                        // 延迟重试
+    void refreshStatusLabel();  // 根据拉流状态刷新状态标签
 
     // 当前直播状态
     QString     mDeviceSn;
@@ -90,17 +99,20 @@ private:
     // 控制按钮
     QPushButton* mStartBtn;
     QPushButton* mStopBtn;
+    QPushButton* mPullBtn;         // 手动拉流（不推流）
     QPushButton* mQualityBtn;
     QMenu*       mQualityMenu;
     QPushButton* mLensBtn;          // 镜头类型切换
     QMenu*       mLensMenu;
-    QPushButton* mCameraBtn;        // 相机切换（舱内/舱外）
-    QMenu*       mCameraMenu;
 
     // libVLC
     libvlc_instance_t*      mVlcInstance = nullptr;
     libvlc_media_player_t*  mVlcPlayer   = nullptr;
     libvlc_media_t*         mVlcMedia    = nullptr;
+
+    // 自动重试
+    int     mAutoRetryRemaining = 0;   // 剩余重试次数（0=不重试）
+    QString mRetryUrl;                 // 重试使用的 URL
 };
 
 #endif // VIDEOSTREAMWINDOW_H

@@ -24,9 +24,6 @@
 #include "DeviceManager.h"
 #include "VideoStreamWindow.h"
 
-// libVLC 前向声明（全局作用域，与 vlc/vlc.h 兼容）
-struct libvlc_instance_t;
-
 class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
@@ -53,7 +50,6 @@ private:
     void refreshDockControlList(const QString& currentSn);
     void showVideoWindows();
     void hideVideoWindows();
-    bool initVlc();  // 懒加载 VLC，显示加载中提示
     void onLiveStatusChanged(const QString& sn, const QVector<LiveStatusInfo>& list);
     void removeVideoWindowsForDevice(const QString& sn);
     void refreshVideoWindows();  // 从当前配置刷新已有窗口的推流地址 + live_status
@@ -85,9 +81,6 @@ private:
     QSplitter*         mVideoSplitter = nullptr;     // 两个视频窗口水平分割器
     QPushButton*       mVideoToggleBtn = nullptr;    // 视频面板折叠/展开按钮
     QLabel*            mVideoLoadingLabel = nullptr; // 视频引擎初始化加载提示
-#ifdef HAS_VLC
-    libvlc_instance_t* mVlcInstance = nullptr;
-#endif
     QLabel*            mDeviceTitleLabel;   // Devices列表 (N)
     QLabel*            mBrokerLabel;
 

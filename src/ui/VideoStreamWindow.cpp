@@ -1,6 +1,7 @@
 #include "VideoStreamWindow.h"
 
 #include <QCloseEvent>
+#include <QDebug>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -8,6 +9,7 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QString>
+#include <QTimer>
 #include <QVBoxLayout>
 
 #ifdef HAS_VLC
@@ -20,21 +22,34 @@ static void onVlcEvent(const libvlc_event_t* event, void* userData) {
 
     switch (event->type) {
     case libvlc_MediaPlayerEncounteredError:
+        qDebug() << "[VLC event] MediaPlayerEncounteredError";
         QMetaObject::invokeMethod(win, [win]() {
             win->onVlcError();
         }, Qt::QueuedConnection);
         break;
     case libvlc_MediaPlayerBuffering:
+        qDebug() << "[VLC event] MediaPlayerBuffering cache =" << event->u.media_player_buffering.new_cache;
         QMetaObject::invokeMethod(win, [win, caching = event->u.media_player_buffering.new_cache]() {
             win->onVlcBuffering(caching);
         }, Qt::QueuedConnection);
         break;
     case libvlc_MediaPlayerPlaying:
+        qDebug() << "[VLC event] MediaPlayerPlaying";
         QMetaObject::invokeMethod(win, [win]() {
             win->onVlcPlaying();
         }, Qt::QueuedConnection);
         break;
+    case libvlc_MediaPlayerOpening:
+        qDebug() << "[VLC event] MediaPlayerOpening";
+        break;
+    case libvlc_MediaPlayerStopped:
+        qDebug() << "[VLC event] MediaPlayerStopped";
+        break;
+    case libvlc_MediaPlayerEndReached:
+        qDebug() << "[VLC event] MediaPlayerEndReached";
+        break;
     default:
+        qDebug() << "[VLC event] type =" << event->type;
         break;
     }
 }
@@ -64,6 +79,10 @@ VideoStreamWindow::~VideoStreamWindow() {
     if (mVlcPlayer) {
         libvlc_media_player_release(mVlcPlayer);
         mVlcPlayer = nullptr;
+    }
+    if (mVlcInstance) {
+        libvlc_release(mVlcInstance);
+        mVlcInstance = nullptr;
     }
 #endif
 }
@@ -153,6 +172,20 @@ void VideoStreamWindow::setupUi() {
     connect(mStopBtn, &QPushButton::clicked, this, &VideoStreamWindow::onStop);
     controlLayout->addWidget(mStopBtn);
 
+    // 手动拉流按钮（仅 VLC 拉流，不发送推流指令）
+    mPullBtn = new QPushButton(QString::fromUtf8("🔗 拉流"), controlBar);
+    mPullBtn->setCursor(Qt::PointingHandCursor);
+    mPullBtn->setFocusPolicy(Qt::NoFocus);
+    mPullBtn->setFixedHeight(30);
+    mPullBtn->setStyleSheet(
+        "QPushButton { background: #2e7d32; color: #fff; font-weight: bold;"
+        "border: none; border-radius: 4px; padding: 4px 12px; font-size: 12px; }"
+        "QPushButton:hover { background: #1b5e20; }"
+        "QPushButton:disabled { background: #4a4a4a; color: #888; }");
+    mPullBtn->setToolTip(QString::fromUtf8("仅拉流播放，不发送推流指令"));
+    connect(mPullBtn, &QPushButton::clicked, this, &VideoStreamWindow::onPullStream);
+    controlLayout->addWidget(mPullBtn);
+
     // 清晰度按钮
     mQualityBtn = new QPushButton(controlBar);
     mQualityBtn->setCursor(Qt::PointingHandCursor);
@@ -216,34 +249,6 @@ void VideoStreamWindow::setupUi() {
     mLensBtn->setMenu(mLensMenu);
     controlLayout->addWidget(mLensBtn);
 
-    // 相机切换按钮
-    mCameraBtn = new QPushButton(QString::fromUtf8("📷 相机 ▾"), controlBar);
-    mCameraBtn->setCursor(Qt::PointingHandCursor);
-    mCameraBtn->setFocusPolicy(Qt::NoFocus);
-    mCameraBtn->setFixedHeight(30);
-    mCameraBtn->setStyleSheet(
-        "QPushButton { background: #3a3a3a; color: #ccc;"
-        "border: 1px solid #555; border-radius: 4px;"
-        "padding: 4px 10px; font-size: 12px; }"
-        "QPushButton:hover { background: #4a4a4a; border-color: #888; }"
-        "QPushButton::menu-indicator { image: none; }");
-
-    mCameraMenu = new QMenu(this);
-    mCameraMenu->setStyleSheet(
-        "QMenu { background: #2a2a2a; border: 1px solid #555;"
-        "border-radius: 4px; padding: 4px 0; }"
-        "QMenu::item { color: #ccc; padding: 6px 28px 6px 16px; font-size: 12px; }"
-        "QMenu::item:selected { background: #1a73e8; color: #fff; }");
-
-    mCameraMenu->addAction(QString::fromUtf8("舱内 (FPV)"), this, [this]() {
-        onCameraSelected(0);
-    });
-    mCameraMenu->addAction(QString::fromUtf8("舱外"), this, [this]() {
-        onCameraSelected(1);
-    });
-    mCameraBtn->setMenu(mCameraMenu);
-    controlLayout->addWidget(mCameraBtn);
-
     controlLayout->addStretch();
     layout->addWidget(controlBar);
 }
@@ -256,19 +261,19 @@ void VideoStreamWindow::updateLiveStatus(const LiveStatusInfo& info) {
     mLiveStatus   = info.status;
     mErrorStatus  = info.errorStatus;
 
-    // 更新标题 — "[机场] 设备名 | video_id: xxx"
+    // 更新标题 — "[机场/飞机]  |  video_id: xxx"
     QString prefix = mDeviceName.isEmpty()
         ? QString()
         : QString("[%1] ").arg(mDeviceName);
-    mTitleLabel->setText(QString("%1%2  |  video_id: %3")
-        .arg(prefix, mDeviceSn, mVideoId));
+    mTitleLabel->setText(QString("%1 |  video_id: %2")
+        .arg(prefix, mVideoId));
 
-    // 更新状态标签
+    refreshStatusLabel();
+}
+
+void VideoStreamWindow::refreshStatusLabel() {
     QString statusText;
-    if (mErrorStatus != 0) {
-        statusText = QString::fromUtf8("⚠ 错误: %1").arg(mErrorStatus);
-        mStatusLabel->setStyleSheet("color: #d93025; font-size: 11px;");
-    } else if (mLiveStatus == 1) {
+    if (mStreaming) {
         statusText = QString::fromUtf8("● 在直播");
         mStatusLabel->setStyleSheet("color: #2e7d32; font-size: 11px;");
     } else {
@@ -300,8 +305,11 @@ void VideoStreamWindow::updateQualityButtonText() {
 }
 
 void VideoStreamWindow::updateButtonStates() {
-    mStartBtn->setEnabled(!mStreaming);
+    bool hasUrl = !mUrlInput->text().trimmed().isEmpty()
+        && !mUrlInput->text().contains(QString::fromUtf8("请先在配置中心设置"));
+    mStartBtn->setEnabled(!mStreaming && hasUrl);
     mStopBtn->setEnabled(mStreaming);
+    mPullBtn->setEnabled(hasUrl);
 }
 
 void VideoStreamWindow::onStart() {
@@ -318,15 +326,87 @@ void VideoStreamWindow::onStart() {
     // 1) 发射信号 → MainWindow → DeviceManager 下发 live_start_push
     emit startPushRequested(mDeviceSn, mVideoId, url, 1, mVideoQuality);
 
-#ifdef HAS_VLC
-    if (!mVlcInstance) {
-        QMessageBox::warning(this,
-            QString::fromUtf8("提示"),
-            QString::fromUtf8("VLC 未初始化"));
+    // 2) VLC 拉流播放（含自动重试）
+    tryVlcPlayback(url);
+}
+
+void VideoStreamWindow::autoPlay() {
+    // 仅 VLC 拉流播放，不发送推流指令
+    // 适用场景：设备此前已收到 live_start_push 且持续推流，重启程序后只需重新拉流
+    QString url = mUrlInput->text().trimmed();
+    qDebug() << "VideoStreamWindow::autoPlay()" << mDeviceSn << mVideoId << "url:" << url;
+    if (url.isEmpty()) {
+        qDebug() << "  -> skipped: url is empty";
         return;
     }
+    tryVlcPlayback(url);
+}
 
-    // 2) VLC 拉流播放 — 从同一 RTMP 地址拉流显示
+void VideoStreamWindow::onPullStream() {
+    QString url = mUrlInput->text().trimmed();
+    if (url.isEmpty()
+        || url.contains(QString::fromUtf8("请先在配置中心设置"))) {
+        QMessageBox::warning(this,
+            QString::fromUtf8("提示"),
+            QString::fromUtf8("请先在配置中心设置流媒体服务器"));
+        return;
+    }
+    qDebug() << "VideoStreamWindow::onPullStream()" << mDeviceSn << mVideoId << "url:" << url;
+    tryVlcPlayback(url);
+}
+
+void VideoStreamWindow::tryVlcPlayback(const QString& url) {
+    mAutoRetryRemaining = 2;  // 最多重试 2 次（共 3 次尝试）
+    mRetryUrl = url;
+    startVlcPlayback(url);
+}
+
+void VideoStreamWindow::scheduleRetry() {
+    if (mAutoRetryRemaining <= 0)
+        return;
+
+    mAutoRetryRemaining--;
+    qDebug() << "VideoStreamWindow::scheduleRetry()" << mDeviceSn << mVideoId
+             << "remaining:" << mAutoRetryRemaining;
+
+    mPlaceholderLabel->setText(
+        QString::fromUtf8("⏳ 连接失败，%1 秒后重试（剩余 %2 次）...")
+            .arg(2).arg(mAutoRetryRemaining + 1));
+    mPlaceholderLabel->setStyleSheet(
+        "color: #f9ab00; font-size: 14px; background: transparent;");
+    mPlaceholderLabel->show();
+
+    // 2 秒后重试
+    QTimer::singleShot(2000, this, [this]() {
+        if (mRetryUrl.isEmpty()) return;
+        qDebug() << "VideoStreamWindow: retrying playback..."
+                 << mDeviceSn << mVideoId;
+        startVlcPlayback(mRetryUrl);
+    });
+}
+
+void VideoStreamWindow::startVlcPlayback(const QString& url) {
+    qDebug() << "VideoStreamWindow::startVlcPlayback()" << mDeviceSn << mVideoId << "url:" << url;
+#ifdef HAS_VLC
+    // 懒加载：每个窗口创建自己独立的 VLC 实例，避免单实例多播放器的 RTMP 资源竞争
+    if (!mVlcInstance) {
+        const char* const vlc_args[] = {
+            "--verbose=2",           // 诊断日志：输出 VLC 内部消息
+            "--no-video-title-show",
+        };
+        mVlcInstance = libvlc_new(sizeof(vlc_args) / sizeof(vlc_args[0]), vlc_args);
+        if (!mVlcInstance) {
+            qWarning() << "VideoStreamWindow: libvlc_new failed for" << mDeviceSn << mVideoId;
+            if (mAutoRetryRemaining > 0) {
+                scheduleRetry();
+                return;
+            }
+            return;
+        }
+        qDebug() << "  -> VLC instance created for" << mDeviceSn << mVideoId;
+    }
+
+    qDebug() << "  -> creating VLC media...";
     // 如果已有播放器，先停再换媒体
     if (mVlcPlayer) {
         libvlc_media_player_stop(mVlcPlayer);
@@ -335,20 +415,28 @@ void VideoStreamWindow::onStart() {
 
     mVlcMedia = libvlc_media_new_location(mVlcInstance, url.toUtf8().constData());
     if (!mVlcMedia) {
+        qDebug() << "  -> FAILED: libvlc_media_new_location returned null";
+        if (mAutoRetryRemaining > 0) {
+            scheduleRetry();
+            return;
+        }
         QMessageBox::warning(this,
             QString::fromUtf8("播放失败"),
             QString::fromUtf8("无法创建媒体源，请检查地址是否正确"));
         return;
     }
 
+    qDebug() << "  -> setting VLC options...";
     // RTMP 直播流网络缓冲参数
     libvlc_media_add_option(mVlcMedia, ":network-caching=3000");
     libvlc_media_add_option(mVlcMedia, ":live-caching=3000");
     libvlc_media_add_option(mVlcMedia, ":rtmp-timeout=15");
     libvlc_media_add_option(mVlcMedia, ":no-audio");
+    libvlc_media_add_option(mVlcMedia, ":avcodec-hw=none");  // 禁用硬件加速，避免多实例 GPU 资源竞争
 
     // 首次创建播放器：绑定窗口 + 注册事件
     if (!mVlcPlayer) {
+        qDebug() << "  -> creating new VLC player...";
         mVlcPlayer = libvlc_media_player_new_from_media(mVlcMedia);
         libvlc_media_player_set_hwnd(mVlcPlayer, (void*)mVideoArea->winId());
 
@@ -357,18 +445,29 @@ void VideoStreamWindow::onStart() {
         libvlc_event_attach(em, libvlc_MediaPlayerBuffering, onVlcEvent, this);
         libvlc_event_attach(em, libvlc_MediaPlayerPlaying, onVlcEvent, this);
     } else {
+        qDebug() << "  -> reusing VLC player, setting new media...";
         // 复用播放器，仅替换媒体
         libvlc_media_player_set_media(mVlcPlayer, mVlcMedia);
     }
 
+    qDebug() << "  -> calling libvlc_media_player_play...";
     int ret = libvlc_media_player_play(mVlcPlayer);
     if (ret != 0) {
+        qDebug() << "  -> FAILED: libvlc_media_player_play returned" << ret;
+        if (mAutoRetryRemaining > 0) {
+            releaseVlcMedia();
+            scheduleRetry();
+            return;
+        }
         QMessageBox::warning(this,
             QString::fromUtf8("播放失败"),
             QString::fromUtf8("无法开始播放 (错误码: %1)").arg(ret));
         releaseVlcMedia();
         return;
     }
+    qDebug() << "  -> VLC playback started successfully";
+#else
+    qDebug() << "  -> HAS_VLC not defined, skipping";
 #endif
 
     mStreaming = true;
@@ -389,8 +488,10 @@ void VideoStreamWindow::onStop() {
     releaseVlcMedia();
 #endif
 
+    mAutoRetryRemaining = 0;  // 用户主动停止，取消重试
     mStreaming = false;
     mBuffering = false;
+    refreshStatusLabel();
     mPlaceholderLabel->setText(QString::fromUtf8("等待视频流..."));
     mPlaceholderLabel->setStyleSheet(
         "color: #444; font-size: 16px; background: transparent;");
@@ -419,17 +520,30 @@ void VideoStreamWindow::onCameraSelected(int cameraPosition) {
 // ——— VLC 事件回调 ———
 
 void VideoStreamWindow::onVlcError() {
+    qDebug() << "[VLC cb]" << mDeviceSn << mVideoId << "onVlcError"
+             << "retryRemaining:" << mAutoRetryRemaining;
+
+    mStreaming = false;
+    mBuffering = false;
+
+    if (mAutoRetryRemaining > 0) {
+        // 还有重试次数，延迟重试
+        scheduleRetry();
+        return;
+    }
+
+    // 重试次数已用完，显示错误
     mPlaceholderLabel->setText(
         QString::fromUtf8("⚠ 播放出错 — 请检查流地址或网络连接"));
     mPlaceholderLabel->setStyleSheet(
         "color: #d93025; font-size: 14px; background: transparent;");
     mPlaceholderLabel->show();
-    mStreaming = false;
-    mBuffering = false;
+    refreshStatusLabel();
     updateButtonStates();
 }
 
 void VideoStreamWindow::onVlcBuffering(float cache) {
+    qDebug() << "[VLC cb]" << mDeviceSn << mVideoId << "onVlcBuffering cache =" << cache;
     mBuffering = (cache < 100.0f);
     if (mBuffering && mStreaming) {
         mPlaceholderLabel->setText(
@@ -441,12 +555,16 @@ void VideoStreamWindow::onVlcBuffering(float cache) {
 }
 
 void VideoStreamWindow::onVlcPlaying() {
+    qDebug() << "[VLC cb]" << mDeviceSn << mVideoId << "onVlcPlaying — hiding placeholder";
+    mAutoRetryRemaining = 0;  // 播放成功，清零重试计数
     mBuffering = false;
+    refreshStatusLabel();
     mPlaceholderLabel->hide();
 }
 
 void VideoStreamWindow::setStreamUrl(const QString& url) {
     mUrlInput->setText(url);
+    updateButtonStates();
 }
 
 void VideoStreamWindow::setDeviceName(const QString& name) {
@@ -455,23 +573,14 @@ void VideoStreamWindow::setDeviceName(const QString& name) {
     QString prefix = mDeviceName.isEmpty()
         ? QString()
         : QString("[%1] ").arg(mDeviceName);
-    mTitleLabel->setText(QString("%1%2  |  video_id: %3")
-        .arg(prefix, mDeviceSn, mVideoId));
+    mTitleLabel->setText(QString("%1 |  video_id: %2")
+        .arg(prefix, mVideoId));
 }
 
 void VideoStreamWindow::setDeviceType(DeviceType type) {
-    // 镜头切换、相机切换按钮仅飞机显示
+    // 镜头切换按钮仅飞机显示
     bool isAircraft = (type == DeviceType::Aircraft);
     mLensBtn->setVisible(isAircraft);
-    mCameraBtn->setVisible(isAircraft);
-}
-
-void VideoStreamWindow::setVlcInstance(libvlc_instance_t* vlc) {
-#ifdef HAS_VLC
-    mVlcInstance = vlc;
-#else
-    Q_UNUSED(vlc);
-#endif
 }
 
 void VideoStreamWindow::closeEvent(QCloseEvent* event) {

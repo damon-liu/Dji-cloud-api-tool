@@ -9,6 +9,7 @@
 #include <QMessageBox>
 #include <QApplication>
 #include <algorithm>
+#include <QDebug>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QSet>
@@ -1351,20 +1352,6 @@ void MainWindow::updateStatusBar() {
 }
 
 void MainWindow::showVideoWindows() {
-    // 显示居中的加载提示
-    if (mVideoLoadingLabel) {
-        mVideoLoadingLabel->setGeometry(mVideoPanel->rect());
-        mVideoLoadingLabel->setVisible(true);
-        mVideoLoadingLabel->raise();
-    }
-    QApplication::processEvents();
-
-    if (!initVlc()) {
-        if (mVideoLoadingLabel)
-            mVideoLoadingLabel->setVisible(false);
-        return;
-    }
-
     // 尝试从 live_status cache 初始化窗口
     const auto& allDevs = mDevMgr->allDevices();
     bool hasLiveStatus = false;
@@ -1392,9 +1379,6 @@ void MainWindow::showVideoWindows() {
             info.videoId  = acKeys.first();
             info.status   = 1;
             auto* win = new VideoStreamWindow(info, this);
-#ifdef HAS_VLC
-            win->setVlcInstance(mVlcInstance);
-#endif
             win->setStreamUrl(urls.aircraft.value(acKeys.first()));
             mVideoWindows.append(win);
             mVideoSplitter->addWidget(win);
@@ -1407,47 +1391,17 @@ void MainWindow::showVideoWindows() {
             info.videoId  = dockKeys.first();
             info.status   = 1;
             auto* win = new VideoStreamWindow(info, this);
-#ifdef HAS_VLC
-            win->setVlcInstance(mVlcInstance);
-#endif
             win->setStreamUrl(urls.dock.value(dockKeys.first()));
             mVideoWindows.append(win);
             mVideoSplitter->addWidget(win);
         }
     }
-
-    // 隐藏加载提示
-    if (mVideoLoadingLabel)
-        mVideoLoadingLabel->setVisible(false);
 }
 
 void MainWindow::hideVideoWindows() {
     if (mVideoToggleBtn && mVideoToggleBtn->isChecked()) {
         mVideoToggleBtn->setChecked(false);
     }
-}
-
-bool MainWindow::initVlc() {
-#ifdef HAS_VLC
-    if (mVlcInstance)
-        return true;
-
-    // 显示加载中提示
-    statusBar()->showMessage(QString::fromUtf8("正在初始化视频引擎，请稍候..."));
-    QApplication::processEvents();  // 立即刷新 UI
-
-    mVlcInstance = libvlc_new(0, nullptr);
-    if (!mVlcInstance) {
-        qWarning() << "MainWindow: libvlc_new failed";
-        statusBar()->showMessage(QString::fromUtf8("视频引擎初始化失败"), 5000);
-        return false;
-    }
-    qDebug() << "MainWindow: VLC initialized successfully (lazy)";
-    statusBar()->showMessage(QString::fromUtf8("视频引擎就绪"), 2000);
-    return true;
-#else
-    return true;
-#endif
 }
 
 void MainWindow::onLiveStatusChanged(const QString& sn, const QVector<LiveStatusInfo>& list) {
@@ -1457,68 +1411,78 @@ void MainWindow::onLiveStatusChanged(const QString& sn, const QVector<LiveStatus
         return;
     }
 
-    if (!initVlc()) return;
-
     // 反闪烁：与缓存完全相同则跳过
     if (mCachedLiveStatus.value(sn) == list)
         return;
     mCachedLiveStatus[sn] = list;
 
-    // 解析网关 SN：推流控制指令必须发到机场（gateway），子飞机的 live_status
-    // 其 topic SN 为飞机 SN，需解析到父机场 SN
+    // 解析网关 SN：推流控制指令必须发到机场（gateway）
+    // topic SN 为设备 SN（可能是机场或飞机），子飞机需解析到父机场
     QString gatewaySn = sn;
-    DeviceInfo* dev = mDevMgr->device(sn);
-    if (dev && !dev->parentSn.isEmpty())
-        gatewaySn = dev->parentSn;
-
-    // 设备类型标签（用于视频窗口标题识别机场/飞机）
-    QString deviceName;
-    if (dev) {
-        if (dev->type == DeviceType::Dock)
-            deviceName = QString::fromUtf8("机场");
-        else
-            deviceName = QString::fromUtf8("飞机");
-        // 优先使用用户自定义名称
-        if (!dev->name.isEmpty() && dev->name != dev->sn)
-            deviceName = deviceName + QString("-%1").arg(dev->name);
+    {
+        DeviceInfo* topicDev = mDevMgr->device(sn);
+        if (topicDev && !topicDev->parentSn.isEmpty())
+            gatewaySn = topicDev->parentSn;
     }
 
     StreamMediaConfig ss = mDevMgr->streamMediaConfig();
     bool serverConfigured = !ss.ip.isEmpty();
 
-    // 计算每路摄像头的默认推流后缀
-    // 机场: 按 video_id 排序后依次编号 0, 1, ...
-    // 飞机: 固定为 "3"
     auto sorted = list;
     std::sort(sorted.begin(), sorted.end(), [](const LiveStatusInfo& a, const LiveStatusInfo& b) {
         return a.videoId < b.videoId;
     });
-    QMap<QString, QString> suffixMap;  // video_id → cameraSuffix
-    int dockIdx = 0;
+
+    // 按 entry 计算推流后缀和网关（每条 entry 可能属于不同设备）
+    // DJI 约定: 机场摄像头按 video_id 排序编号; 飞机摄像头固定后缀 "3"
+    QMap<QString, QString>  suffixMap;       // video_id → cameraSuffix
+    QMap<QString, QString>  entryGatewayMap; // video_id → gatewaySn
+    QMap<QString, DeviceType> entryTypeMap;  // video_id → deviceType (for new windows)
+    int dockCamIdx = 0;
     for (const auto& info : sorted) {
-        if (dev && dev->type == DeviceType::Dock)
-            suffixMap[info.videoId] = QString::number(dockIdx++);
-        else
-            suffixMap[info.videoId] = QStringLiteral("3");
+        DeviceInfo* entryDev = mDevMgr->device(info.deviceSn);
+        bool isAircraft = (entryDev && entryDev->type != DeviceType::Dock);
+
+        // 后缀
+        suffixMap[info.videoId] = isAircraft
+            ? QStringLiteral("3")
+            : QString::number(dockCamIdx++);
+
+        // 网关：逐 entry 解析（entry 可能是子飞机，需找到父机场）
+        QString entryGw = info.deviceSn;
+        if (entryDev && !entryDev->parentSn.isEmpty())
+            entryGw = entryDev->parentSn;
+        entryGatewayMap[info.videoId] = entryGw;
+
+        // 设备类型（仅新建窗口用）
+        if (entryDev)
+            entryTypeMap[info.videoId] = entryDev->type;
     }
 
-    // 索引该设备已有窗口：videoId → win
-    QMap<QString, VideoStreamWindow*> existingWindows;
+    // 全局索引：videoId → win（videoId 全局唯一，跨 SN 复用防止重复窗口）
+    QMap<QString, VideoStreamWindow*> allExisting;
+    // SN 作用域索引：仅用于清理当前 SN 范围内已下线的窗口
+    QMap<QString, VideoStreamWindow*> scopedExisting;
     for (auto* win : mVideoWindows) {
+        QString vid = win->property("videoId").toString();
+        allExisting[vid] = win;
         if (win->property("deviceSn").toString() == sn) {
-            existingWindows[win->property("videoId").toString()] = win;
+            scopedExisting[vid] = win;
         }
     }
 
     // 增量更新：已有窗口复用（保留 VLC 推流状态），只创建新增的 videoId
     for (const auto& info : sorted) {
-        if (existingWindows.contains(info.videoId)) {
-            // 复用已有窗口，增量刷新标题和状态标签
-            VideoStreamWindow* win = existingWindows.take(info.videoId);
+        QString entryGatewaySn = entryGatewayMap.value(info.videoId, gatewaySn);
+
+        if (allExisting.contains(info.videoId)) {
+            // 复用已有窗口（跨 SN 匹配），增量刷新标题和状态标签
+            VideoStreamWindow* win = allExisting.take(info.videoId);
+            scopedExisting.remove(info.videoId);
             win->updateLiveStatus(info);
             // 刷新推流地址（配置可能已变更）
             if (serverConfigured) {
-                QString url = buildStreamUrl(ss, gatewaySn, info.deviceSn,
+                QString url = buildStreamUrl(ss, entryGatewaySn, info.deviceSn,
                                              info.videoId, suffixMap.value(info.videoId));
                 win->setStreamUrl(url);
             }
@@ -1527,27 +1491,34 @@ void MainWindow::onLiveStatusChanged(const QString& sn, const QVector<LiveStatus
             auto* win = new VideoStreamWindow(info, this);
             win->setProperty("videoId", info.videoId);
             win->setProperty("deviceSn", info.deviceSn);
-#ifdef HAS_VLC
-            win->setVlcInstance(mVlcInstance);
-#endif
             if (serverConfigured) {
-                QString url = buildStreamUrl(ss, gatewaySn, info.deviceSn,
+                QString url = buildStreamUrl(ss, entryGatewaySn, info.deviceSn,
                                              info.videoId, suffixMap.value(info.videoId));
                 win->setStreamUrl(url);
+                // 流媒体服务器已配置 → 自动 VLC 拉流播放（不发送推流指令）
+                win->autoPlay();
             }
-            if (!deviceName.isEmpty())
-                win->setDeviceName(deviceName);
-            if (dev)
-                win->setDeviceType(dev->type);
-            connectPushControlSignals(win, gatewaySn);
+
+            // 按 entry 查设备类型和名称
+            DeviceType entryType = entryTypeMap.value(info.videoId, DeviceType::Dock);
+            QString deviceName = (entryType == DeviceType::Dock)
+                ? QString::fromUtf8("机场")
+                : QString::fromUtf8("飞机");
+            DeviceInfo* entryDev = mDevMgr->device(info.deviceSn);
+            if (entryDev && !entryDev->name.isEmpty() && entryDev->name != entryDev->sn)
+                deviceName = deviceName + QString("-%1").arg(entryDev->name);
+
+            win->setDeviceName(deviceName);
+            win->setDeviceType(entryType);
+            connectPushControlSignals(win, entryGatewaySn);
 
             mVideoWindows.append(win);
             mVideoSplitter->addWidget(win);
         }
     }
 
-    // 移除在新 list 中已不存在的窗口
-    const QList<VideoStreamWindow*> staleWindows = existingWindows.values();
+    // 移除在当前 SN 作用域内已不存在的窗口（不在 live_status 列表中）
+    const QList<VideoStreamWindow*> staleWindows = scopedExisting.values();
     for (auto* win : staleWindows) {
         win->hide();
         win->deleteLater();
@@ -1595,8 +1566,8 @@ QString MainWindow::buildStreamUrl(const StreamMediaConfig& ss, const QString& g
     case 4:  scheme = QStringLiteral("webrtc");  break;
     default: scheme = QStringLiteral("rtmp");    break;
     }
-    // RTMP 默认流名称: {网关SN}{cameraSuffix}
-    // 机场 2 路摄像头: 0 / 1，飞机: 3
+    // RTMP 默认流名称: {gatewaySN}{cameraSuffix}
+    // 摄像头后缀: 机场摄像头按 video_id 排序 0/1/2...，飞机固定 "3"
     // 用户自定义 streamKey 可覆盖此默认流名称
     QString key = ss.streamKey.isEmpty()
         ? QString("%1%2").arg(gatewaySn, cameraSuffix)
@@ -1657,13 +1628,6 @@ void MainWindow::closeEvent(QCloseEvent* event) {
         VideoStreamWindow* win = mVideoWindows.takeLast();
         win->deleteLater();
     }
-
-#ifdef HAS_VLC
-    if (mVlcInstance) {
-        libvlc_release(mVlcInstance);
-        mVlcInstance = nullptr;
-    }
-#endif
 
     event->accept();
 }
