@@ -622,7 +622,7 @@ void DeviceManager::parseAndRoute(const QString& topic, const QByteArray& payloa
                 if (!detectedSn.isEmpty() && !mDevices.contains(detectedSn)) {
                     DeviceInfo child;
                     child.sn       = detectedSn;
-                    child.name     = info.name + QString::fromUtf8("-\xe9\xa3\x9e\xe6\x9c\xba");
+                    child.name     = QString::fromUtf8("\xe9\xa3\x9e\xe6\x9c\xba-") + detectedSn.right(4);
                     child.type     = DeviceType::Aircraft;
                     child.parentSn = sn;
 

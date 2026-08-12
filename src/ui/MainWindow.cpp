@@ -5,6 +5,7 @@
 #include "AboutDialog.h"
 #include <QAction>
 #include <QCloseEvent>
+#include <QResizeEvent>
 #include <QDialog>
 #include <QMessageBox>
 #include <QApplication>
@@ -345,7 +346,7 @@ void MainWindow::setupToolBar() {
                 }
             }
         });
-        // 流媒体配置已合并至 "MQTT 连接配置" 对话框内
+        // 流媒体配置已合并至 "连接配置" 对话框内
         configBtn->setMenu(menu);
     }
     toolbar->addWidget(configBtn);
@@ -362,7 +363,7 @@ void MainWindow::setupToolBar() {
         menu->addAction("🛫 飞行控制", this, [this]() { showFunctionInTab(TAB_FLIGHT); });
         menu->addAction("📢 PSDK功能", this, [this]() { showFunctionInTab(TAB_PSDK); });
         // 运维工具功能暂未完善，暂时隐藏
-        // menu->addAction("🔧 运维工具", this, [this]() { showFunctionInTab(TAB_MAINT); });
+        menu->addAction("🔧 运维工具", this, [this]() { showFunctionInTab(TAB_MAINT); });
         menu->addSeparator();
         menu->addAction("📋 下发记录", this, [this]() { showFunctionInTab(TAB_HISTORY); });
         featureBtn->setMenu(menu);
@@ -624,16 +625,6 @@ void MainWindow::setupLayout() {
     mVideoSplitter->setChildrenCollapsible(false);
     videoPanelLayout->addWidget(mVideoSplitter, 1);
 
-    // 视频引擎初始化加载提示（覆盖在视频面板中央，默认隐藏）
-    mVideoLoadingLabel = new QLabel(mVideoPanel);
-    mVideoLoadingLabel->setText(QString::fromUtf8("⏳ 视频引擎正在初始化，请稍候..."));
-    mVideoLoadingLabel->setAlignment(Qt::AlignCenter);
-    mVideoLoadingLabel->setStyleSheet(
-        "color: #f9ab00; font-size: 20px; font-weight: bold;"
-        "background: #1a1a1a;");
-    mVideoLoadingLabel->setVisible(false);
-    // 不加入 layout，手动 resizeEvent 中居中定位
-
     mVideoPanel->setVisible(false);
     mVideoPanel->setMinimumHeight(180);
 
@@ -651,18 +642,10 @@ void MainWindow::setupLayout() {
             [this](bool checked) {
         if (checked) {
             mVideoPanel->setVisible(true);
-            mVideoLoadingLabel->setParent(mVideoPanel);
-            mVideoLoadingLabel->setGeometry(mVideoPanel->rect());
-            mVideoLoadingLabel->setVisible(true);
 
-            // 延迟到下一轮事件循环执行重活，确保加载提示先渲染
+            // 延迟到下一轮事件循环执行重活
             QTimer::singleShot(50, this, [this]() {
-                if (mVideoWindows.isEmpty()) {
-                    showVideoWindows();
-                } else {
-                    refreshVideoWindows();
-                }
-                mVideoLoadingLabel->setVisible(false);
+                showCurrentDeviceVideoWindows();
             });
         } else {
             mVideoPanel->setVisible(false);
@@ -1097,10 +1080,9 @@ void MainWindow::refreshDockControlList(const QString& currentSn) {
 
 // ——— 设备选择 ———
 void MainWindow::onDeviceSelected(const QString& sn) {
-    // 设备切换时：停止 VLC、销毁窗口、隐藏面板
+    // 设备切换时：隐藏当前设备视频窗口（保留 VLC 实例以复用）
     if (!mSelectedDeviceSn.isEmpty() && mSelectedDeviceSn != sn) {
-        hideVideoWindows();
-        clearVideoWindows();
+        hideVideoWindows();  // toggle OFF → clearVideoWindows() → 软关闭
     }
     mSelectedDeviceSn = sn;
 
@@ -1118,8 +1100,7 @@ void MainWindow::onDeviceSelected(const QString& sn) {
         mTopicParsePanel->clear();
         mDeleteDeviceBtn->setEnabled(false);
         mAddDeviceBtn->setEnabled(true);
-        hideVideoWindows();
-        clearVideoWindows();
+        hideVideoWindows();  // toggle OFF → 软关闭，保留 VLC
         return;
     }
 
@@ -1295,10 +1276,11 @@ void MainWindow::onAddDevice() {
             QString("为机场「%1」添加手飞无人机\n设备序列号 (SN):").arg(selectedDev->name));
         if (sn.trimmed().isEmpty()) return;
 
+        QString defaultChildName = QString::fromUtf8("\xe9\xa3\x9e\xe6\x9c\xba-") + sn.trimmed().right(4);
         name = QInputDialog::getText(this, "添加手飞无人机", "设备名称:",
-            QLineEdit::Normal, sn.trimmed());
+            QLineEdit::Normal, defaultChildName);
         if (name.trimmed().isEmpty())
-            name = sn.trimmed();
+            name = defaultChildName;
         type = DeviceType::Aircraft;
     } else {
         QString typeStr = QInputDialog::getItem(this, "添加设备", "选择设备类型:",
@@ -1310,10 +1292,13 @@ void MainWindow::onAddDevice() {
         sn = QInputDialog::getText(this, "添加设备", "设备序列号 (SN):");
         if (sn.trimmed().isEmpty()) return;
 
+        QString defaultName = (type == DeviceType::Dock
+            ? QString::fromUtf8("\xe6\x9c\xba\xe5\x9c\xba-")
+            : QString::fromUtf8("\xe9\xa3\x9e\xe6\x9c\xba-")) + sn.trimmed().right(4);
         name = QInputDialog::getText(this, "添加设备", "设备名称:",
-            QLineEdit::Normal, sn.trimmed());
+            QLineEdit::Normal, defaultName);
         if (name.trimmed().isEmpty())
-            name = sn.trimmed();
+            name = defaultName;
     }
 
     // 默认订阅 OSD topic
@@ -1449,10 +1434,13 @@ void MainWindow::hideVideoWindows() {
 }
 
 void MainWindow::clearVideoWindows() {
-    while (!mVideoWindows.isEmpty()) {
-        VideoStreamWindow* win = mVideoWindows.takeLast();
+    suspendVideoWindows();
+}
+
+void MainWindow::suspendVideoWindows() {
+    for (auto* win : mVideoWindows) {
+        win->setDeviceOffline();  // 停止 VLC 播放，保留实例
         win->hide();
-        win->deleteLater();
     }
 }
 
@@ -1727,16 +1715,73 @@ void MainWindow::onLiveStatusChanged(const QString& sn, const QVector<LiveStatus
     applyVideoLayoutMode();
 }
 
-void MainWindow::refreshVideoWindows() {
+void MainWindow::refreshVideoWindows(bool currentDeviceOnly) {
+    if (currentDeviceOnly && !mSelectedDeviceSn.isEmpty()) {
+        // 仅刷新当前选中设备及其子飞机（切换设备时使用）
+        DeviceInfo* dev = mDevMgr->device(mSelectedDeviceSn);
+        if (dev) {
+            QVector<LiveStatusInfo> liveList = mDevMgr->latestLiveStatus(dev->sn);
+            if (!liveList.isEmpty()) {
+                mCachedLiveStatus.remove(dev->sn);
+                onLiveStatusChanged(dev->sn, liveList);
+            }
+        }
+        const auto& allDevs = mDevMgr->allDevices();
+        for (auto* d : allDevs) {
+            if (d->parentSn == mSelectedDeviceSn) {
+                QVector<LiveStatusInfo> childList = mDevMgr->latestLiveStatus(d->sn);
+                if (!childList.isEmpty()) {
+                    mCachedLiveStatus.remove(d->sn);
+                    onLiveStatusChanged(d->sn, childList);
+                }
+            }
+        }
+        return;
+    }
+
+    // 刷新所有设备（流媒体配置变更时使用）
     const auto& allDevs = mDevMgr->allDevices();
     for (auto* dev : allDevs) {
         QVector<LiveStatusInfo> liveList = mDevMgr->latestLiveStatus(dev->sn);
         if (!liveList.isEmpty()) {
-            // 绕过反闪烁缓存，强制刷新（配置可能已变更）
             mCachedLiveStatus.remove(dev->sn);
             onLiveStatusChanged(dev->sn, liveList);
         }
     }
+}
+
+void MainWindow::showCurrentDeviceVideoWindows() {
+    if (mSelectedDeviceSn.isEmpty()) return;
+
+    // 1. 确保非当前设备的窗口隐藏
+    for (auto* win : mVideoWindows) {
+        QString winSn = win->property("deviceSn").toString();
+        QString gwSn = win->property("gatewaySn").toString();
+        if (winSn != mSelectedDeviceSn && gwSn != mSelectedDeviceSn) {
+            win->setDeviceOffline();
+            win->hide();
+        }
+    }
+
+    // 2. 显示当前设备的窗口（复用已有的 VLC 实例）
+    bool hasWindows = false;
+    for (auto* win : mVideoWindows) {
+        QString winSn = win->property("deviceSn").toString();
+        QString gwSn = win->property("gatewaySn").toString();
+        if (winSn == mSelectedDeviceSn || gwSn == mSelectedDeviceSn) {
+            win->show();
+            hasWindows = true;
+        }
+    }
+
+    // 3. 已有窗口 → 刷新 live_status；无窗口 → 从 cache 创建
+    if (hasWindows) {
+        refreshVideoWindows(true);
+    } else {
+        showVideoWindows();
+    }
+
+    applyVideoLayoutMode();
 }
 
 void MainWindow::removeVideoWindowsForDevice(const QString& sn) {
@@ -1807,6 +1852,12 @@ void MainWindow::connectPushControlSignals(VideoStreamWindow* win, const QString
             [this](const QString& gwSn, const QString& videoType) {
         mDevMgr->liveLensChange(gwSn, videoType);
     });
+
+}
+
+void MainWindow::resizeEvent(QResizeEvent* event) {
+    QMainWindow::resizeEvent(event);
+
 
 }
 

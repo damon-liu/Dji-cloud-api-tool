@@ -423,7 +423,7 @@ void VideoStreamWindow::startVlcPlayback(const QString& url) {
     // 懒加载：每个窗口创建自己独立的 VLC 实例，避免单实例多播放器的 RTMP 资源竞争
     if (!mVlcInstance) {
         const char* const vlc_args[] = {
-            "--verbose=2",           // 诊断日志：输出 VLC 内部消息
+            "--quiet",               // 抑制 VLC 初始化弹窗和日志输出
             "--no-video-title-show",
         };
         mVlcInstance = libvlc_new(sizeof(vlc_args) / sizeof(vlc_args[0]), vlc_args);
@@ -578,7 +578,7 @@ void VideoStreamWindow::onVlcBuffering(float cache) {
     mBuffering = (cache < 100.0f);
     if (mBuffering && mStreaming) {
         mPlaceholderLabel->setText(
-            QString::fromUtf8("⏳ 缓冲中 %1%...").arg(static_cast<int>(cache)));
+            QString::fromUtf8("⏳ 直播拉流中 %1%...").arg(static_cast<int>(cache)));
         mPlaceholderLabel->setStyleSheet(
             "color: #f9ab00; font-size: 14px; background: transparent;");
         mPlaceholderLabel->show();

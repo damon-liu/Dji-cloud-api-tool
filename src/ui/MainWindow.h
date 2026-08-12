@@ -31,6 +31,7 @@ public:
 
 protected:
     void closeEvent(QCloseEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
 private slots:
     void onDeviceSelected(const QString& sn);
@@ -53,7 +54,9 @@ private:
     void clearVideoWindows();  // 销毁所有视频窗口 + 停止 VLC
     void onLiveStatusChanged(const QString& sn, const QVector<LiveStatusInfo>& list);
     void removeVideoWindowsForDevice(const QString& sn);
-    void refreshVideoWindows();  // 从当前配置刷新已有窗口的推流地址 + live_status
+    void refreshVideoWindows(bool currentDeviceOnly = false);  // 刷新推流地址 + live_status
+    void showCurrentDeviceVideoWindows();  // 显示当前设备视频窗口（复用已有 VLC 实例）
+    void suspendVideoWindows();            // 停止所有窗口播放并隐藏（保留 VLC 实例）
     QString buildStreamUrl(const StreamMediaConfig& ss, const QString& gatewaySn,
                            const QString& deviceSn, const QString& videoId,
                            const QString& cameraSuffix);
@@ -62,7 +65,7 @@ private:
     void popOutCurrentTab();
     void popInPanel(QWidget* panel);
     VideoStreamWindow* findDockVideoWindow();  // 查找机库视频窗口
-    void applyVideoLayoutMode();               // 根据当前视频窗口情况自动切换布局
+    void applyVideoLayoutMode();               // 始终使用 60/40 统一比例
 
     DeviceManager*     mDevMgr;
     DeviceTreeWidget*  mDeviceTree;
@@ -83,7 +86,7 @@ private:
     QWidget*           mVideoPanel = nullptr;        // 视频面板容器（嵌入监控标签页）
     QSplitter*         mVideoSplitter = nullptr;     // 两个视频窗口水平分割器
     QPushButton*       mVideoToggleBtn = nullptr;    // 视频面板折叠/展开按钮
-    QLabel*            mVideoLoadingLabel = nullptr; // 视频引擎初始化加载提示
+
     QLabel*            mDeviceTitleLabel;   // Devices列表 (N)
     QLabel*            mBrokerLabel;
 

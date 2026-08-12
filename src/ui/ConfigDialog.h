@@ -46,7 +46,6 @@ private:
     QLineEdit*     mStreamIpEdit;
     QSpinBox*      mStreamPortSpin;
     QComboBox*     mStreamProtocolCombo;
-    QLineEdit*     mStreamKeyEdit;
 
     QPushButton*   mTestBtn;
     QMqttClient*   mTestClient    = nullptr;
