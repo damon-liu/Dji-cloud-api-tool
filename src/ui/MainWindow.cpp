@@ -314,7 +314,7 @@ void MainWindow::setupToolBar() {
     configBtn->setCursor(Qt::PointingHandCursor);
     {
         auto* menu = new QMenu(configBtn);
-        menu->addAction(QString::fromUtf8("\xf0\x9f\x94\x8c MQTT \xe8\xbf\x9e\xe6\x8e\xa5\xe9\x85\x8d\xe7\xbd\xae"), this, [this]() {
+        menu->addAction(QString::fromUtf8("\xf0\x9f\x94\x8c \xe8\xbf\x9e\xe6\x8e\xa5\xe9\x85\x8d\xe7\xbd\xae"), this, [this]() {
             MqttConfig oldMqtt = mDevMgr->mqttConfig();
             ConfigDialog dlg(mDevMgr, this);
             if (dlg.exec() == QDialog::Accepted) {
@@ -1276,7 +1276,7 @@ void MainWindow::onAddDevice() {
             QString("为机场「%1」添加手飞无人机\n设备序列号 (SN):").arg(selectedDev->name));
         if (sn.trimmed().isEmpty()) return;
 
-        QString defaultChildName = QString::fromUtf8("\xe9\xa3\x9e\xe6\x9c\xba-") + sn.trimmed().right(4);
+        QString defaultChildName = QString::fromUtf8("\xe9\xa3\x9e\xe6\x9c\xba");
         name = QInputDialog::getText(this, "添加手飞无人机", "设备名称:",
             QLineEdit::Normal, defaultChildName);
         if (name.trimmed().isEmpty())
@@ -1292,9 +1292,9 @@ void MainWindow::onAddDevice() {
         sn = QInputDialog::getText(this, "添加设备", "设备序列号 (SN):");
         if (sn.trimmed().isEmpty()) return;
 
-        QString defaultName = (type == DeviceType::Dock
-            ? QString::fromUtf8("\xe6\x9c\xba\xe5\x9c\xba-")
-            : QString::fromUtf8("\xe9\xa3\x9e\xe6\x9c\xba-")) + sn.trimmed().right(4);
+        QString defaultName = (type == DeviceType::Dock)
+            ? QString::fromUtf8("\xe6\x9c\xba\xe5\x9c\xba")
+            : QString::fromUtf8("\xe9\xa3\x9e\xe6\x9c\xba");
         name = QInputDialog::getText(this, "添加设备", "设备名称:",
             QLineEdit::Normal, defaultName);
         if (name.trimmed().isEmpty())
