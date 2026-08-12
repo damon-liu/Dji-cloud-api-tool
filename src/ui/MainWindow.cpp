@@ -485,11 +485,19 @@ void MainWindow::setupLayout() {
 
     // Topic 列表面板（设备树下方）
     mTopicListWidget = new TopicListWidget(this);
+    mTopicListWidget->setMinimumHeight(180);
     leftSplitter->addWidget(mTopicListWidget);
 
     leftSplitter->setStretchFactor(0, 3);   // 设备树占 3/5
     leftSplitter->setStretchFactor(1, 2);   // Topic 列表占 2/5
     leftSplitter->setChildrenCollapsible(false);
+
+    // 窗口首次布局后设置初始 60/40 比例（stretch factor 仅作用于 resize 增量）
+    QTimer::singleShot(0, this, [this, leftSplitter]() {
+        int total = leftSplitter->height();
+        if (total > 0)
+            leftSplitter->setSizes({total * 3 / 5, total * 2 / 5});
+    });
 
     leftLayout->addWidget(leftSplitter, 1);
 
@@ -541,23 +549,9 @@ void MainWindow::setupLayout() {
 
     mRawJsonPanel->setMaximumWidth(520);  // 与设备列表宽度一致
 
-    // 右侧栏容器：原始JSON(上) + 机库视频内嵌容器(下，飞机离线时可见)
-    // 使用 QSplitter 让两者高度比例可拖拽调整
-    mRightColumnWidget = new QSplitter(Qt::Vertical, this);
-    mRightColumnWidget->setMaximumWidth(520);  // 与 mRawJsonPanel 宽度一致
-    mRightColumnWidget->addWidget(mRawJsonPanel);
-    mRightColumnWidget->setChildrenCollapsible(false);
-
-    mDockVideoInlineContainer = new QWidget(this);
-    auto* dockInlineLayout = new QVBoxLayout(mDockVideoInlineContainer);
-    dockInlineLayout->setContentsMargins(0, 4, 0, 0);
-    dockInlineLayout->setSpacing(0);
-    mDockVideoInlineContainer->setVisible(false);  // 默认隐藏
-    mRightColumnWidget->addWidget(mDockVideoInlineContainer);
-
     mRightSplitter = new QSplitter(Qt::Horizontal, this);
     mRightSplitter->addWidget(leftHalf);
-    mRightSplitter->addWidget(mRightColumnWidget);
+    mRightSplitter->addWidget(mRawJsonPanel);
     mRightSplitter->setStretchFactor(0, 3);
     mRightSplitter->setStretchFactor(1, 1);
     mRightSplitter->setSizes({600, 440});
@@ -641,7 +635,7 @@ void MainWindow::setupLayout() {
     // 不加入 layout，手动 resizeEvent 中居中定位
 
     mVideoPanel->setVisible(false);
-    mVideoPanel->setMinimumHeight(300);
+    mVideoPanel->setMinimumHeight(180);
 
     rightContentSplitter->addWidget(mVideoPanel);
 
@@ -654,50 +648,12 @@ void MainWindow::setupLayout() {
     mVideoToggleBtn->setCheckable(true);
     mVideoToggleBtn->setCursor(Qt::PointingHandCursor);
     connect(mVideoToggleBtn, &QPushButton::toggled, this,
-            [this, rightContentSplitter](bool checked) {
+            [this](bool checked) {
         if (checked) {
-            // 预测布局模式：通过缓存的 live_status 判断是否有飞机在线
-            // Compact（飞机离线）→ 加载提示在右侧栏；Normal（飞机在线）→ 全宽加载提示
-            bool predictCompact = false;
-            if (!mCachedLiveStatus.isEmpty()) {
-                bool hasAircraft = false;
-                bool hasDock = false;
-                for (auto it = mCachedLiveStatus.begin(); it != mCachedLiveStatus.end(); ++it) {
-                    DeviceInfo* dev = mDevMgr->device(it.key());
-                    if (dev && dev->type != DeviceType::Dock && !it.value().isEmpty()) {
-                        hasAircraft = true;
-                        break;
-                    }
-                    if (dev && dev->type == DeviceType::Dock && !it.value().isEmpty()) {
-                        hasDock = true;
-                    }
-                }
-                predictCompact = !hasAircraft && hasDock;
-            }
-
-            if (predictCompact) {
-                // Compact 模式：加载提示在底部持久面板，右下角对齐
-                mVideoPanel->setVisible(true);
-                mDockVideoInlineContainer->setVisible(false);
-                if (rightContentSplitter) {
-                    int total = rightContentSplitter->height();
-                    if (total > 0) {
-                        rightContentSplitter->setSizes({total * 70 / 100, total * 30 / 100});
-                        rightContentSplitter->setStretchFactor(0, 7);
-                        rightContentSplitter->setStretchFactor(1, 3);
-                    }
-                }
-                mVideoLoadingLabel->setParent(mVideoPanel);
-                mVideoLoadingLabel->setGeometry(mVideoPanel->rect());
-                mVideoLoadingLabel->setVisible(true);
-            } else {
-                // Normal 模式：全宽加载提示（飞机在线或无法预测时保持原逻辑不变）
-                mVideoPanel->setVisible(true);
-                mVideoLoadingLabel->setParent(mVideoPanel);
-                mVideoLoadingLabel->setGeometry(mVideoPanel->rect());
-                mVideoLoadingLabel->setVisible(true);
-            }
-            QApplication::processEvents();
+            mVideoPanel->setVisible(true);
+            mVideoLoadingLabel->setParent(mVideoPanel);
+            mVideoLoadingLabel->setGeometry(mVideoPanel->rect());
+            mVideoLoadingLabel->setVisible(true);
 
             // 延迟到下一轮事件循环执行重活，确保加载提示先渲染
             QTimer::singleShot(50, this, [this]() {
@@ -1498,9 +1454,6 @@ void MainWindow::clearVideoWindows() {
         win->hide();
         win->deleteLater();
     }
-    if (mDockVideoInlineContainer)
-        mDockVideoInlineContainer->setVisible(false);
-    mVideoLayoutMode = VideoLayoutMode::Normal;
 }
 
 VideoStreamWindow* MainWindow::findDockVideoWindow() {
@@ -1514,101 +1467,13 @@ VideoStreamWindow* MainWindow::findDockVideoWindow() {
 }
 
 void MainWindow::applyVideoLayoutMode() {
-    bool hasAircraft = false;
-    for (auto* win : mVideoWindows) {
-        QString gwSn = win->property("gatewaySn").toString();
-        if (gwSn.isEmpty()) {  // 飞机窗口：gatewaySn 为空
-            hasAircraft = true;
-            break;
-        }
-    }
-
-    VideoLayoutMode targetMode = hasAircraft ? VideoLayoutMode::Normal
-                                             : VideoLayoutMode::Compact;
-
-    // 获取 rightContentSplitter 指针（通过 mVideoPanel 的父控件）
+    // 始终使用 60/40 比例，不区分设备在线状态
     QSplitter* rightContentSplitter = qobject_cast<QSplitter*>(mVideoPanel->parentWidget());
-
-    if (mVideoLayoutMode == targetMode && targetMode == VideoLayoutMode::Normal) {
-        // Normal → Normal：stretch factor 仅影响 resize 时的增量分配，
-        // 初始比例必须通过 setSizes 显式设置为 60/40
-        if (rightContentSplitter && mVideoPanel->isVisible()) {
-            int total = rightContentSplitter->height();
-            if (total > 0)
-                rightContentSplitter->setSizes({total * 60 / 100, total * 40 / 100});
-        }
-        return;
+    if (rightContentSplitter && mVideoPanel->isVisible()) {
+        int total = rightContentSplitter->height();
+        if (total > 0)
+            rightContentSplitter->setSizes({total * 60 / 100, total * 40 / 100});
     }
-
-    if (targetMode == VideoLayoutMode::Compact) {
-        // === 切换到 Compact 模式：仅机库视频，全宽固定在底部面板（跨标签页持久可见）===
-
-        // 1. 隐藏内嵌容器（不再使用）
-        mDockVideoInlineContainer->setVisible(false);
-
-        // 2. 确保机库视频窗口在底部 mVideoSplitter 中
-        for (auto* win : mVideoWindows) {
-            QString gwSn = win->property("gatewaySn").toString();
-            if (!gwSn.isEmpty() && win->parentWidget() != mVideoSplitter) {
-                win->setParent(mVideoSplitter);
-                win->show();
-                mVideoSplitter->setStretchFactor(mVideoSplitter->count() - 1, 1);
-            }
-        }
-
-        // 3. 清理飞机窗口
-        QMutableListIterator<VideoStreamWindow*> it(mVideoWindows);
-        while (it.hasNext()) {
-            VideoStreamWindow* win = it.next();
-            QString gwSn = win->property("gatewaySn").toString();
-            if (gwSn.isEmpty()) {
-                win->hide();
-                win->deleteLater();
-                it.remove();
-            }
-        }
-
-        // 4. 显示底部持久面板 + 设置 70/30 比例（单视频比双视频占用更少空间）
-        mVideoPanel->setVisible(true);
-        if (rightContentSplitter) {
-            int total = rightContentSplitter->height();
-            if (total > 0) {
-                rightContentSplitter->setSizes({total * 70 / 100, total * 30 / 100});
-            }
-            rightContentSplitter->setStretchFactor(0, 7);
-            rightContentSplitter->setStretchFactor(1, 3);
-        }
-
-    } else {
-        // === 切换到 Normal 模式：视频展开为全宽底部面板 ===
-
-        // 1. 隐藏内嵌容器，把机库窗口移回 mVideoSplitter
-        mDockVideoInlineContainer->setVisible(false);
-
-        for (auto* win : mVideoWindows) {
-            QString gwSn = win->property("gatewaySn").toString();
-            if (!gwSn.isEmpty() && win->parentWidget() != mVideoSplitter) {
-                win->setParent(mVideoSplitter);
-                win->show();
-            }
-            int idx = mVideoSplitter->indexOf(win);
-            if (idx >= 0)
-                mVideoSplitter->setStretchFactor(idx, 1);  // 等分伸缩
-        }
-
-        // 2. 显示底部视频面板 + 设置 60/40 比例
-        mVideoPanel->setVisible(true);
-        if (rightContentSplitter) {
-            int total = rightContentSplitter->height();
-            if (total > 0) {
-                rightContentSplitter->setSizes({total * 60 / 100, total * 40 / 100});
-            }
-            rightContentSplitter->setStretchFactor(0, 3);
-            rightContentSplitter->setStretchFactor(1, 2);
-        }
-    }
-
-    mVideoLayoutMode = targetMode;
 }
 
 void MainWindow::onLiveStatusChanged(const QString& sn, const QVector<LiveStatusInfo>& list) {
