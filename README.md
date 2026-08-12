@@ -12,7 +12,7 @@
 
 前往 [Releases](https://github.com/damon-liu/Dji-cloud-api-tool/releases) 页面下载最新版本：
 
-- **`DjiCloudApiTool-v1.0.3.zip`** — 完整包（exe + Qt 运行库 + 配置模板），解压即用
+- **`DjiCloudApiTool-v1.0.4.zip`** — 完整包（exe + Qt 运行库 + 配置模板），解压即用
 
 > 无需安装 Qt 或其他依赖，Windows 10/11 x64 下直接运行。首次启动自动生成 `config.json` 在 `config/` 子目录下。
 
@@ -29,14 +29,15 @@
 - **Topic 下发**：自动预设常用下发 Topic，每个 Topic 提供官方下发参数 JSON 模板
 - **Topic 下发记录**：自动记录每次下发与响应，成功/失败一目了然
 - **控制中心-机场控制**：集成远程调试、飞机电源、机场舱盖、飞机充电、机场维护、强制关舱门等快捷控制，实时显示发送及响应消息记录
-- **控制中心-飞行控制**：支持飞行控制权限抢夺/释放、一键起飞/返航/取消返航/紧急停机等飞行指令；
+- **控制中心-飞行控制**：支持飞行控制权限抢夺/释放、一键起飞（参数可配置）/返航/取消返航/紧急停机等飞行指令；
 - **控制中心-负载控制**：支持负载控制权限抢夺/释放、拍照/录像/云台回中等负载控制；支持多机场下拉切换
+- **控制中心-PSDK 喊话器**：支持 TTS 文字转语音播报和音频文件 URL 播报，音量可调，播报模式可切换，实时进度管线展示
 - **控制中心-运维模式**：支持机场重启、强制关舱门、补光灯等运维操作
-- **视频直播**：飞机/机场双窗口独立直播，支持镜头切换（红外/变焦/广角）、视频源切换（内外视频）、5档清晰度调节【下版本实现】
+- **视频直播**：飞机/机场双窗口独立直播，支持镜头切换（红外/变焦/广角）、视频源切换（内外视频）、5档清晰度调节
 - **自动重连**：指数退避（1s → 2s → … → 最长 30s），恢复后自动刷新
 - **断线保护**：断线自动暂停面板刷新，手动暂停优先级更高，不打断数据查看
 
-> 🔜 v1.1 预告：视频直播功能实现、暗色模式支持、批量设备管理。详见 [用户指南](docs/guide/user-guide.md)。
+> 🔜 后续预告：暗色模式支持、批量设备管理。详见 [用户指南](docs/guide/user-guide.md)。
 
 ## 🆚 vs MQTTX
 
@@ -47,7 +48,7 @@
 | 设备识别 | 只能看到 Topic 字符串，需人工判断是哪个设备 | 自动识别设备 SN，树形展示机场与子飞机的层级关系 |
 | 设备管理 | 所有 Topic 混在一起，无层级结构 | 每个设备独立管理 Topic，支持启用/禁用/拖拽排序 |
 | 自动关联子设备 | 无 | 机场添加以后发现并订阅子飞机 |
-| 自动订阅 | 无（需手动逐个添加 Topic） | 添加机场自动订阅 7 个Topic |
+| 自动订阅Topic | 无（需手动逐个添加 Topic） | 添加机场自动订阅 7 个Topic |
 | 上报JSON管理 | 无分类筛选能力 | 支持原始 JSON 实时滚动、暂停/恢复、一键复制、清除历史 |
 | JSON抓包导出 | 需手动复制粘贴或配置外部工具 | 一键抓包，数据实时写入 `captures/` 文件夹，按设备/Topic 分类保存 |
 | JSON自动翻译 | 原始 JSON，字段名全英文（如 `drone_in_dock`） | 自动翻译为中文，按分组展示，一目了然 |
@@ -56,25 +57,28 @@
 | 机场控制 | 需手动拼装远程调试/电源/舱盖/充电等指令 JSON | 点击按钮一键控制，进入远程调试后可用，实时反馈执行结果 |
 | 飞行控制 | 需手动拼装起飞/返航/降落指令 JSON | 独立飞行控制窗口，一键起飞/返航/降落，含飞行器状态反馈 |
 | 负载控制 | 需手动拼装拍照/录像指令 JSON | 独立飞行控制窗口，一键拍照/录像 |
+| PSDK 喊话器 | 需手动拼装指令 JSON | 独立 PSDK 喊话器面板，可视化配置播报参数，实时进度管线展示 |
 | 运维模式 | 需手动拼装运维功能等指令 JSON | 独立运维窗口，集成日常运维所需的功能按钮 |
 | 视频直播 | 无视频直播能力 | 飞机/机场双窗口独立直播，支持飞机多镜头、机场内外视频源切换、清晰度调节 |
 | 环境依赖 | 需安装 Node.js 或下载桌面版 | 可执行文件 exe，无需任何依赖 |
 | 学习成本 | 通用 MQTT 工具，需自行理解 DJI 协议 | 专为 DJI Cloud API 设计，开箱即用 |
-| 行业定制 | 无                                            | 专门针对大疆上云定制版本，后续持续更新内容 |
+| 行业定制 | 无 | 专门针对大疆上云定制版本，后续持续更新内容 |
 
-> 💡 总结：MQTTX 是优秀的通用 MQTT 调试利器，但 DjiCloudApiTool 在 DJI 行业设备场景下效率更高——**设备层级树展示、自动关联订阅机场无人机、默认集成设备上下行的所有 Topic、Topic 抓包导出、JSON 自动翻译、Topic指令下发及下发记录、机场快捷控制、飞行控制、负载控制、视频直播**等功能都是针对大疆设备的专属优化。
+> 💡 总结：MQTTX 是优秀的通用 MQTT 调试利器，但 DjiCloudApiTool 在 DJI 行业设备场景下效率更高——**设备层级树展示、自动关联订阅机场无人机、默认集成设备上下行的所有 Topic、Topic 抓包导出、JSON 自动翻译、Topic指令下发及下发记录、机场快捷控制、飞行控制、负载控制、PSDK 喊话器、视频直播**等功能都是针对大疆设备的专属优化。
 
 ## 🚶 快速开始
 
 ### Windows
 
-从 [Releases](https://github.com/damon-liu/Dji-cloud-api-tool/releases/latest) 下载 `DjiCloudApiTool-v1.0.3.zip`，解压后双击 `DjiCloudApi.exe` 即可运行。
+从 [Releases](https://github.com/damon-liu/Dji-cloud-api-tool/releases/latest) 下载 `DjiCloudApiTool-v1.0.4.zip`，解压后双击 `DjiCloudApi.exe` 即可运行。
 
 **三步上手：**
 
-1. **配置 MQTT** — 点击「⚙ 配置」→ 填写 Broker 地址/端口/用户名/密码 → 「Test」测试 → 「OK」保存
+1. **配置 MQTT** — 点击「⚙ 配置中心」→ 填写 Broker 地址/端口/用户名/密码 → 「Test」测试 → 「OK」保存
 2. **添加设备** — 点击「＋」→ 选择 Dock（机场）或 Pilot（无人机）→ 输入设备 SN 和名称
 3. **连接监控** — 点击「● 连接」，OSD 面板和 JSON 面板开始实时刷新
+
+> 💡 添加机场时自动创建关联的无人机设备。连接机场后也会自动发现并添加下方无人机。
 
 详细教程见 [📖 用户使用指南](docs/guide/user-guide.md)。
 
@@ -166,8 +170,11 @@ MQTT 消息 → MqttClientManager::messageReceived
 | `TopicManager` | 主题到设备 SN 的映射及反向索引；发出 `topicsChanged` 信号触发 MQTT 重新订阅 |
 | `MqttClientManager` | `QMqttClient` 封装；指数退避自动重连（基数 1s，上限 30s）；去重订阅管理 |
 | `DeviceInfo` / `OsdData` | 纯头文件数据结构。`AircraftOsd` 和 `DockOsd` 继承 `OsdBase` |
-| `MainWindow` | 顶层窗口（1280×760），水平分割器：左侧设备树 + Topic 列表（可拖拽），右侧 OSD + JSON 解析 + 原始 JSON |
+| `MainWindow` | 顶层窗口（1280×760），工具栏（配置中心 / 功能中心 / 帮助），左侧设备树 + Topic 列表，右侧 OSD + JSON 解析 + 原始 JSON + Topic 下发 |
 | `PublishPanel` | Topic 下发面板：预设常用 Topic、MD 模板自动匹配、JSON 编辑、发送历史 |
+| `PsdkSpeakerPanel` | PSDK 喊话器面板：TTS 文字播报、音频文件 URL 播报、音量/模式控制、进度管线 |
+| `VideoStreamWindow` | 视频直播窗口：独立窗口推拉流、镜头切换（红外/变焦/广角）、5 档清晰度 |
+| `TakeoffConfigDialog` | 一键起飞参数配置对话框：目标点经纬度/高度、高度模式、安全参数可视化设置 |
 
 ## 📁 项目结构
 
@@ -181,7 +188,8 @@ MQTT 消息 → MqttClientManager::messageReceived
 │   │   ├── TopicManager.h/cpp    #   Topic ↔ 设备 SN 映射、订阅管理
 │   │   ├── DeviceInfo.h          #   设备信息数据结构（纯头文件）
 │   │   ├── OsdData.h             #   OSD 数据结构：AircraftOsd / DockOsd
-│   │   └── TopicMapping.h        #   JSON key → 中文映射配置
+│   │   ├── TopicMapping.h        #   JSON key → 中文映射配置
+│   │   ├── DockCommand.h/cpp     #   下发命令系统：类型枚举、命令执行器、进度追踪
 │   ├── mqtt/                     # 通信层 — MQTT 客户端封装
 │   │   └── MqttClientManager.h/cpp  QMqttClient 封装、自动重连、去重订阅
 │   ├── ui/                       # UI 层 — 面板与对话框
@@ -193,9 +201,23 @@ MQTT 消息 → MqttClientManager::messageReceived
 │   │   ├── TopicParsePanel.h/cpp  #  JSON 字段 → 中文翻译面板
 │   │   ├── RawJsonPanel.h/cpp     #  原始 JSON 显示（暂停/复制/抓包）
 │   │   ├── PublishPanel.h/cpp     #  Topic 下发面板（预设模板、JSON 编辑、发送历史）
+│   │   ├── PsdkSpeakerPanel.h/cpp #  PSDK 喊话器面板（TTS / 音频播报 / 进度管线）
+│   │   ├── PsdkSpeakerDialog.h    #  PSDK 喊话器独立窗口
+│   │   ├── VideoStreamWindow.h/cpp #  视频直播独立窗口（推拉流 / 镜头切换）
+│   │   ├── TakeoffConfigDialog.h/cpp # 一键起飞参数配置对话框
+│   │   ├── FlightControlPanel.h/cpp # 飞行控制面板（飞行 + 负载）
+│   │   ├── FlightControlDialog.h  #  飞行控制独立窗口
+│   │   ├── DockControlPanel.h/cpp  #  机场控制面板（远程调试 / 充电 / 舱盖）
+│   │   ├── DockControlDialog.h    #  机场控制独立窗口
+│   │   ├── MaintenancePanel.h/cpp #  运维模式面板
+│   │   ├── MaintenanceDialog.h    #  运维模式独立窗口
+│   │   ├── FlowLayout.h           #  流式布局辅助类
 │   │   └── ConfigDialog.h/cpp     #  MQTT 连接配置对话框（多 Profile）
 │   └── resources/
-│       └── config.json           # 默认配置文件模板（不含真实凭证）
+│       ├── config.json           # 默认配置文件模板（不含真实凭证）
+│       ├── logo3.ico              #  应用图标
+│       ├── logo3.png              #  应用图标 PNG
+│       └── app_icon.rc            #  Windows 资源文件（嵌入图标）
 ├── config/
 │   ├── topic_mappings.json       # JSON key → 中文翻译映射表
 │   └── topic-send-construct/
@@ -215,7 +237,8 @@ MQTT 消息 → MqttClientManager::messageReceived
 │   │   ├── RELEASE-v1.0.md         # v1.0 发布说明
 │   │   ├── RELEASE-v1.0.1.md       # v1.0.1 发布说明
 │   │   ├── RELEASE-v1.0.2.md       # v1.0.2 发布说明
-│   │   └── RELEASE-v1.0.3.md       # v1.0.3 发布说明
+│   │   ├── RELEASE-v1.0.3.md       # v1.0.3 发布说明
+│   │   └── RELEASE-v1.0.4.md       # v1.0.4 发布说明
 │   └── product/
 ├── package.sh                    # 一键打包脚本（编译 → 部署 → 清除凭证 → 打包）
 ├── CMakeLists.txt                # CMake 构建配置
@@ -264,7 +287,7 @@ cmake --build build_mingw
 cmake --build build_mingw --target deploy
 
 # === 一键打包（编译 + 部署 DLL + 清除凭证 + 打包 zip） ===
-bash package.sh v1.0.3
+bash package.sh v1.0.4
 
 # === 原生 Linux ===
 cmake -B build -DCMAKE_BUILD_TYPE=Release
