@@ -131,7 +131,7 @@ docker run --rm dji-cloud-api:latest
 
 ## 📸 界面截图
 
-![image-20260710165818685](https://damon-siyuan.oss-cn-wuhan-lr.aliyuncs.com/markdown/image-20260710165818685.png)
+![输入图片说明](docs/guide/img_v3_0213s_b73b7dde-8feb-4a0f-92b9-bebbf5c0f7fg.jpg)
 
 ## 🏗 架构
 
@@ -314,4 +314,4 @@ MIT
 
 关注我，后期版本更新均在公众号上通知！！
 
-<img width="430" height="430" alt="img_v3_0213k_6b03e120-c73b-43f4-812a-c9fc2a9ca33g" src="https://github.com/user-attachments/assets/626fc73a-3a74-4514-b5c4-1829dd6f04c6" />
+![输入图片说明](docs/%E6%89%AB%E7%A0%81_%E6%90%9C%E7%B4%A2%E8%81%94%E5%90%88%E4%BC%A0%E6%92%AD%E6%A0%B7%E5%BC%8F-%E6%A0%87%E5%87%86%E8%89%B2%E7%89%88.png)
