@@ -131,7 +131,7 @@ docker run --rm dji-cloud-api:latest
 
 ## 📸 界面截图
 
-![输入图片说明](docs/guide/img_v3_0213s_b73b7dde-8feb-4a0f-92b9-bebbf5c0f7fg.jpg)
+<img width="1903" height="1039" alt="img_v3_0213s_b73b7dde-8feb-4a0f-92b9-bebbf5c0f7fg" src="https://github.com/user-attachments/assets/abf55dfa-4c5f-41f4-9719-a57c262ed70f" />
 
 ## 🏗 架构
 
