@@ -314,4 +314,5 @@ MIT
 
 关注我，后期版本更新均在公众号上通知！！
 
-![输入图片说明](docs/%E6%89%AB%E7%A0%81_%E6%90%9C%E7%B4%A2%E8%81%94%E5%90%88%E4%BC%A0%E6%92%AD%E6%A0%B7%E5%BC%8F-%E6%A0%87%E5%87%86%E8%89%B2%E7%89%88.png)
+<img width="430" height="430" alt="公众号接入" src="https://github.com/user-attachments/assets/d78e1266-a5ae-4a7b-817e-e3dcdb3a243f" />
+
