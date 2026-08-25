@@ -1,0 +1,265 @@
+---
+name: comet-design
+description: "Comet Classic 阶段 2 —— 为 change 产出深度技术 Design Doc。"
+disable-model-invocation: true
+---
+
+# Comet 阶段 2：深度设计（Design）
+
+开始或恢复前必须先读取并执行 `comet-classic/reference/classic-layout.md`；本文件中的 OpenSpec CLI 调用必须使用 adapter，文件路径必须使用该协议绑定的 `<classic-*>` 逻辑根。
+
+## 前置条件
+
+- 活跃 change 已存在（proposal.md、design.md、tasks.md）
+- 无 Design Doc（`docs/superpowers/specs/` 下无对应文件）
+
+> 职责边界：open 阶段的 `design.md` 给出**高层方案框架**（架构决策方向、方案选型、数据流）；design 阶段的 Design Doc 是对它的**深度技术细化**（详细实现设计、技术风险、测试策略、边界条件），是深化而非替代或重写。
+
+## 步骤
+
+### 0. 入口状态验证（Entry Check）
+
+按 `comet-classic/reference/scripts.md` 运行公开 Comet CLI 命令，然后执行入口验证；从任意入口恢复时先按 `comet-classic/reference/context-recovery.md` 运行恢复检查：
+
+```bash
+comet state select <change-name>
+comet state check <name> design
+```
+
+验证通过后继续 Step 1。验证失败时脚本会输出具体失败原因。
+
+**幂等性**：所有 design 阶段操作可以安全重试。如果 `handoff_context` 和 `handoff_hash` 已存在，先确认它们与当前产物一致再决定是否重新生成。
+
+### 1a. 生成 OpenSpec → Superpowers 交接包
+
+**必须由脚本生成，不允许 agent 临场手写 summary 代替。**
+
+```bash
+comet handoff <change-name> design --write
+```
+
+脚本会根据 change `.comet.yaml` 的 `context_compression` 快照生成并记录交接包。
+
+默认 `context_compression: off` 时生成：
+
+```text
+<classic-change-dir>/.comet/handoff/design-context.json
+<classic-change-dir>/.comet/handoff/design-context.md
+```
+
+启用 beta（项目 `.comet/config.yaml` 中 `classic.context_compression: beta`，创建 change 时快照进入 `.comet.yaml`）时生成：
+
+```text
+<classic-change-dir>/.comet/handoff/spec-context.json
+<classic-change-dir>/.comet/handoff/spec-context.md
+```
+
+并在 `.comet.yaml` 写入：
+
+```yaml
+handoff_context: <classic-change-dir>/.comet/handoff/design-context.json
+handoff_hash: <sha256>
+```
+
+默认交接包是 **compact 可追溯摘录**，不是 agent summary：
+- `design-context.json`：机器索引，包含 change、phase、canonical spec、source paths、hash
+- `design-context.md`：供 Superpowers 阅读的上下文，包含脚本标记、source path、line range、sha256、确定性摘录
+- 超出摘录预算时标记 `[TRUNCATED]`，并保留 Full source 路径
+
+beta 交接包是 **结构化 spec projection**，用于减少 OpenSpec 原文 token 占用但避免实现漂移：
+- `spec-context.json`：机器索引，包含 change、phase、mode=beta、source paths、context_hash、files 角色
+- `spec-context.md`：供 Superpowers 阅读的紧凑上下文，verbatim 投影 delta spec 文件并按 hash 引用支撑产物
+- OpenSpec delta spec 仍是 canonical spec；projection 缺失或过期时必须重新生成或读取源 spec，不得用 agent summary 替代
+
+如确实需要全文上下文，可显式运行：
+
+```bash
+comet handoff <change-name> design --write --full
+```
+
+交接包来源来自 OpenSpec open 阶段产物：
+- `proposal.md`：目标、动机、范围、非目标
+- `design.md`：高层架构决策、方案约束
+- `tasks.md`：初始任务边界
+- `specs/*/spec.md`：delta 能力规格
+
+### 1b. 执行 Brainstorming（带上下文）
+
+**立即执行：** 使用 Skill 工具加载 Superpowers `brainstorming` 技能。禁止跳过此步骤。
+
+技能加载时，ARGUMENTS 必须包含：
+
+```text
+Language: 使用 `comet state get <name> language` 读取到的 Comet 配置产物语言输出
+```
+
+技能加载后，按其指引使用以下上下文：
+
+```text
+Change: <change-name>
+OpenSpec Context Pack: <classic-change-dir>/.comet/handoff/design-context.md
+Machine handoff: <classic-change-dir>/.comet/handoff/design-context.json
+
+如 context_compression: beta，则使用：
+OpenSpec Context Pack: <classic-change-dir>/.comet/handoff/spec-context.md
+Machine handoff: <classic-change-dir>/.comet/handoff/spec-context.json
+
+OpenSpec 产物是上游事实源，但不得用“跳过重复上下文探索”削弱 Superpowers `brainstorming` 的澄清流程。
+你的任务是基于交接包做深度技术设计：实现方案、技术风险、测试策略、边界条件。
+如发现目标、范围、非目标、验收场景或关键约束仍不清楚，必须先继续提问并形成设计方案，不得只进行一轮问答就创建 Design Doc。
+不要重写 proposal/spec；如发现 OpenSpec delta spec 缺少验收场景，只能提出 Spec Patch，并回写 OpenSpec delta spec；不要在 Design Doc 中创建第二份需求 spec。Spec Patch 仅限于补充验收场景、修正歧义描述或添加边界条件，不得大幅重写 delta spec 的结构或范围——如需大幅修改，应标记为设计发现并回到 brainstorming 确认。
+
+Design Doc frontmatter 必须最小化，只包含：
+---
+comet_change: <change-name>
+role: technical-design
+canonical_spec: openspec
+---
+
+按 Superpowers `brainstorming` 技能原流程推进：澄清问题、2-3 个方案、分段确认设计。不得提前写入 Design Doc。
+```
+
+禁止在未加载该技能的情况下继续。
+
+如 Superpowers `brainstorming` 技能不可用，停止流程并提示安装或启用 Superpowers 技能，不要用普通对话替代该步骤。
+
+技能加载后，按其指引产出设计方案（以对话形式呈现）：
+- 技术方案：架构、数据流、关键技术选型与风险
+- 测试策略
+- 需求/范围缺口与需回写的 Spec Patch
+- 如需补充验收场景，标明将回写的 delta spec 变更
+
+brainstorming 阶段不写入 Design Doc 文件，仅产出设计方案供 Step 1c 用户确认。确认后才创建 `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` 并回写 delta spec。
+
+但为了上下文压缩恢复，brainstorming 过程中必须增量更新 `brainstorm-summary.md`。每轮澄清或方案迭代后，只要产生新的已确认事实、关键约束、候选方案、取舍/风险、测试策略或 Spec Patch 候选，就更新该文件；未确认内容必须标注为“待确认”或“候选”。该文件是恢复检查点，不是 Design Doc，也不得替代 Step 1c 的用户确认。
+
+### 1c. 用户确认设计方案（阻塞点）
+
+brainstorming 产出设计方案后，**必须按 `comet-classic/reference/decision-point.md` 的协议暂停并等待用户明确确认设计方案**。不得在用户确认前创建最终 Design Doc、写入 `design_doc`、运行 design guard，或进入 `/comet-build`。
+
+暂停时只展示必要摘要：
+- 采用的技术方案
+- 关键取舍与风险
+- 测试策略
+- 如有 Spec Patch，列出将回写的 delta spec 变更
+
+用户明确确认后，才继续 Step 2。若用户要求调整，继续 brainstorming 迭代，直到用户确认。
+
+
+### 1d. Brainstorming 检查点定稿
+
+用户确认设计方案后，在创建 Design Doc 前，创建或更新已增量维护的检查点文件，将其定稿为确认后的设计方案摘要：
+
+使用文件工具确保 `<classic-change-dir>/.comet/handoff/` 存在；不要依赖 POSIX 专用目录命令。
+
+`<classic-change-dir>/.comet/handoff/brainstorm-summary.md` 结构：
+
+```markdown
+# Brainstorm Summary
+
+- Change: <change-name>
+- Date: <YYYY-MM-DD>
+
+## 确认的技术方案
+
+<用户确认的方案摘要>
+
+## 关键取舍与风险
+
+<主要取舍和风险>
+
+## 测试策略
+
+<测试方法概述>
+
+## Spec Patch
+
+<将回写的 delta spec 变更，无则写"无">
+```
+
+**上下文压缩说明**：每次增量更新 `brainstorm-summary.md` 后，都是相对安全的压缩恢复点。Brainstorming 完成后，如上下文窗口紧张，应优先在此处进行压缩。压缩后重新加载以下文件继续 Step 2：
+- `<classic-change-dir>/.comet/handoff/brainstorm-summary.md`
+- `<classic-change-dir>/.comet/handoff/design-context.md`（或 beta 模式的 `spec-context.md`）
+- `<classic-change-dir>/.comet/handoff/design-context.json`（或 beta 模式的 `spec-context.json`）
+
+### 1e. 压缩策略（此处不阻塞）
+
+`brainstorm-summary.md` 是恢复检查点，但 Design Doc 尚未落盘时不得主动丢弃当前设计上下文。直接进入 Step 2；上下文压缩移到 Design Doc、状态和最新 handoff 全部持久化之后执行。
+
+### 2. 创建 Design Doc
+
+基于 brainstorming 对话的完整上下文（仍在主 session 中），创建 Design Doc。
+
+Design Doc frontmatter 必须最小化：
+
+```yaml
+---
+comet_change: <change-name>
+role: technical-design
+canonical_spec: openspec
+---
+```
+
+将 Design Doc 写入 `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`。
+如需回写 delta spec（Spec Patch），同时编辑对应的 `specs/*/spec.md`。
+
+**上下文压缩恢复**：若上下文已被压缩，从 `brainstorm-summary.md` + handoff 上下文恢复。若用户尚未确认设计方案，回到 Step 1b/1c 继续 brainstorming；若用户已确认，继续创建 Design Doc。brainstorm-summary.md 是压缩恢复的落盘点，不是 Design Doc 的唯一输入——创建时应尽可能利用恢复后的完整上下文。
+
+### 3. 更新 Comet 状态
+
+先记录 design_doc 路径。如果 Spec Patch 回写了 delta spec（新增、修改或删除了 `specs/*/spec.md`），必须重新生成 handoff 以更新 hash：
+
+```bash
+# 记录 design_doc 路径
+comet state set <name> design_doc docs/superpowers/specs/YYYY-MM-DD-topic-design.md
+
+# 如有 delta spec 变更，重新生成 handoff（更新 hash）
+comet handoff <change-name> design --write
+
+# 阶段守卫推进 phase 到下一阶段
+comet guard <change-name> design --apply
+```
+
+delta spec 的增、改、删都会改变 handoff hash，因此删除 delta spec 同样必须重新生成 handoff；否则记录的 `handoff_hash` 与当前 OpenSpec artifacts 不再匹配，design guard 将拒绝推进。如果没有 delta spec 变更，跳过 handoff 重新生成步骤。状态文件自动更新，无需手动编辑其他字段。
+
+### 3a. 可选主动式上下文压缩
+
+只在 **Design Doc 和状态证据落盘后**、进入 Build 前考虑主动式压缩。先确认 `design_doc`、最新 handoff、`handoff_hash` 和 design guard 均已成功持久化；这样压缩后可从文件恢复，不会丢失尚未写入的设计判断。
+
+- 上下文窗口确有压力且存在可调用的原生压缩机制时，可以触发一次，并在恢复提示中列出 change、下一步和需重新加载的 Design Doc/handoff 文件
+- 压缩只能由用户手动触发时，给出一次非阻塞建议并继续；**不得阻塞**、不得额外制造确认点
+- 不得用 shell 命令或摘要伪造上下文压缩
+
+## 退出条件
+
+- Design Doc 已创建并保存
+- Design Doc frontmatter 包含 `comet_change`、`role: technical-design`、`canonical_spec: openspec`
+- `handoff_context` 和 `handoff_hash` 已写入 `.comet.yaml`（由 guard 强制校验）
+- `handoff_hash` 与当前 OpenSpec open 阶段产物一致（由 guard 强制校验）
+- `design-context.md` 或 beta `spec-context.md` 必须是脚本生成，且包含 source path、mode、sha256 等可追溯标记（由 guard 强制校验）
+- beta 模式下，`spec-context.json` 必须结构合法且引用当前源文件（由 guard 强制校验）
+- 如有新能力或补充验收场景，OpenSpec delta spec 已创建/更新
+- `design_doc` 已写入 `.comet.yaml`
+- **阶段守卫**：运行 `comet guard <change-name> design --apply`，全部 PASS 后由守卫推进到 `phase: build`（此步骤更新 `phase` 字段，与 `auto_transition` 无关）
+
+退出前必须使用 `--apply`：
+
+```bash
+comet guard <change-name> design --apply
+```
+
+## 上下文压缩恢复
+
+按 `comet-classic/reference/context-recovery.md` 执行，phase 参数为 `design`。
+
+## 自动衔接下一阶段
+
+按 `comet-classic/reference/auto-transition.md` 执行。关键命令：
+
+```bash
+comet state next <change-name>
+```
+
+- `NEXT: auto` → 调用 `SKILL` 指向的 skill 进入下一阶段
+- `NEXT: manual` → 不调用下一 skill，按 `HINT` 交还控制权并结束当前调用；不再创建确认点
+- `NEXT: done` → 流程已完成，无需继续

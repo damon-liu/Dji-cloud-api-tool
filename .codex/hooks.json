@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"D:/project/damon/dji-cloud-api-tool/.agents/skills/comet/scripts/comet-hook-router.mjs\" --platform \"codex\" --project-root \"D:/project/damon/dji-cloud-api-tool\""
+          }
+        ]
+      }
+    ]
+  }
+}
