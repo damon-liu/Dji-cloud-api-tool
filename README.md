@@ -218,8 +218,7 @@ MQTT 消息 → MqttClientManager::messageReceived
 │   │   └── RELEASE-v1.0.3.md       # v1.0.3 发布说明
 │   └── product/
 ├── package.sh                    # 一键打包脚本（编译 → 部署 → 清除凭证 → 打包）
-├── CMakeLists.txt                # CMake 构建配置
-└── CLAUDE.md                     # AI 辅助开发指引
+└── CMakeLists.txt                # CMake 构建配置
 ```
 
 ## 🛠 开发

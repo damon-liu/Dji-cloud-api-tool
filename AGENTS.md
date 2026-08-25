@@ -1,7 +1,5 @@
 # AGENTS.md
 
-> Keep `CLAUDE.md` in sync with this file — it's a copy used by Claude Code.
-
 ## Build
 
 ```bash
